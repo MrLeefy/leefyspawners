@@ -1,0 +1,270 @@
+//bridge-file-version: #47
+{
+    "pools": [
+        {
+            "rolls": 1,
+            "entries": [
+                {
+                    "type": "item",
+                    "weight": 1,
+                    "name": "minecraft:totem"
+                },
+                {
+                    "type": "item",
+                    "weight": 2,
+                    "functions": [
+                        {
+                            "function": "enchant_with_levels",
+                            "levels": {
+                                "max": 30,
+                                "min": 1
+                            },
+                            "treasure": true
+                        }
+                    ],
+                    "name": "minecraft:book"
+                },
+                {
+                    "type": "item",
+                    "weight": 2,
+                    "functions": [
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        }
+                    ],
+                    "name": "minecraft:emerald"
+                },
+                {
+                    "type": "item",
+                    "weight": 2,
+                    "name": "minecraft:ender_pearl"
+                },
+                {
+                    "type": "item",
+                    "weight": 12.5,
+                    "functions": [
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        }
+                    ],
+                    "name": "minecraft:spider_eye"
+                },
+                {
+                    "type": "item",
+                    "weight": 12.5,
+                    "name": "minecraft:redstone",
+                    "functions": [
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "item",
+                    "weight": 12.5,
+                    "functions": [
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        }
+                    ],
+                    "name": "minecraft:gunpowder"
+                },
+                {
+                    "type": "item",
+                    "weight": 12.5,
+                    "name": "minecraft:glowstone_dust",
+                    "functions": [
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "item",
+                    "weight": 12.5,
+                    "functions": [
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        },
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        }
+                    ],
+                    "name": "minecraft:glass_bottle"
+                },
+                {
+                    "type": "item",
+                    "weight": 12.5,
+                    "functions": [
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        },
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        }
+                    ],
+                    "name": "minecraft:sugar"
+                },
+                {
+                    "type": "item",
+                    "weight": 25,
+                    "functions": [
+                        {
+                            "function": "set_count",
+                            "count": {
+                                "min": 2,
+                                "max": 3
+                            }
+                        },
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        }
+                    ],
+                    "name": "minecraft:stick"
+                },
+                {
+                    "type": "item",
+                    "weight": 1,
+                    "name": "minecraft:goat_horn"
+                },
+                {
+                    "type": "item",
+                    "name": "minecraft:banner",
+                    "weight": 5,
+                    "functions": [
+                        {
+                            "function": "set_banner_details",
+                            "type": 1
+                        }
+                    ]
+                },
+                {
+                    "type": "item",
+                    "name": "minecraft:crossbow",
+                    "weight": 8,
+                    "functions": [
+                        {
+                            "function": "looting_enchant",
+                            "count": {
+                                "min": 0,
+                                "max": 1
+                            }
+                        },
+                        {
+                            "function": "enchant_random_gear",
+                            "chance": 0.1
+                        }
+                    ]
+                },
+                {
+                    "type": "item",
+                    "name": "minecraft:saddle",
+                    "weight": 8
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "mrleefy:ravagerstill_display",
+      "textures": {
+        "default": "textures/entity/illager/ravager"
+      },
+      "materials": {
+        "default": "ravager"
+      },
+      "geometry": {
+        "default": "geometry.ravager_display"
+      },
+      "render_controllers": ["controller.render.default"]
+    }
+  }
+}

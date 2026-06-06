@@ -1,0 +1,20 @@
+{
+	"format_version": "1.8.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "mrleefy:skeletonstill_display",
+			"min_engine_version": "1.8.0",
+			"materials": {
+				"default": "skeleton"
+			},
+			"textures": {
+				"default": "textures/entity/skeletonstill"
+			},
+			"geometry": {
+				"default": "geometry.skeletonstill_display"
+			},
+			"render_controllers": ["controller.render.default"],
+			"enable_attachables": true
+		}
+	}
+}

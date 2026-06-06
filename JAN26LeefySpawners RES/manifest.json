@@ -1,0 +1,39 @@
+{
+	"format_version": 2,
+	"header": {
+		"name": "LeefySpawners v8.0.0 RES - Jan 26",
+		"description": "LeefySpawners Resource Pack v8.0.0 - Production Release",
+		"uuid": "fbf87c67-55f7-4bd1-be4a-dde6aa7fb470",
+		"version": [
+			8,
+			0,
+			0
+		],
+		"min_engine_version": [
+			1,
+			13,
+			0
+		]
+	},
+	"modules": [
+		{
+			"type": "resources",
+			"uuid": "ad12a0a9-2769-4b3d-ac01-af055f1a07db",
+			"version": [
+				8,
+				0,
+				0
+			]
+		}
+	],
+	"dependencies": [
+		{
+			"uuid": "809ba436-d81e-44e9-9070-f69b8213dd57",
+			"version": [
+				8,
+				0,
+				0
+			]
+		}
+	]
+}

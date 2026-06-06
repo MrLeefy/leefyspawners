@@ -1,0 +1,20 @@
+{
+	"format_version": "1.8.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "mrleefy:zombiestill_display",
+			"min_engine_version": "1.8.0",
+			"materials": {
+				"default": "zombie"
+			},
+			"textures": {
+				"default": "textures/entity/zombiestill"
+			},
+			"geometry": {
+				"default": "geometry.zombiestill_display"
+			},
+			"render_controllers": ["controller.render.default"],
+			"enable_attachables": true
+		}
+	}
+}

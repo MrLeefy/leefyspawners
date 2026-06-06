@@ -1,0 +1,19 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "mrleefy:piglinbrutestill_display",
+      "materials": {
+        "default": "piglin_brute"
+      },
+      "textures": {
+        "default": "textures/entity/piglin/piglin_brute"
+      },
+      "geometry": {
+        "default": "geometry.piglin_brute_display"
+      },
+      "render_controllers": ["controller.render.default"],
+      "enable_attachables": true
+    }
+  }
+}

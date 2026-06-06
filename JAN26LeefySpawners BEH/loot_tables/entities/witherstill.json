@@ -1,0 +1,151 @@
+//bridge-file-version: #43
+{
+	"pools": [
+		{
+			"rolls": 1,
+			"entries": [
+				{
+					"type": "item",
+					"weight": 50,
+					"name": "minecraft:netherstar"
+				},
+				{
+					"type": "item",
+					"weight": 1,
+					"name": "minecraft:obsidian",
+					"functions": [
+						{
+							"function": "set_count",
+							"count": {
+								"min": 2,
+								"max": 3
+							}
+						},
+						{
+							"function": "looting_enchant",
+							"count": {
+								"min": 0,
+								"max": 1
+							}
+						}
+					]
+				},
+				{
+					"type": "item",
+					"weight": 1,
+					"functions": [
+						{
+							"function": "set_count",
+							"count": {
+								"min": 2,
+								"max": 3
+							}
+						},
+						{
+							"function": "looting_enchant",
+							"count": {
+								"min": 0,
+								"max": 1
+							}
+						}
+					],
+					"name": "minecraft:wither_rose"
+				},
+				{
+					"type": "item",
+					"weight": 12.5,
+					"functions": [
+						{
+							"function": "set_count",
+							"count": {
+								"min": 2,
+								"max": 3
+							}
+						},
+						{
+							"function": "looting_enchant",
+							"count": {
+								"min": 0,
+								"max": 1
+							}
+						}
+					],
+					"name": "minecraft:coal_block"
+				},
+				{
+					"type": "item",
+					"weight": 25,
+					"functions": [
+						{
+							"function": "set_count",
+							"count": {
+								"min": 2,
+								"max": 3
+							}
+						},
+						{
+							"function": "looting_enchant",
+							"count": {
+								"min": 0,
+								"max": 1
+							}
+						}
+					],
+					"name": "minecraft:quartz"
+				},
+				{
+					"type": "item",
+					"name": "minecraft:recovery_compass",
+					"weight": 1
+				},
+				{
+					"type": "item",
+					"weight": 10,
+					"functions": [
+						{
+							"function": "set_count",
+							"count": {
+								"min": 2,
+								"max": 3
+							}
+						},
+						{
+							"function": "looting_enchant",
+							"count": {
+								"min": 0,
+								"max": 1
+							}
+						}
+					],
+					"name": "minecraft:nether_wart"
+				},
+				{
+					"type": "item",
+					"weight": 25,
+					"functions": [
+						{
+							"function": "set_count",
+							"count": {
+								"min": 2,
+								"max": 3
+							}
+						},
+						{
+							"function": "looting_enchant",
+							"count": {
+								"min": 0,
+								"max": 1
+							}
+						}
+					],
+					"name": "minecraft:nether_brick"
+				},
+				{
+					"type": "item",
+					"weight": 1,
+					"name": "minecraft:spyglass"
+				}
+			]
+		}
+	]
+}

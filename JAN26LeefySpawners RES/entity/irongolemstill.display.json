@@ -1,0 +1,19 @@
+//bridge-file-version: #0
+{
+	"format_version": "1.10.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "mrleefy:irongolemstill_display",
+			"materials": {
+				"default": "entity"
+			},
+			"textures": {
+				"default": "textures/entity/irongolemstill"
+			},
+			"geometry": {
+				"default": "geometry.irongolemstill_display"
+			},
+			"render_controllers": ["controller.render.default"]
+		}
+	}
+}

@@ -1,0 +1,14 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.start": {
+			"loop": true,
+			"animation_length": 0.0
+		},
+		"animation.riding.body": {
+			"loop": true,
+			"animation_length": 0.0
+		}
+	}
+}
+

@@ -1,0 +1,54 @@
+{
+    "format_version": "1.20.60",
+    "minecraft:block": {
+        "description": {
+            "identifier": "mrleefy:emerald_golem_spawner8"
+        },
+        "components": {
+            "minecraft:material_instances": {
+                "*": {
+                    "render_method": "alpha_test",
+                    "texture": "emeraldgolemspawner"
+                }
+            },
+            "minecraft:geometry": "geometry.mrleefy",
+            "minecraft:light_dampening": 15,
+            "minecraft:light_emission": 10,
+            "minecraft:map_color": [
+                176,
+                0,
+                207
+            ],
+            "minecraft:collision_box": {
+                "origin": [
+                    -8,
+                    0,
+                    -8
+                ],
+                "size": [
+                    16,
+                    16,
+                    16
+                ]
+            },
+            "minecraft:selection_box": {
+                "origin": [
+                    -8,
+                    0,
+                    -8
+                ],
+                "size": [
+                    16,
+                    16,
+                    16
+                ]
+            },
+            "minecraft:destructible_by_explosion": {
+                "explosion_resistance": 1
+            },
+            "minecraft:destructible_by_mining": {
+                "seconds_to_destroy": 1
+            }
+        }
+    }
+}
