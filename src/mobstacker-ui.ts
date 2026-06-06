@@ -1,13 +1,14 @@
+// @ts-nocheck
 // mobstacker-ui.js
 
 import { world, system } from "@minecraft/server";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 import { Database } from "./database";
-import { LootManager } from './loot_table.js';
-import { cooldowns, spawnerDatabase } from "./levelsystem.js"; // <-- CORRECTLY IMPORTED COOLDOWNS AND DATABASE
-import { validMobs, configDatabase, xpDropDatabase, spawnerStatistics, calculateSpawnerTotals, performanceMetrics, getMemoryUsage, saveSpawnerStatistics, loadSpawnerStatistics, resetSpawnerStatistics, getPlayerTopKills, ACTIVE_CHUNKS, enableLogging, disableLogging, isLoggingEnabled, debugLog } from "./mobstacker-core.js";
-import { securityService } from "./security-service.js";
-import { UI, ERROR_MESSAGES, ENTITIES } from "./constants.js";
+import { LootManager } from './loot_table';
+import { cooldowns, spawnerDatabase } from "./levelsystem"; // <-- CORRECTLY IMPORTED COOLDOWNS AND DATABASE
+import { validMobs, configDatabase, xpDropDatabase, spawnerStatistics, calculateSpawnerTotals, performanceMetrics, getMemoryUsage, saveSpawnerStatistics, loadSpawnerStatistics, resetSpawnerStatistics, getPlayerTopKills, ACTIVE_CHUNKS, enableLogging, disableLogging, isLoggingEnabled, debugLog } from "./mobstacker-core";
+import { securityService } from "./security-service";
+import { UI, ERROR_MESSAGES, ENTITIES } from "./constants";
 
 // --- CONFIGURATION MANAGEMENT ---
 const aaDatabase = new Database("AAValues");

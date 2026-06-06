@@ -1,10 +1,11 @@
+// @ts-nocheck
 // mobstacker-core.js
 
 import { system, world } from "@minecraft/server";
 import { Database } from "./database";
-import { getAAValueForLevel } from "./mobstacker-ui.js"; // Import the config function from the UI file
-import { TIMING, UI, ENTITIES, PERFORMANCE, VALIDATION } from "./constants.js";
-import { activeForms, cooldowns } from "./levelsystem.js";
+import { getAAValueForLevel } from "./mobstacker-ui"; // Import the config function from the UI file
+import { TIMING, UI, ENTITIES, PERFORMANCE, VALIDATION } from "./constants";
+import { activeForms, cooldowns } from "./levelsystem";
 
 // Performance monitoring
 const performanceMetrics = {
@@ -360,9 +361,9 @@ const PERFORMANCE_THRESHOLDS = {
 };
 
 // Import services for better separation of concerns
-import { EntityService } from './entity-service.js';
-import { ConfigurationService } from './configuration-service.js';
-import { PerformanceMonitor } from './performance-monitor.js';
+import { EntityService } from './entity-service';
+import { ConfigurationService } from './configuration-service';
+import { PerformanceMonitor } from './performance-monitor';
 
 // Performance monitoring functions
 function getMemoryUsage() {

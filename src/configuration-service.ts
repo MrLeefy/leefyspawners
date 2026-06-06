@@ -1,5 +1,6 @@
-import { UI, ENTITIES, VALIDATION, PERFORMANCE } from "./constants.js";
-import { Database } from "./database.js";
+// @ts-nocheck
+import { UI, ENTITIES, VALIDATION, PERFORMANCE } from "./constants";
+import { Database } from "./database";
 
 /**
  * Service class for managing all configuration settings

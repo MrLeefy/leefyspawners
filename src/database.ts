@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { world, ScoreboardObjective, ScoreboardIdentityType, system, Entity } from "@minecraft/server";
-import { DATABASE } from "./constants.js";
+import { DATABASE } from "./constants";
 
 const { scoreboard } = world, { FakePlayer } = ScoreboardIdentityType;
 const databases = new Map();

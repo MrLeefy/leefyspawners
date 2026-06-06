@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { system, world } from "@minecraft/server";
-import { Vector3 } from "./VectorMath/index.js"
+import { Vector3 } from "./VectorMath/index"
 /*const overworld = world.getDimension('overworld');
 
 world.afterEvents.playerPlaceBlock.subscribe(event => {

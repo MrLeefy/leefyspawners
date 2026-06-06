@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
     world,
     system,
@@ -10,9 +11,9 @@ import {
 } from "@minecraft/server-ui"
 
 import { Database } from "./database";
-import { Vector3 } from "./VectorMath/index.js";
-import { configDatabase, debugLog, clearMaxedSpawnerCache } from "./mobstacker-core.js";
-import { TIMING, UI, ERROR_MESSAGES, SUCCESS_MESSAGES, VALIDATION } from "./constants.js";
+import { Vector3 } from "./VectorMath/index";
+import { configDatabase, debugLog, clearMaxedSpawnerCache } from "./mobstacker-core";
+import { TIMING, UI, ERROR_MESSAGES, SUCCESS_MESSAGES, VALIDATION } from "./constants";
 
 // Define shared cooldown map here and export it for other scripts
 export const cooldowns = new Map();

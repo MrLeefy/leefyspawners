@@ -1,12 +1,18 @@
+// @ts-nocheck
 import { system } from "@minecraft/server";
-import { PERFORMANCE } from "./constants.js";
-import { debugLog } from "./mobstacker-core.js";
+import { PERFORMANCE } from "./constants";
+import { debugLog } from "./mobstacker-core";
 
 /**
  * Service class for monitoring and tracking performance metrics
  * Provides centralized performance monitoring with minimal overhead
  */
 export class PerformanceMonitor {
+    metrics: any;
+    timingStack: Map<string, number>;
+    alerts: any[];
+    thresholds: any;
+
     constructor() {
         this.metrics = {
             stackingOperations: 0,

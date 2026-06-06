@@ -1,0 +1,17 @@
+{
+  "name": "leefyspawners",
+  "version": "8.0.0",
+  "description": "Mob Spawner management and stacking addon for Minecraft Bedrock",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/import.ts --bundle --format=esm --external:@minecraft/server --external:@minecraft/server-ui --outfile=\"JUN06LeefySpawners BEH/scripts/module/import.js\"",
+    "dev": "esbuild src/import.ts --bundle --format=esm --external:@minecraft/server --external:@minecraft/server-ui --outfile=\"JUN06LeefySpawners BEH/scripts/module/import.js\" --watch"
+  },
+  "devDependencies": {
+    "@minecraft/server": "1.12.0",
+    "@minecraft/server-ui": "1.2.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.0.0"
+  }
+}

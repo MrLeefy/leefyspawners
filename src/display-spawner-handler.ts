@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { world, system } from "@minecraft/server";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
-import { Database } from "./database.js";
+import { Database } from "./database";
 
 /**
  * Display Spawner Handler

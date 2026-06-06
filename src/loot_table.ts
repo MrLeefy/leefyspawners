@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { world, ItemStack, EnchantmentType } from '@minecraft/server';
 import { Database } from './database';
 

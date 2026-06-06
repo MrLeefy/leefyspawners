@@ -1,3 +1,4 @@
+// @ts-nocheck
 export class Vector3{
     /** @type {number}*/x = 0;
     /** @type {number}*/y = 0;

@@ -3,6 +3,10 @@ $MinecraftPath = "$env:LOCALAPPDATA\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbw
 $BehaviorDest = Join-Path $MinecraftPath "development_behavior_packs\JUN06LeefySpawners BEH"
 $ResourceDest = Join-Path $MinecraftPath "development_resource_packs\JUN06LeefySpawners RES"
 
+# Run TypeScript build
+Write-Host "🔨 Compiling TypeScript..." -ForegroundColor Cyan
+npm run build
+
 # Ensure developer directories exist
 New-Item -ItemType Directory -Force -Path (Split-Path $BehaviorDest) | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $ResourceDest) | Out-Null

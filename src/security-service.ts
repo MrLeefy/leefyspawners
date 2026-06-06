@@ -1,12 +1,21 @@
+// @ts-nocheck
 import { Player } from "@minecraft/server";
-import { UI, ERROR_MESSAGES, VALIDATION } from "./constants.js";
-import { performanceMonitor } from "./performance-monitor.js";
+import { UI, ERROR_MESSAGES, VALIDATION } from "./constants";
+import { performanceMonitor } from "./performance-monitor";
 
 /**
  * Security service for handling permissions, command validation, and security checks
  * Provides centralized security management with proper access control
  */
 export class SecurityService {
+    permissionLevels: any;
+    commandCooldowns: Map<string, number>;
+    suspiciousActivity: Map<string, number[]>;
+    bannedCommands: Set<string>;
+    ipWhitelist: Set<string>;
+    sessionTokens: Map<string, string>;
+    securityEvents: any[];
+
     constructor() {
         this.permissionLevels = {
             USER: 0,

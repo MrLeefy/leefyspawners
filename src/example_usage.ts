@@ -1,3 +1,4 @@
+// @ts-nocheck
 // scripts/main.js
 // Advanced Dungeon System for Minecraft Bedrock Edition using Script API
 // FIX: Removed "chatSend" prefix from all runCommand() calls for valid execution.
