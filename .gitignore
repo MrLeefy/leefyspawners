@@ -1,0 +1,24 @@
+# Windows system files
+[Dd]esktop.ini
+Thumbs.db
+ehthumbs.db
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / Editor folders
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary / Build files
+*.log
+*.tmp
+*.bak
+*.temp
