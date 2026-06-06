@@ -1,0 +1,37 @@
+name: Compile Addon
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**.mcaddon'
+      - 'README.md'
+      - '.github/**'
+      - '.agent/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create .mcaddon File
+        run: |
+          zip -r LeefySpawners.mcaddon "JUN06LeefySpawners BEH" "JUN06LeefySpawners RES"
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add LeefySpawners.mcaddon
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto-compile .mcaddon [skip ci]"
+            git push origin master
+          else
+            echo "No changes to the compiled addon."
+          fi

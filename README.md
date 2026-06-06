@@ -4,7 +4,7 @@ A high-performance, features-rich Mob Spawner management and stacking addon for 
 
 ## 📥 Direct Download for Gameplay
 Click the link below to download the compiled addon file immediately:
-*   👉 [**Download LeefySpawners v8.0.0 (.mcaddon)**](https://github.com/MrLeefy/leefyspawners/raw/master/v8.0.0_LeefySpawners_Fixed.mcaddon)
+*   👉 [**Download LeefySpawners (.mcaddon)**](https://github.com/MrLeefy/leefyspawners/raw/master/LeefySpawners.mcaddon)
 
 ---
 
