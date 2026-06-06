@@ -2,7 +2,12 @@
 
 A high-performance, features-rich Mob Spawner management and stacking addon for **Minecraft: Bedrock Edition**. Built from the ground up to support single-player worlds, dedicated servers, and **Minecraft Realms** without requiring unstable Beta APIs.
 
+## 📥 Direct Download for Gameplay
+Click the link below to download the compiled addon file immediately:
+*   👉 [**Download LeefySpawners v8.0.0 (.mcaddon)**](https://github.com/MrLeefy/leefyspawners/raw/master/v8.0.0_LeefySpawners_Fixed.mcaddon)
+
 ---
+
 
 ## 🚀 Key Features
 
