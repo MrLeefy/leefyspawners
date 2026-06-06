@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { system } from "@minecraft/server";
 import { PERFORMANCE } from "./constants";
 import { debugLog } from "./mobstacker-core";
@@ -8,10 +7,28 @@ import { debugLog } from "./mobstacker-core";
  * Provides centralized performance monitoring with minimal overhead
  */
 export class PerformanceMonitor {
-    metrics: any;
+    metrics: {
+        stackingOperations: number;
+        entitySpawns: number;
+        entityRemovals: number;
+        averageProcessingTime: number;
+        lootDrops: number;
+        databaseReads: number;
+        databaseWrites: number;
+        cacheHits: number;
+        cacheMisses: number;
+        errors: number;
+        lastReset: number;
+        [key: string]: number;
+    };
     timingStack: Map<string, number>;
-    alerts: any[];
-    thresholds: any;
+    alerts: Array<{ timestamp: number; message: string }>;
+    thresholds: {
+        maxProcessingTime: number;
+        maxErrorsPerMinute: number;
+        maxMemoryUsage: number;
+    };
+    _intervalId?: number;
 
     constructor() {
         this.metrics = {
@@ -28,7 +45,7 @@ export class PerformanceMonitor {
             lastReset: Date.now()
         };
 
-        this.timingStack = new Map();
+        this.timingStack = new Map<string, number>();
         this.alerts = [];
         this.thresholds = {
             maxProcessingTime: 50, // ms
@@ -42,10 +59,10 @@ export class PerformanceMonitor {
 
     /**
      * Start timing for an operation
-     * @param {string} operation - Operation name
-     * @returns {string} Timer ID
+     * @param operation - Operation name
+     * @returns Timer ID
      */
-    startTiming(operation) {
+    startTiming(operation: string): string {
         const timerId = `${operation}_${Date.now()}_${Math.random()}`;
         this.timingStack.set(timerId, Date.now());
         return timerId;
@@ -53,11 +70,11 @@ export class PerformanceMonitor {
 
     /**
      * End timing for an operation and record the duration
-     * @param {string} timerId - Timer ID from startTiming
-     * @param {string} operation - Operation name (fallback)
-     * @returns {number} Duration in milliseconds
+     * @param timerId - Timer ID from startTiming
+     * @param operation - Operation name (fallback)
+     * @returns Duration in milliseconds
      */
-    endTiming(timerId, operation = 'unknown') {
+    endTiming(timerId: string, operation = 'unknown'): number {
         const startTime = this.timingStack.get(timerId);
         if (!startTime) {
             debugLog(`PerformanceMonitor: Timer not found for ${timerId}`);
@@ -82,10 +99,10 @@ export class PerformanceMonitor {
 
     /**
      * Record a performance event
-     * @param {string} eventType - Type of event (e.g., 'entitySpawn', 'lootDrop')
-     * @param {number} value - Value to record (optional)
+     * @param eventType - Type of event (e.g., 'entitySpawn', 'lootDrop')
+     * @param value - Value to record (optional)
      */
-    recordEvent(eventType, value = 1) {
+    recordEvent(eventType: string, value = 1): void {
         if (this.metrics.hasOwnProperty(eventType)) {
             this.metrics[eventType] += value;
         } else {
@@ -95,9 +112,9 @@ export class PerformanceMonitor {
 
     /**
      * Record a cache hit or miss
-     * @param {boolean} isHit - True for cache hit, false for cache miss
+     * @param isHit - True for cache hit, false for cache miss
      */
-    recordCacheAccess(isHit) {
+    recordCacheAccess(isHit: boolean): void {
         if (isHit) {
             this.metrics.cacheHits++;
         } else {
@@ -107,10 +124,10 @@ export class PerformanceMonitor {
 
     /**
      * Record a database operation
-     * @param {string} operation - 'read' or 'write'
-     * @param {string} table - Table name (optional)
+     * @param operation - 'read' or 'write'
+     * @param table - Table name (optional)
      */
-    recordDatabaseOperation(operation, table = 'unknown') {
+    recordDatabaseOperation(operation: string, table = 'unknown'): void {
         if (operation === 'read') {
             this.metrics.databaseReads++;
         } else if (operation === 'write') {
@@ -120,10 +137,10 @@ export class PerformanceMonitor {
 
     /**
      * Record an error
-     * @param {string} errorType - Type of error
-     * @param {string} message - Error message
+     * @param errorType - Type of error
+     * @param message - Error message
      */
-    recordError(errorType, message) {
+    recordError(errorType: string, message: string): void {
         this.metrics.errors++;
         this.addAlert(`${errorType}: ${message}`);
 
@@ -136,9 +153,9 @@ export class PerformanceMonitor {
 
     /**
      * Add a performance alert
-     * @param {string} message - Alert message
+     * @param message - Alert message
      */
-    addAlert(message) {
+    addAlert(message: string): void {
         const alert = {
             timestamp: Date.now(),
             message: message
@@ -155,9 +172,9 @@ export class PerformanceMonitor {
 
     /**
      * Get current performance statistics
-     * @returns {object} Performance statistics
+     * @returns Performance statistics
      */
-    getStats() {
+    getStats(): any {
         const now = Date.now();
         const uptimeMinutes = (now - this.metrics.lastReset) / 60000;
 
@@ -174,18 +191,18 @@ export class PerformanceMonitor {
 
     /**
      * Get errors per minute
-     * @returns {number} Errors per minute
+     * @returns Errors per minute
      */
-    getErrorsPerMinute() {
+    getErrorsPerMinute(): number {
         const uptimeMinutes = (Date.now() - this.metrics.lastReset) / 60000;
         return uptimeMinutes > 0 ? this.metrics.errors / uptimeMinutes : 0;
     }
 
     /**
      * Get cache hit rate percentage
-     * @returns {number} Cache hit rate (0-100)
+     * @returns Cache hit rate (0-100)
      */
-    getCacheHitRate() {
+    getCacheHitRate(): number {
         const total = this.metrics.cacheHits + this.metrics.cacheMisses;
         return total > 0 ? (this.metrics.cacheHits / total) * 100 : 0;
     }
@@ -193,7 +210,7 @@ export class PerformanceMonitor {
     /**
      * Reset all metrics
      */
-    reset() {
+    reset(): void {
         const now = Date.now();
         for (const key in this.metrics) {
             if (typeof this.metrics[key] === 'number') {
@@ -208,9 +225,9 @@ export class PerformanceMonitor {
     /**
      * Start periodic performance monitoring
      */
-    startPeriodicMonitoring() {
+    startPeriodicMonitoring(): void {
         // Log performance stats every 5 minutes
-        system.runInterval(() => {
+        this._intervalId = system.runInterval(() => {
             const stats = this.getStats();
 
             if (stats.errors > 0 || stats.operationsPerMinute > 1000) {
@@ -236,11 +253,11 @@ export class PerformanceMonitor {
 
     /**
      * Get performance health status
-     * @returns {object} Health status
+     * @returns Health status
      */
-    getHealthStatus() {
+    getHealthStatus(): any {
         const stats = this.getStats();
-        const issues = [];
+        const issues: string[] = [];
 
         if (stats.errorsPerMinute > this.thresholds.maxErrorsPerMinute) {
             issues.push('High error rate');
@@ -263,10 +280,10 @@ export class PerformanceMonitor {
 
     /**
      * Get recent alerts
-     * @param {number} count - Number of recent alerts to return
-     * @returns {Array} Recent alerts
+     * @param count - Number of recent alerts to return
+     * @returns Recent alerts
      */
-    getRecentAlerts(count = 10) {
+    getRecentAlerts(count = 10): any[] {
         return this.alerts.slice(-count);
     }
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Player } from "@minecraft/server";
 import { UI, ERROR_MESSAGES, VALIDATION } from "./constants";
 import { performanceMonitor } from "./performance-monitor";
@@ -8,7 +7,12 @@ import { performanceMonitor } from "./performance-monitor";
  * Provides centralized security management with proper access control
  */
 export class SecurityService {
-    permissionLevels: any;
+    permissionLevels: {
+        USER: number;
+        ADMIN: number;
+        OWNER: number;
+        [key: string]: number;
+    };
     commandCooldowns: Map<string, number>;
     suspiciousActivity: Map<string, number[]>;
     bannedCommands: Set<string>;
@@ -23,25 +27,26 @@ export class SecurityService {
             OWNER: 2
         };
 
-        this.commandCooldowns = new Map();
-        this.suspiciousActivity = new Map();
-        this.bannedCommands = new Set([
+        this.commandCooldowns = new Map<string, number>();
+        this.suspiciousActivity = new Map<string, number[]>();
+        this.bannedCommands = new Set<string>([
             'execute', 'function', 'gamerule', 'setblock', 'fill', 'clone',
             'summon', 'give', 'tp', 'teleport', 'kill', 'effect', 'enchant'
         ]);
 
-        this.ipWhitelist = new Set(); // For future IP-based restrictions
-        this.sessionTokens = new Map(); // For session management
+        this.ipWhitelist = new Set<string>(); // For future IP-based restrictions
+        this.sessionTokens = new Map<string, string>(); // For session management
+        this.securityEvents = [];
     }
 
     /**
      * Check if player has required permission level
-     * @param {Player} player - The player to check
-     * @param {number} requiredLevel - Required permission level
-     * @returns {boolean} True if player has permission
+     * @param player - The player to check
+     * @param requiredLevel - Required permission level
+     * @returns True if player has permission
      */
-    hasPermission(player, requiredLevel = this.permissionLevels.USER) {
-        if (!player?.isValid) return false;
+    hasPermission(player: Player, requiredLevel = this.permissionLevels.USER): boolean {
+        if (!player?.isValid()) return false;
 
         try {
             // Owner has all permissions
@@ -62,7 +67,7 @@ export class SecurityService {
             }
 
             return false;
-        } catch (error) {
+        } catch (error: any) {
             performanceMonitor.recordError('permission_check', error.message);
             return false;
         }
@@ -70,16 +75,16 @@ export class SecurityService {
 
     /**
      * Check if player has specific tag-based permission
-     * @param {Player} player - The player to check
-     * @param {string} permissionTag - The permission tag to check
-     * @returns {boolean} True if player has permission
+     * @param player - The player to check
+     * @param permissionTag - The permission tag to check
+     * @returns True if player has permission
      */
-    hasTagPermission(player, permissionTag) {
-        if (!player?.isValid || !permissionTag) return false;
+    hasTagPermission(player: Player, permissionTag: string): boolean {
+        if (!player?.isValid() || !permissionTag) return false;
 
         try {
             return player.hasTag(permissionTag);
-        } catch (error) {
+        } catch (error: any) {
             performanceMonitor.recordError('tag_permission_check', error.message);
             return false;
         }
@@ -87,12 +92,12 @@ export class SecurityService {
 
     /**
      * Grant permission to player
-     * @param {Player} granter - Player granting permission
-     * @param {Player} target - Player receiving permission
-     * @param {string} permissionTag - Permission tag to grant
-     * @returns {boolean} True if permission was granted
+     * @param granter - Player granting permission
+     * @param target - Player receiving permission
+     * @param permissionTag - Permission tag to grant
+     * @returns True if permission was granted
      */
-    grantPermission(granter, target, permissionTag) {
+    grantPermission(granter: Player, target: Player, permissionTag: string): boolean {
         if (!this.hasPermission(granter, this.permissionLevels.OWNER)) {
             this.logSecurityEvent('unauthorized_permission_grant', granter, {
                 target: target?.name,
@@ -101,7 +106,7 @@ export class SecurityService {
             return false;
         }
 
-        if (!target?.isValid || !permissionTag) return false;
+        if (!target?.isValid() || !permissionTag) return false;
 
         try {
             target.addTag(permissionTag);
@@ -110,7 +115,7 @@ export class SecurityService {
                 permission: permissionTag
             });
             return true;
-        } catch (error) {
+        } catch (error: any) {
             performanceMonitor.recordError('permission_grant', error.message);
             return false;
         }
@@ -118,12 +123,12 @@ export class SecurityService {
 
     /**
      * Revoke permission from player
-     * @param {Player} revoker - Player revoking permission
-     * @param {Player} target - Player losing permission
-     * @param {string} permissionTag - Permission tag to revoke
-     * @returns {boolean} True if permission was revoked
+     * @param revoker - Player revoking permission
+     * @param target - Player losing permission
+     * @param permissionTag - Permission tag to revoke
+     * @returns True if permission was revoked
      */
-    revokePermission(revoker, target, permissionTag) {
+    revokePermission(revoker: Player, target: Player, permissionTag: string): boolean {
         if (!this.hasPermission(revoker, this.permissionLevels.OWNER)) {
             this.logSecurityEvent('unauthorized_permission_revoke', revoker, {
                 target: target?.name,
@@ -132,7 +137,7 @@ export class SecurityService {
             return false;
         }
 
-        if (!target?.isValid || !permissionTag) return false;
+        if (!target?.isValid() || !permissionTag) return false;
 
         try {
             target.removeTag(permissionTag);
@@ -141,7 +146,7 @@ export class SecurityService {
                 permission: permissionTag
             });
             return true;
-        } catch (error) {
+        } catch (error: any) {
             performanceMonitor.recordError('permission_revoke', error.message);
             return false;
         }
@@ -149,13 +154,13 @@ export class SecurityService {
 
     /**
      * Validate command input for security
-     * @param {Player} player - Player executing command
-     * @param {string} command - Command to validate
-     * @param {string[]} args - Command arguments
-     * @returns {object} Validation result with isValid and error message
+     * @param player - Player executing command
+     * @param command - Command to validate
+     * @param args - Command arguments
+     * @returns Validation result with isValid and error message
      */
-    validateCommand(player, command, args = []) {
-        const validation = {
+    validateCommand(player: Player, command: string, args: string[] = []): any {
+        const validation: any = {
             isValid: true,
             error: null,
             warnings: []
@@ -206,13 +211,13 @@ export class SecurityService {
             if (validation.isValid) {
                 this.commandCooldowns.set(cooldownKey, now);
 
-                // Clean up old cooldowns periodically
+                // Clean up old cooldowns
                 if (this.commandCooldowns.size > 1000) {
                     this.cleanupExpiredCooldowns(now);
                 }
             }
 
-        } catch (error) {
+        } catch (error: any) {
             performanceMonitor.recordError('command_validation', error.message);
             validation.isValid = false;
             validation.error = "Command validation failed due to internal error.";
@@ -223,12 +228,12 @@ export class SecurityService {
 
     /**
      * Validate command arguments
-     * @param {string} command - Command name
-     * @param {string[]} args - Command arguments
-     * @returns {object} Validation result
+     * @param command - Command name
+     * @param args - Command arguments
+     * @returns Validation result
      */
-    validateCommandArguments(command, args) {
-        const result = { isValid: true, error: null };
+    validateCommandArguments(command: string, args: string[]): any {
+        const result: any = { isValid: true, error: null };
 
         // Common argument validations
         for (let i = 0; i < args.length; i++) {
@@ -264,11 +269,11 @@ export class SecurityService {
 
     /**
      * Detect suspicious patterns in command arguments
-     * @param {string[]} args - Command arguments
-     * @returns {string[]} Array of suspicious patterns found
+     * @param args - Command arguments
+     * @returns Array of suspicious patterns found
      */
-    detectSuspiciousPatterns(args) {
-        const patterns = [];
+    detectSuspiciousPatterns(args: string[]): string[] {
+        const patterns: string[] = [];
         const suspiciousStrings = [
             'javascript:', 'data:', 'vbscript:', 'onload=', 'onerror=',
             '<script', '</script>', 'eval(', 'exec(', 'system(',
@@ -288,13 +293,13 @@ export class SecurityService {
 
     /**
      * Check if player is rate limited
-     * @param {Player} player - Player to check
-     * @param {string} action - Action being performed
-     * @param {number} maxActions - Maximum actions allowed
-     * @param {number} timeWindow - Time window in milliseconds
-     * @returns {boolean} True if rate limited
+     * @param player - Player to check
+     * @param action - Action being performed
+     * @param maxActions - Maximum actions allowed
+     * @param timeWindow - Time window in milliseconds
+     * @returns True if rate limited
      */
-    isRateLimited(player, action, maxActions = 10, timeWindow = 60000) {
+    isRateLimited(player: Player, action: string, maxActions = 10, timeWindow = 60000): boolean {
         const now = Date.now();
         const key = `${player.name}_${action}`;
 
@@ -302,7 +307,7 @@ export class SecurityService {
             this.suspiciousActivity.set(key, []);
         }
 
-        const timestamps = this.suspiciousActivity.get(key);
+        const timestamps = this.suspiciousActivity.get(key)!;
 
         // Remove old timestamps
         const cutoff = now - timeWindow;
@@ -323,9 +328,9 @@ export class SecurityService {
 
     /**
      * Clean up expired cooldowns
-     * @param {number} now - Current timestamp
+     * @param now - Current timestamp
      */
-    cleanupExpiredCooldowns(now) {
+    cleanupExpiredCooldowns(now: number): void {
         const cutoff = now - 60000; // Remove cooldowns older than 1 minute
 
         for (const [key, timestamp] of this.commandCooldowns.entries()) {
@@ -337,11 +342,11 @@ export class SecurityService {
 
     /**
      * Log security event
-     * @param {string} eventType - Type of security event
-     * @param {Player} player - Player involved
-     * @param {object} details - Additional event details
+     * @param eventType - Type of security event
+     * @param player - Player involved
+     * @param details - Additional event details
      */
-    logSecurityEvent(eventType, player, details = {}) {
+    logSecurityEvent(eventType: string, player: Player, details: any = {}): void {
         const event = {
             timestamp: Date.now(),
             eventType,
@@ -369,10 +374,10 @@ export class SecurityService {
 
     /**
      * Get severity level for security event
-     * @param {string} eventType - Type of event
-     * @returns {string} Severity level (low, medium, high)
+     * @param eventType - Type of event
+     * @returns Severity level (low, medium, high)
      */
-    getEventSeverity(eventType) {
+    getEventSeverity(eventType: string): string {
         const highSeverity = [
             'unauthorized_permission_grant',
             'unauthorized_permission_revoke',
@@ -393,11 +398,9 @@ export class SecurityService {
 
     /**
      * Store security event for admin review
-     * @param {object} event - Security event to store
+     * @param event - Security event to store
      */
-    storeSecurityEvent(event) {
-        // In a real implementation, this would store to a database
-        // For now, we'll keep recent events in memory
+    storeSecurityEvent(event: any): void {
         if (!this.securityEvents) {
             this.securityEvents = [];
         }
@@ -412,11 +415,11 @@ export class SecurityService {
 
     /**
      * Get recent security events
-     * @param {number} count - Number of events to return
-     * @param {string} severity - Filter by severity (optional)
-     * @returns {object[]} Array of security events
+     * @param count - Number of events to return
+     * @param severity - Filter by severity (optional)
+     * @returns Array of security events
      */
-    getSecurityEvents(count = 50, severity = null) {
+    getSecurityEvents(count = 50, severity: string | null = null): any[] {
         let events = this.securityEvents || [];
 
         if (severity) {
@@ -428,9 +431,9 @@ export class SecurityService {
 
     /**
      * Get security statistics
-     * @returns {object} Security statistics
+     * @returns Security statistics
      */
-    getSecurityStats() {
+    getSecurityStats(): any {
         const events = this.securityEvents || [];
         const now = Date.now();
         const lastHour = now - (60 * 60 * 1000);
@@ -453,10 +456,10 @@ export class SecurityService {
 
     /**
      * Clear security data (admin only)
-     * @param {Player} admin - Admin requesting the clear
-     * @returns {boolean} True if cleared successfully
+     * @param admin - Admin requesting the clear
+     * @returns True if cleared successfully
      */
-    clearSecurityData(admin) {
+    clearSecurityData(admin: Player): boolean {
         if (!this.hasPermission(admin, this.permissionLevels.OWNER)) {
             this.logSecurityEvent('unauthorized_security_clear', admin);
             return false;

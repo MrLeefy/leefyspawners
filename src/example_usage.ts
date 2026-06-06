@@ -1,9 +1,8 @@
-// @ts-nocheck
 // scripts/main.js
 // Advanced Dungeon System for Minecraft Bedrock Edition using Script API
 // FIX: Removed "chatSend" prefix from all runCommand() calls for valid execution.
 
-import { world, system, Dimension, BlockTypes, EntityTypes, ItemStack, EffectTypes, EnchantmentTypes, CustomCommandParamType } from "@minecraft/server";
+import { world, system, Dimension, BlockTypes, EntityTypes, ItemStack, EffectTypes, EnchantmentTypes, Player, Entity, Vector3 } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 
 // Config storage
@@ -20,38 +19,39 @@ export let config = {
 };
 
 // In-memory instances data
-export const instances = new Map(); // id => {deaths:0, players:Set<Player>, minPos, maxPos, dim, level, effectiveDifficulty, entrancePos, threshold, completed:false, bossEntityId, rooms: [] with {pos, index}}
+export const instances = new Map<number, any>();
 
 // Load config from world properties
-config.difficulty = world.getDynamicProperty(PROPERTY_DIFFICULTY) ?? config.difficulty;
-config.size = world.getDynamicProperty(PROPERTY_SIZE) ?? config.size;
-config.mobDensity = world.getDynamicProperty(PROPERTY_MOB_DENSITY) ?? config.mobDensity;
+config.difficulty = (world.getDynamicProperty(PROPERTY_DIFFICULTY) as number) ?? config.difficulty;
+config.size = (world.getDynamicProperty(PROPERTY_SIZE) as number) ?? config.size;
+config.mobDensity = (world.getDynamicProperty(PROPERTY_MOB_DENSITY) as number) ?? config.mobDensity;
 
 // Command registration moved to dungeon-commands.js for proper timing
 
 
 // Create dungeon - exported for command system
-export function createDungeon(player, level) {
+export function createDungeon(player: Player, level: string): void {
     if (getPlayerInstanceId(player) !== null) {
         player.sendMessage("You are already in a dungeon. Use /dungeon:leave first.");
         return;
     }
 
-    const difficultyModifier = { easy: 0.5, medium: 1, hard: 1.5 }[level] ?? 1;
+    const levelModifierMap: Record<string, number> = { easy: 0.5, medium: 1, hard: 1.5 };
+    const difficultyModifier = levelModifierMap[level] ?? 1;
     const effectiveDifficulty = Math.round(config.difficulty * difficultyModifier);
 
     const instanceId = getNextInstanceId();
-    const basePos = { x: instanceId * 500, y: 60, z: 0 }; // Plain object
+    const basePos: Vector3 = { x: instanceId * 500, y: 60, z: 0 };
     const dungeonDim = world.getDimension("nether");
 
     player.sendMessage("Creating dungeon instance...");
 
     // Start generation job
-    system.runJob(generateDungeonGen(dungeonDim, basePos, effectiveDifficulty, instanceId, level, (dungeonData) => {
+    system.runJob(generateDungeonGen(dungeonDim, basePos, effectiveDifficulty, instanceId, level, (dungeonData: any) => {
         // On complete
         instances.set(instanceId, {
             deaths: 0,
-            players: new Set(),
+            players: new Set<Player>(),
             minPos: dungeonData.minPos,
             maxPos: dungeonData.maxPos,
             dim: dungeonDim,
@@ -70,26 +70,26 @@ export function createDungeon(player, level) {
 }
 
 // Instance counter
-export function getNextInstanceId() {
-    let id = world.getDynamicProperty(PROPERTY_INSTANCE_COUNTER) ?? 0;
+export function getNextInstanceId(): number {
+    let id = (world.getDynamicProperty(PROPERTY_INSTANCE_COUNTER) as number) ?? 0;
     id++;
     world.setDynamicProperty(PROPERTY_INSTANCE_COUNTER, id);
     return id;
 }
 
 // Generator for progressive generation with ticking area
-function* generateDungeonGen(dim, basePos, difficulty, instanceId, level, onComplete) {
+function* generateDungeonGen(dim: Dimension, basePos: Vector3, difficulty: number, instanceId: number, level: string, onComplete: (data: any) => void) {
     const roomSize = 10;
     const numRooms = config.size;
     const themes = ["overworld", "nether", "end"];
     const theme = themes[Math.floor(Math.random() * themes.length)];
 
     // Generate room graph
-    let grid = {};
-    let rooms = [];
-    let frontiers = [];
+    let grid: Record<string, any> = {};
+    let rooms: any[] = [];
+    let frontiers: any[] = [];
 
-    const startRoom = { gx: 0, gz: 0, connections: [], type: "entrance" };
+    const startRoom = { gx: 0, gz: 0, connections: [] as any[], type: "entrance" };
     grid[`0_0`] = startRoom;
     rooms.push(startRoom);
     frontiers.push(startRoom);
@@ -101,11 +101,11 @@ function* generateDungeonGen(dim, basePos, difficulty, instanceId, level, onComp
 
         let added = false;
         for (let d of directions) {
-            const ngx = current.gx + d.dx;
-            const ngz = current.gz + d.dz;
+            const ngx: number = current.gx + d.dx;
+            const ngz: number = current.gz + d.dz;
             const key = `${ngx}_${ngz}`;
             if (!grid[key]) {
-                const newRoom = { gx: ngx, gz: ngz, connections: [], type: getRandomRoomType(), connectFromDir: oppositeDir(d.dir) };
+                const newRoom = { gx: ngx, gz: ngz, connections: [] as any[], type: getRandomRoomType(), connectFromDir: oppositeDir(d.dir) };
                 grid[key] = newRoom;
                 rooms.push(newRoom);
                 frontiers.push(newRoom);
@@ -125,11 +125,11 @@ function* generateDungeonGen(dim, basePos, difficulty, instanceId, level, onComp
         const directions = shuffle([{ dx: 1, dz: 0, dir: "east" }, { dx: -1, dz: 0, dir: "west" }, { dx: 0, dz: 1, dir: "south" }, { dx: 0, dz: -1, dir: "north" }]);
         for (let d of directions) {
             if (Math.random() < 0.2) {
-                const ngx = room.gx + d.dx;
-                const ngz = room.gz + d.dz;
+                const ngx: number = room.gx + d.dx;
+                const ngz: number = room.gz + d.dz;
                 const key = `${ngx}_${ngz}`;
                 const neighbor = grid[key];
-                if (neighbor && !room.connections.some(c => c.to === neighbor)) {
+                if (neighbor && !room.connections.some((c: any) => c.to === neighbor)) {
                     room.connections.push({ dir: d.dir, to: neighbor });
                     neighbor.connections.push({ dir: oppositeDir(d.dir), to: room });
                 }
@@ -139,27 +139,27 @@ function* generateDungeonGen(dim, basePos, difficulty, instanceId, level, onComp
     }
 
     // Offsets
-    const minGx = Math.min(...rooms.map(r => r.gx));
-    const minGz = Math.min(...rooms.map(r => r.gz));
+    const minGx = Math.min(...rooms.map((r: any) => r.gx));
+    const minGz = Math.min(...rooms.map((r: any) => r.gz));
     const offsetX = -minGx * roomSize;
     const offsetZ = -minGz * roomSize;
 
-    const minPos = { x: basePos.x + offsetX, y: basePos.y, z: basePos.z + offsetZ };
-    const maxPos = { x: minPos.x + (Math.max(...rooms.map(r => r.gx)) - minGx + 1) * roomSize - 1, y: basePos.y + 5, z: minPos.z + (Math.max(...rooms.map(r => r.gz)) - minGz + 1) * roomSize - 1 };
+    const minPos: Vector3 = { x: basePos.x + offsetX, y: basePos.y, z: basePos.z + offsetZ };
+    const maxPos: Vector3 = { x: minPos.x + (Math.max(...rooms.map((r: any) => r.gx)) - minGx + 1) * roomSize - 1, y: basePos.y + 5, z: minPos.z + (Math.max(...rooms.map((r: any) => r.gz)) - minGz + 1) * roomSize - 1 };
 
     // Add ticking area for the dungeon bounds
     dim.runCommand(`tickingarea add ${minPos.x} ${minPos.y - 1} ${minPos.z} ${maxPos.x} ${maxPos.y + 1} ${maxPos.z} dungeon_${instanceId}`);
     yield;
 
     // Assign room indices
-    rooms.forEach((room, index) => {
+    rooms.forEach((room: any, index: number) => {
         room.index = index;
         room.pos = { x: basePos.x + offsetX + (room.gx - minGx) * roomSize, y: basePos.y, z: basePos.z + offsetZ + (room.gz - minGz) * roomSize };
     });
 
     // Build rooms one by one
     for (let room of rooms) {
-        buildRoom(dim, room.pos, theme, room.connections.map(c => c.dir), room.connectFromDir ?? null, difficulty, room.type, instanceId, room.index);
+        buildRoom(dim, room.pos, theme, room.connections.map((c: any) => c.dir), room.connectFromDir ?? null, difficulty, room.type, instanceId, room.index);
         yield;
     }
 
@@ -174,7 +174,7 @@ function* generateDungeonGen(dim, basePos, difficulty, instanceId, level, onComp
 }
 
 // Join dungeon
-export function joinDungeon(player, instanceId) {
+export function joinDungeon(player: Player, instanceId: number): void {
     if (!instances.has(instanceId)) {
         player.sendMessage("Invalid dungeon instance ID.");
         return;
@@ -188,7 +188,7 @@ export function joinDungeon(player, instanceId) {
 }
 
 // Enter instance
-function enterInstance(player, instanceId) {
+function enterInstance(player: Player, instanceId: number): void {
     const instance = instances.get(instanceId);
     player.addTag(`in_dungeon_${instanceId}`);
     instance.players.add(player);
@@ -201,7 +201,7 @@ function enterInstance(player, instanceId) {
 }
 
 // Leave dungeon
-export function leaveDungeon(player) {
+export function leaveDungeon(player: Player): void {
     const instanceId = getPlayerInstanceId(player);
     if (instanceId === null) {
         player.sendMessage("You are not in a dungeon.");
@@ -214,14 +214,14 @@ export function leaveDungeon(player) {
 }
 
 // Get player's instance ID
-export function getPlayerInstanceId(player) {
+export function getPlayerInstanceId(player: Player): number | null {
     const tags = player.getTags();
-    const dungeonTag = tags.find(tag => tag.startsWith("in_dungeon_"));
+    const dungeonTag = tags.find((tag: string) => tag.startsWith("in_dungeon_"));
     return dungeonTag ? parseInt(dungeonTag.split("_")[2]) : null;
 }
 
 // Remove player from instance
-function removePlayerFromInstance(player, instanceId) {
+function removePlayerFromInstance(player: Player, instanceId: number): void {
     player.removeTag(`in_dungeon_${instanceId}`);
     player.runCommand("gamemode survival @s");
     const instance = instances.get(instanceId);
@@ -237,7 +237,7 @@ function removePlayerFromInstance(player, instanceId) {
 world.afterEvents.entityDie.subscribe((event) => {
     if (event.deadEntity.typeId !== "minecraft:player") return;
 
-    const player = event.deadEntity;
+    const player = event.deadEntity as Player;
     const instanceId = getPlayerInstanceId(player);
     if (instanceId === null) return;
 
@@ -269,7 +269,7 @@ world.afterEvents.entityDie.subscribe((event) => {
 });
 
 // Fail dungeon
-function failDungeon(instanceId) {
+function failDungeon(instanceId: number): void {
     const instance = instances.get(instanceId);
     if (!instance) return;
 
@@ -286,7 +286,7 @@ function failDungeon(instanceId) {
 // Handle boss death for completion
 world.afterEvents.entityDie.subscribe((event) => {
     const entity = event.deadEntity;
-    const bossTag = entity.getTags().find(tag => tag.startsWith("dungeon_boss_"));
+    const bossTag = entity.getTags().find((tag: string) => tag.startsWith("dungeon_boss_"));
     if (bossTag) {
         const instanceId = parseInt(bossTag.split("_")[2]);
         const instance = instances.get(instanceId);
@@ -309,7 +309,7 @@ world.afterEvents.entityDie.subscribe((event) => {
 });
 
 // Cleanup instance
-function cleanupInstance(instanceId) {
+function cleanupInstance(instanceId: number): void {
     const instance = instances.get(instanceId);
     if (!instance) return;
 
@@ -320,7 +320,7 @@ function cleanupInstance(instanceId) {
     instance.dim.fillBlocks(instance.minPos, instance.maxPos, BlockTypes.get("minecraft:air"));
 
     // Kill remaining entities
-    const center = { x: (instance.minPos.x + instance.maxPos.x) / 2, y: instance.minPos.y + 3, z: (instance.minPos.z + instance.maxPos.z) / 2 };
+    const center: Vector3 = { x: (instance.minPos.x + instance.maxPos.x) / 2, y: instance.minPos.y + 3, z: (instance.minPos.z + instance.maxPos.z) / 2 };
     for (const entity of instance.dim.getEntities({ location: center, maxDistance: 250 })) {
         if(entity.typeId !== "minecraft:player") entity.kill();
     }
@@ -338,18 +338,18 @@ world.beforeEvents.itemUse.subscribe((event) => {
     }
 });
 
-function showConfigForm(player) {
+function showConfigForm(player: Player): void {
     const form = new ModalFormData();
     form.title("Dungeon Config");
-    form.slider("Difficulty", 1, 10, { defaultValue: config.difficulty });
-    form.slider("Max Rooms", 3, 10, { defaultValue: config.size });
-    form.slider("Mob Density", 1, 5, { defaultValue: config.mobDensity });
+    form.slider("Difficulty", 1, 10, 1, config.difficulty);
+    form.slider("Max Rooms", 3, 10, 1, config.size);
+    form.slider("Mob Density", 1, 5, 1, config.mobDensity);
     system.run(() => {
-        form.show(player).then((response) => {
-        if (!response.canceled) {
-            config.difficulty = response.formValues[0];
-            config.size = response.formValues[1];
-            config.mobDensity = response.formValues[2];
+        form.show(player).then((response: any) => {
+        if (!response.canceled && response.formValues) {
+            config.difficulty = response.formValues[0] as number;
+            config.size = response.formValues[1] as number;
+            config.mobDensity = response.formValues[2] as number;
             world.setDynamicProperty(PROPERTY_DIFFICULTY, config.difficulty);
             world.setDynamicProperty(PROPERTY_SIZE, config.size);
             world.setDynamicProperty(PROPERTY_MOB_DENSITY, config.mobDensity);
@@ -372,7 +372,7 @@ world.beforeEvents.playerBreakBlock.subscribe((event) => {
 });
 
 // Prevent block placing in dungeon
-world.beforeEvents.playerPlaceBlock.subscribe((event) => {
+((world.beforeEvents as any).playerPlaceBlock as any).subscribe((event: any) => {
     const player = event.player;
     const instanceId = getPlayerInstanceId(player);
     if (instanceId !== null) {
@@ -384,7 +384,7 @@ world.beforeEvents.playerPlaceBlock.subscribe((event) => {
 });
 
 // Prevent door opening if room not cleared
-world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
+((world.beforeEvents as any).playerInteractWithBlock as any).subscribe((event: any) => {
     const player = event.player;
     const block = event.block;
     const instanceId = getPlayerInstanceId(player);
@@ -394,7 +394,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
             const room = getRoomFromPosition(instance.rooms, player.location);
             if (room) {
                 const mobsInRoom = instance.dim.getEntities({ tags: [`dungeon_mob_${instanceId}_${room.index}`] });
-                const aliveMobs = mobsInRoom.filter(mob => mob.isValid);
+                const aliveMobs = mobsInRoom.filter((mob: Entity) => mob.isValid());
                 if (aliveMobs.length > 0) {
                     event.cancel = true;
                     player.sendMessage("Clear the room of mobs before opening the door!");
@@ -405,14 +405,14 @@ world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
 });
 
 // Helper to check if position in bounds
-function isPositionInBounds(pos, minPos, maxPos) {
+function isPositionInBounds(pos: Vector3, minPos: Vector3, maxPos: Vector3): boolean {
     return pos.x >= minPos.x && pos.x <= maxPos.x &&
         pos.y >= minPos.y && pos.y <= maxPos.y &&
         pos.z >= minPos.z && pos.z <= maxPos.z;
 }
 
 // Helper to get room from position
-function getRoomFromPosition(rooms, pos) {
+function getRoomFromPosition(rooms: any[], pos: Vector3): any {
     for (let room of rooms) {
         if (pos.x >= room.pos.x && pos.x < room.pos.x + 10 &&
             pos.z >= room.pos.z && pos.z < room.pos.z + 10) {
@@ -423,7 +423,7 @@ function getRoomFromPosition(rooms, pos) {
 }
 
 // Helper functions
-function shuffle(array) {
+function shuffle(array: any[]): any[] {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
@@ -432,19 +432,19 @@ function shuffle(array) {
 }
 
 
-function oppositeDir(dir) {
-    const opposites = { east: "west", west: "east", south: "north", north: "south" };
+function oppositeDir(dir: string): string {
+    const opposites: Record<string, string> = { east: "west", west: "east", south: "north", north: "south" };
     return opposites[dir];
 }
 
-function getRandomRoomType() {
+function getRandomRoomType(): string {
     const types = ["mob", "mob", "loot", "trap"];
     return types[Math.floor(Math.random() * types.length)];
 }
 
-function buildRoom(dim, roomPos, theme, doorDirs, connectFromDir, difficulty, roomType, instanceId, roomIndex) {
+function buildRoom(dim: Dimension, roomPos: Vector3, theme: string, doorDirs: string[], connectFromDir: string | null, difficulty: number, roomType: string, instanceId: number, roomIndex: number): void {
     const roomSize = 10;
-    const endPos = { x: roomPos.x + roomSize - 1, y: roomPos.y + 5, z: roomPos.z + roomSize - 1 };
+    const endPos: Vector3 = { x: roomPos.x + roomSize - 1, y: roomPos.y + 5, z: roomPos.z + roomSize - 1 };
 
     // Walls, Floor, Ceiling
     const floorBlock = getThemeBlock(theme, "floor");
@@ -455,13 +455,13 @@ function buildRoom(dim, roomPos, theme, doorDirs, connectFromDir, difficulty, ro
         from: roomPos,
         to: { x: endPos.x, y: roomPos.y, z: endPos.z }
     };
-    dim.fillBlocks(floorVolume, floorBlock); // Floor
+    (dim as any).fillBlocks(floorVolume, floorBlock); // Floor
     // Ceiling
     const ceilingVolume = {
         from: { x: roomPos.x, y: endPos.y, z: roomPos.z },
         to: { x: endPos.x, y: endPos.y, z: endPos.z }
     };
-    dim.fillBlocks(ceilingVolume, ceilingBlock);
+    (dim as any).fillBlocks(ceilingVolume, ceilingBlock);
 
     for (let y = roomPos.y + 1; y < endPos.y; y++) {
         // North Wall
@@ -469,41 +469,41 @@ function buildRoom(dim, roomPos, theme, doorDirs, connectFromDir, difficulty, ro
             from: { x: roomPos.x, y, z: roomPos.z },
             to: { x: endPos.x, y, z: roomPos.z }
         };
-        dim.fillBlocks(northWallVolume, wallBlock);
+        (dim as any).fillBlocks(northWallVolume, wallBlock);
 
         // South Wall
         const southWallVolume = {
             from: { x: roomPos.x, y, z: endPos.z },
             to: { x: endPos.x, y, z: endPos.z }
         };
-        dim.fillBlocks(southWallVolume, wallBlock);
+        (dim as any).fillBlocks(southWallVolume, wallBlock);
 
         // West Wall
         const westWallVolume = {
             from: { x: roomPos.x, y, z: roomPos.z + 1 },
             to: { x: roomPos.x, y, z: endPos.z - 1 }
         };
-        dim.fillBlocks(westWallVolume, wallBlock);
+        (dim as any).fillBlocks(westWallVolume, wallBlock);
 
         // East Wall
         const eastWallVolume = {
             from: { x: endPos.x, y, z: roomPos.z + 1 },
             to: { x: endPos.x, y, z: endPos.z - 1 }
         };
-        dim.fillBlocks(eastWallVolume, wallBlock);
+        (dim as any).fillBlocks(eastWallVolume, wallBlock);
     }
     // Clear inside
     const clearVolume = {
         from: { x: roomPos.x + 1, y: roomPos.y + 1, z: roomPos.z + 1 },
         to: { x: endPos.x - 1, y: endPos.y - 1, z: endPos.z - 1 }
     };
-    dim.fillBlocks(clearVolume, BlockTypes.get("minecraft:air"));
+    (dim as any).fillBlocks(clearVolume, BlockTypes.get("minecraft:air")!);
 
     // Doorways with doors
     const allDoors = new Set(doorDirs);
     if (connectFromDir) allDoors.add(connectFromDir);
     for (let doorDir of allDoors) {
-        let doorPos, clearStart, clearEnd;
+        let doorPos: Vector3, clearStart: Vector3, clearEnd: Vector3;
         if (doorDir === "west") {
             doorPos = { x: roomPos.x, y: roomPos.y + 1, z: roomPos.z + 4 };
         } else if (doorDir === "east") {
@@ -528,7 +528,7 @@ function buildRoom(dim, roomPos, theme, doorDirs, connectFromDir, difficulty, ro
             from: clearStart,
             to: clearEnd
         };
-        dim.fillBlocks(doorwayClearVolume, BlockTypes.get("minecraft:air"));
+        (dim as any).fillBlocks(doorwayClearVolume, BlockTypes.get("minecraft:air")!);
     }
 
     // Room content
@@ -547,13 +547,13 @@ function buildRoom(dim, roomPos, theme, doorDirs, connectFromDir, difficulty, ro
 }
 
 // Theme blocks
-function getThemeBlock(theme, part) {
-    const blocks = {
+function getThemeBlock(theme: string, part: string): any {
+    const blocks: Record<string, Record<string, string>> = {
         overworld: { floor: "minecraft:stone_bricks", wall: "minecraft:cobblestone", ceiling: "minecraft:mossy_cobblestone" },
         nether: { floor: "minecraft:netherrack", wall: "minecraft:nether_brick", ceiling: "minecraft:blackstone" },
         end: { floor: "minecraft:end_stone_bricks", wall: "minecraft:purpur_block", ceiling: "minecraft:end_stone" }
     };
-    return BlockTypes.get(blocks[theme][part] ?? "minecraft:stone");
+    return BlockTypes.get(blocks[theme]?.[part] ?? "minecraft:stone");
 }
 
 // Spawn mobs
@@ -562,8 +562,8 @@ const mobThemes = {
     nether: ["minecraft:blaze", "minecraft:piglin", "minecraft:magma_cube"],
     end: ["minecraft:enderman", "minecraft:shulker"]
 };
-function spawnMobs(dim, roomPos, difficulty, theme, instanceId, roomIndex) {
-    const mobs = mobThemes[theme] ?? mobThemes.overworld;
+function spawnMobs(dim: Dimension, roomPos: Vector3, difficulty: number, theme: string, instanceId: number, roomIndex: number): void {
+    const mobs = (mobThemes as Record<string, string[]>)[theme] ?? mobThemes.overworld;
     const num = Math.floor(config.mobDensity * (difficulty / 5)) + 1;
     for (let i = 0; i < num; i++) {
         const mobType = mobs[Math.floor(Math.random() * mobs.length)];
@@ -572,8 +572,8 @@ function spawnMobs(dim, roomPos, difficulty, theme, instanceId, roomIndex) {
             const entity = dim.spawnEntity(mobType, pos);
             entity.addTag(`dungeon_mob_${instanceId}_${roomIndex}`);
             if (difficulty > 5) {
-                entity.addEffect(EffectTypes.get("strength"), 20 * 9999, { amplifier: Math.floor(difficulty / 3) });
-                entity.addEffect(EffectTypes.get("speed"), 20 * 9999, { amplifier: 1 });
+                entity.addEffect(EffectTypes.get("strength")!, 20 * 9999, { amplifier: Math.floor(difficulty / 3) });
+                entity.addEffect(EffectTypes.get("speed")!, 20 * 9999, { amplifier: 1 });
             }
         } catch (e) {
             console.warn(`Could not spawn mob ${mobType}: ${e}`);
@@ -583,13 +583,13 @@ function spawnMobs(dim, roomPos, difficulty, theme, instanceId, roomIndex) {
 
 // Spawn boss
 const bossTypes = ["minecraft:warden", "minecraft:wither", "minecraft:elder_guardian"];
-function spawnBoss(dim, roomPos, difficulty, instanceId, roomIndex) {
+function spawnBoss(dim: Dimension, roomPos: Vector3, difficulty: number, instanceId: number, roomIndex: number): Entity {
     const pos = { x: roomPos.x + 5, y: roomPos.y + 1, z: roomPos.z + 5 };
     const bossType = bossTypes[Math.floor(Math.random() * bossTypes.length)];
     const boss = dim.spawnEntity(bossType, pos);
-    boss.addEffect(EffectTypes.get("strength"), 20 * 9999, { amplifier: Math.floor(difficulty / 2) });
-    boss.addEffect(EffectTypes.get("speed"), 20 * 9999, { amplifier: 2 });
-    boss.addEffect(EffectTypes.get("resistance"), 20 * 9999, { amplifier: 1 });
+    boss.addEffect(EffectTypes.get("strength")!, 20 * 9999, { amplifier: Math.floor(difficulty / 2) });
+    boss.addEffect(EffectTypes.get("speed")!, 20 * 9999, { amplifier: 2 });
+    boss.addEffect(EffectTypes.get("resistance")!, 20 * 9999, { amplifier: 1 });
     boss.nameTag = "Dungeon Boss";
     boss.addTag(`dungeon_mob_${instanceId}_${roomIndex}`);
     boss.addTag(`dungeon_boss_${instanceId}`);
@@ -597,13 +597,13 @@ function spawnBoss(dim, roomPos, difficulty, instanceId, roomIndex) {
 }
 
 // Place loot
-function placeLoot(dim, roomPos, difficulty) {
+function placeLoot(dim: Dimension, roomPos: Vector3, difficulty: number): void {
     const chestPos = { x: roomPos.x + 5, y: roomPos.y + 1, z: roomPos.z + 5 };
-    dim.getBlock(chestPos).setType(BlockTypes.get("minecraft:chest"));
-    const block = dim.getBlock(chestPos);
+    dim.getBlock(chestPos)!.setType(BlockTypes.get("minecraft:chest")!);
+    const block = dim.getBlock(chestPos)!;
     
     system.run(() => {
-        const inventory = block.getComponent("minecraft:inventory");
+        const inventory = block.getComponent("minecraft:inventory") as any;
         if (inventory) {
             const container = inventory.container;
             const lootItems = ["minecraft:iron_ingot", "minecraft:gold_ingot", "minecraft:diamond", "minecraft:emerald", "minecraft:enchanted_golden_apple"];
@@ -614,7 +614,7 @@ function placeLoot(dim, roomPos, difficulty) {
 
                 if (Math.random() < 0.3) {
                     try {
-                        const enchantComp = item.getComponent("enchantable");
+                        const enchantComp = item.getComponent("enchantable") as any;
                         if (enchantComp) {
                             // Find a valid enchantment for the item
                             const validEnchants = enchantComp.getValidEnchantments();
@@ -633,7 +633,7 @@ function placeLoot(dim, roomPos, difficulty) {
 }
 
 // Add trap
-function addTrap(dim, roomPos, theme) {
+function addTrap(dim: Dimension, roomPos: Vector3, theme: string): void {
     const trapTypes = ["lava_pit", "arrow_dispenser"];
     const trapType = trapTypes[Math.floor(Math.random() * trapTypes.length)];
 
@@ -643,32 +643,32 @@ function addTrap(dim, roomPos, theme) {
             from: trapPos,
             to: { x: trapPos.x + 3, y: trapPos.y, z: trapPos.z + 3 }
         };
-        dim.fillBlocks(trapAirVolume, BlockTypes.get("minecraft:air"));
+        (dim as any).fillBlocks(trapAirVolume, BlockTypes.get("minecraft:air")!);
 
         const trapLavaVolume = {
             from: { x: trapPos.x, y: trapPos.y - 1, z: trapPos.z },
             to: { x: trapPos.x + 3, y: trapPos.y - 1, z: trapPos.z + 3 }
         };
-        dim.fillBlocks(trapLavaVolume, BlockTypes.get("minecraft:lava"));
+        (dim as any).fillBlocks(trapLavaVolume, BlockTypes.get("minecraft:lava")!);
     } else if (trapType === "arrow_dispenser") {
         const dispPos = { x: roomPos.x + 5, y: roomPos.y + 2, z: roomPos.z };
-        const block = dim.getBlock(dispPos);
-        block.setType(BlockTypes.get("minecraft:dispenser"));
+        const block = dim.getBlock(dispPos)!;
+        block.setType(BlockTypes.get("minecraft:dispenser")!);
         
         system.run(() => {
-            const inv = block.getComponent("inventory");
+            const inv = block.getComponent("inventory") as any;
             if (inv) {
                 inv.container.setItem(0, new ItemStack("minecraft:arrow", 64));
             }
             const tripwireHookPos1 = { x: roomPos.x + 2, y: roomPos.y + 1, z: roomPos.z + 2 };
             const tripwireHookPos2 = { x: roomPos.x + 8, y: roomPos.y + 1, z: roomPos.z + 2 };
-            dim.getBlock(tripwireHookPos1).setType(BlockTypes.get("minecraft:tripwire_hook"));
-            dim.getBlock(tripwireHookPos2).setType(BlockTypes.get("minecraft:tripwire_hook"));
+            dim.getBlock(tripwireHookPos1)!.setType(BlockTypes.get("minecraft:tripwire_hook")!);
+            dim.getBlock(tripwireHookPos2)!.setType(BlockTypes.get("minecraft:tripwire_hook")!);
             const tripwireVolume = {
                 from: { x: roomPos.x + 3, y: roomPos.y + 1, z: roomPos.z + 2 },
                 to: { x: roomPos.x + 7, y: roomPos.y + 1, z: roomPos.z + 2 }
             };
-            dim.fillBlocks(tripwireVolume, BlockTypes.get("minecraft:tripwire"));
+            (dim as any).fillBlocks(tripwireVolume, BlockTypes.get("minecraft:tripwire")!);
         });
     }
 }

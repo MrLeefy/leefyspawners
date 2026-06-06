@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { UI, ENTITIES, VALIDATION, PERFORMANCE } from "./constants";
 import { Database } from "./database";
 
@@ -7,34 +6,41 @@ import { Database } from "./database";
  * Provides a unified interface for configuration with caching and validation
  */
 export class ConfigurationService {
+    configDatabase: Database;
+    xpDropDatabase: Database;
+    spawnerDatabase: Database;
+    cache: Map<string, any>;
+    cacheExpiry: Map<string, number>;
+    CACHE_DURATION: number;
+
     constructor() {
         this.configDatabase = new Database("ConfigValues");
         this.xpDropDatabase = new Database("XPDropValues");
         this.spawnerDatabase = new Database("SpawnerLocations");
 
         // Configuration cache with TTL
-        this.cache = new Map();
-        this.cacheExpiry = new Map();
+        this.cache = new Map<string, any>();
+        this.cacheExpiry = new Map<string, number>();
         this.CACHE_DURATION = PERFORMANCE.CACHE_DURATION;
     }
 
     /**
      * Get cached configuration value with automatic cache management
-     * @param {string} key - Configuration key
-     * @param {*} defaultValue - Default value if key doesn't exist
-     * @returns {*} The configuration value
+     * @param key - Configuration key
+     * @param defaultValue - Default value if key doesn't exist
+     * @returns The configuration value
      */
-    getConfig(key, defaultValue = null) {
+    getConfig(key: string, defaultValue: any = null): any {
         const now = Date.now();
         const cacheKey = `config_${key}`;
 
         // Check cache first
-        if (this.cache.has(cacheKey) && this.cacheExpiry.get(cacheKey) > now) {
+        if (this.cache.has(cacheKey) && (this.cacheExpiry.get(cacheKey) ?? 0) > now) {
             return this.cache.get(cacheKey);
         }
 
         // Fetch from database
-        let value;
+        let value: any;
         switch (key) {
             case 'playerKillOnly':
                 value = this.configDatabase.read(key) ?? false;
@@ -61,10 +67,10 @@ export class ConfigurationService {
 
     /**
      * Set configuration value with cache invalidation
-     * @param {string} key - Configuration key
-     * @param {*} value - Configuration value
+     * @param key - Configuration key
+     * @param value - Configuration value
      */
-    setConfig(key, value) {
+    setConfig(key: string, value: any): void {
         // Validate value based on key
         if (!this.validateConfig(key, value)) {
             throw new Error(`Invalid configuration value for ${key}: ${value}`);
@@ -81,11 +87,11 @@ export class ConfigurationService {
 
     /**
      * Validate configuration value
-     * @param {string} key - Configuration key
-     * @param {*} value - Value to validate
-     * @returns {boolean} True if valid
+     * @param key - Configuration key
+     * @param value - Value to validate
+     * @returns True if valid
      */
-    validateConfig(key, value) {
+    validateConfig(key: string, value: any): boolean {
         switch (key) {
             case 'stackRadius':
                 return typeof value === 'number' &&
@@ -105,14 +111,14 @@ export class ConfigurationService {
 
     /**
      * Get XP drop configuration for an entity
-     * @param {string} entityId - Entity identifier
-     * @returns {object|null} XP configuration or null
+     * @param entityId - Entity identifier
+     * @returns XP configuration or null
      */
-    getXpDropConfig(entityId) {
+    getXpDropConfig(entityId: string): any {
         const cacheKey = `xp_${entityId}`;
         const now = Date.now();
 
-        if (this.cache.has(cacheKey) && this.cacheExpiry.get(cacheKey) > now) {
+        if (this.cache.has(cacheKey) && (this.cacheExpiry.get(cacheKey) ?? 0) > now) {
             return this.cache.get(cacheKey);
         }
 
@@ -125,10 +131,10 @@ export class ConfigurationService {
 
     /**
      * Set XP drop configuration for an entity
-     * @param {string} entityId - Entity identifier
-     * @param {object} config - XP configuration
+     * @param entityId - Entity identifier
+     * @param config - XP configuration
      */
-    setXpDropConfig(entityId, config) {
+    setXpDropConfig(entityId: string, config: any): void {
         if (!config || typeof config !== 'object') {
             throw new Error('Invalid XP configuration');
         }
@@ -151,14 +157,14 @@ export class ConfigurationService {
 
     /**
      * Get spawner location data
-     * @param {string} coordinates - Coordinate string
-     * @returns {object|null} Spawner data or null
+     * @param coordinates - Coordinate string
+     * @returns Spawner data or null
      */
-    getSpawnerLocation(coordinates) {
+    getSpawnerLocation(coordinates: string): any {
         const cacheKey = `spawner_${coordinates}`;
         const now = Date.now();
 
-        if (this.cache.has(cacheKey) && this.cacheExpiry.get(cacheKey) > now) {
+        if (this.cache.has(cacheKey) && (this.cacheExpiry.get(cacheKey) ?? 0) > now) {
             return this.cache.get(cacheKey);
         }
 
@@ -171,10 +177,10 @@ export class ConfigurationService {
 
     /**
      * Set spawner location data
-     * @param {string} coordinates - Coordinate string
-     * @param {object} data - Spawner data
+     * @param coordinates - Coordinate string
+     * @param data - Spawner data
      */
-    setSpawnerLocation(coordinates, data) {
+    setSpawnerLocation(coordinates: string, data: any): void {
         this.spawnerDatabase.write(coordinates, data);
 
         // Invalidate cache
@@ -185,9 +191,9 @@ export class ConfigurationService {
 
     /**
      * Remove spawner location data
-     * @param {string} coordinates - Coordinate string
+     * @param coordinates - Coordinate string
      */
-    removeSpawnerLocation(coordinates) {
+    removeSpawnerLocation(coordinates: string): void {
         this.spawnerDatabase.delete(coordinates);
 
         // Invalidate cache
@@ -199,16 +205,16 @@ export class ConfigurationService {
     /**
      * Clear all configuration cache
      */
-    clearCache() {
+    clearCache(): void {
         this.cache.clear();
         this.cacheExpiry.clear();
     }
 
     /**
      * Get configuration statistics
-     * @returns {object} Configuration statistics
+     * @returns Configuration statistics
      */
-    getStats() {
+    getStats(): any {
         return {
             cachedConfigs: this.cache.size,
             configDatabase: this.configDatabase.getStats(),
@@ -219,9 +225,9 @@ export class ConfigurationService {
 
     /**
      * Get all configuration values as an object
-     * @returns {object} All configuration values
+     * @returns All configuration values
      */
-    getAllConfig() {
+    getAllConfig(): any {
         return {
             playerKillOnly: this.getConfig('playerKillOnly', false),
             itemSpillCap: this.getConfig('itemSpillCap', ENTITIES.DEFAULT_ITEM_SPILL_CAP),

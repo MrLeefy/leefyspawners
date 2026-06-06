@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Configuration constants for LeefySpawners
  * This file centralizes all hardcoded values for better maintainability

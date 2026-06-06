@@ -1,7 +1,6 @@
-// @ts-nocheck
 // mobstacker-core.js
 
-import { system, world } from "@minecraft/server";
+import { system, world, Player, Entity, Block, Vector3, Dimension, EntityHealthComponent, EntityDieAfterEvent, EntityHurtAfterEvent } from "@minecraft/server";
 import { Database } from "./database";
 import { getAAValueForLevel } from "./mobstacker-ui"; // Import the config function from the UI file
 import { TIMING, UI, ENTITIES, PERFORMANCE, VALIDATION } from "./constants";
@@ -57,7 +56,7 @@ console.error = function (...args) {
 };
 
 // Debug logging function that respects the global logging toggle
-function debugLog(message, ...args) {
+function debugLog(message: any, ...args: any[]): void {
     if (LOGGING_ENABLED) {
         console.log(`[DEBUG] ${message}`, ...args);
     }
@@ -119,7 +118,7 @@ function cleanupStatistics() {
 }
 
 // Update statistics when entities are killed
-function updateSpawnerStatistics(entityTypeId, spawnerLocation, player) {
+function updateSpawnerStatistics(entityTypeId: string, spawnerLocation: Vector3, player?: Player) {
     // Track entities killed by type
     const currentKills = spawnerStatistics.entitiesKilled.get(entityTypeId) || 0;
     spawnerStatistics.entitiesKilled.set(entityTypeId, currentKills + 1);
@@ -150,7 +149,7 @@ function updateSpawnerStatistics(entityTypeId, spawnerLocation, player) {
 }
 
 // Optimized Direct Statistics Writer bypassing string parsing
-function updateSpawnerStatisticsDirect(entityTypeId, locationKey, player) {
+function updateSpawnerStatisticsDirect(entityTypeId: string, locationKey: string, player?: Player) {
     // Track entities killed by type
     const currentKills = spawnerStatistics.entitiesKilled.get(entityTypeId) || 0;
     spawnerStatistics.entitiesKilled.set(entityTypeId, currentKills + 1);
@@ -183,7 +182,7 @@ function updateSpawnerStatisticsDirect(entityTypeId, locationKey, player) {
 const pendingSpawnerMetadata = new Map(); // locationKey -> { entityTypeId, kills, playersKilled: { playerName: count }, lastKill }
 
 // Update spawner metadata buffer
-function updateSpawnerMetadata(locationKey, entityTypeId, player) {
+function updateSpawnerMetadata(locationKey: string, entityTypeId: string, player?: Player) {
     try {
         let pending = pendingSpawnerMetadata.get(locationKey);
         if (!pending) {
@@ -311,11 +310,11 @@ function resetSpawnerStatistics() {
 }
 
 // Get player top kills
-function getPlayerTopKills(playerStat, count = 3) {
+function getPlayerTopKills(playerStat: any, count = 3): any[] {
     if (!playerStat || !playerStat.killsByType) return [];
     
     return Object.entries(playerStat.killsByType)
-        .sort((a, b) => b[1] - a[1])
+        .sort((a, b) => (b[1] as number) - (a[1] as number))
         .slice(0, count)
         .map(([typeId, killsCount]) => ({
             displayName: mobDisplayNameMap.get(typeId) || typeId.replace("mrleefy:", ""),
@@ -361,7 +360,6 @@ const PERFORMANCE_THRESHOLDS = {
 };
 
 // Import services for better separation of concerns
-import { EntityService } from './entity-service';
 import { ConfigurationService } from './configuration-service';
 import { PerformanceMonitor } from './performance-monitor';
 
@@ -435,19 +433,22 @@ const spawnerDatabase = new Database("SpawnerLocations");
 
 // Unified Cache Manager - consolidates all caching systems
 class UnifiedCacheManager {
+    caches = new Map<string, Map<any, any>>();
+    cacheConfigs = new Map<string, { duration: number; maxSize: number | null; lastUpdate: number }>();
+
     constructor() {
         this.caches = new Map();
         this.cacheConfigs = new Map();
     }
 
     // Register a cache with specific configuration
-    registerCache(cacheName, duration, maxSize = null) {
+    registerCache(cacheName: string, duration: number, maxSize: number | null = null): void {
         this.caches.set(cacheName, new Map());
         this.cacheConfigs.set(cacheName, { duration, maxSize, lastUpdate: 0 });
     }
 
     // Get cached value with automatic refresh
-    get(cacheName, key, fetchFunction, defaultValue = null) {
+    get(cacheName: string, key: any, fetchFunction: () => any, defaultValue: any = null): any {
         const cache = this.caches.get(cacheName);
         const config = this.cacheConfigs.get(cacheName);
 
@@ -465,7 +466,7 @@ class UnifiedCacheManager {
             if (config.maxSize && cache.size > config.maxSize) {
                 const entries = Array.from(cache.entries());
                 const toRemove = entries.slice(0, cache.size - config.maxSize);
-                toRemove.forEach(([k]) => cache.delete(k));
+                toRemove.forEach(([k]) => cache.delete(k as any));
             }
         }
 
@@ -473,7 +474,7 @@ class UnifiedCacheManager {
     }
 
     // Manual cache update
-    set(cacheName, key, value) {
+    set(cacheName: string, key: any, value: any): void {
         const cache = this.caches.get(cacheName);
         if (cache) {
             cache.set(key, value);
@@ -481,7 +482,7 @@ class UnifiedCacheManager {
     }
 
     // Clear specific cache
-    clearCache(cacheName) {
+    clearCache(cacheName: string): void {
         const cache = this.caches.get(cacheName);
         if (cache) {
             cache.clear();
@@ -489,8 +490,8 @@ class UnifiedCacheManager {
     }
 
     // Get cache statistics
-    getStats() {
-        const stats = {};
+    getStats(): Record<string, { size: number; config: any }> {
+        const stats: Record<string, { size: number; config: any }> = {};
         for (const [name, cache] of this.caches.entries()) {
             stats[name] = {
                 size: cache.size,
@@ -510,7 +511,7 @@ cacheManager.registerCache('entity', 5000, 100); // 5 second entity cache, max 1
 cacheManager.registerCache('xpDrop', 60000); // 1 minute XP drop configuration cache
 
 // Configuration validation to prevent performance issues
-function validateAndClampConfig(key, value, defaultValue) {
+function validateAndClampConfig(key: string, value: any, defaultValue: any): any {
     switch (key) {
         case "stackRadius":
             return Math.max(VALIDATION.MIN_RADIUS, Math.min(VALIDATION.MAX_RADIUS, value || defaultValue));
@@ -524,7 +525,7 @@ function validateAndClampConfig(key, value, defaultValue) {
 }
 
 // Legacy compatibility functions with validation
-function getCachedConfig(key, defaultValue) {
+function getCachedConfig(key: string, defaultValue: any): any {
     return cacheManager.get('config', key,
         () => {
             const rawConfigs = {
@@ -541,14 +542,13 @@ function getCachedConfig(key, defaultValue) {
                 "xpSpillCap": validateAndClampConfig("xpSpillCap", rawConfigs.xpSpillCap, ENTITIES.DEFAULT_XP_SPILL_CAP)
             };
 
-            return configs[key];
+            return (configs as Record<string, any>)[key];
         },
         defaultValue
     );
 }
 
-// Global function for cache synchronization between modules
-globalThis.updateMobstackerCache = function (key, value) {
+(globalThis as any).updateMobstackerCache = function (key: string, value: any): void {
     cacheManager.set('config', key, value);
 };
 
@@ -602,13 +602,13 @@ export const validMobs = [
 
 const mobDisplayNameMap = new Map(validMobs.map(m => [m.typeId, m.displayName]));
 
-function extractStackNumber(nameTag) {
+function extractStackNumber(nameTag: string | undefined): number {
     const match = nameTag?.match(/x(\d+)/);
     return match ? parseInt(match[1], 10) : 1;
 }
 
 // Check if any players are near a location (cheap check for performance)
-function hasPlayersNearby(location, radius) {
+function hasPlayersNearby(location: Vector3, radius: number): boolean {
     try {
         const overworld = world.getDimension('overworld');
         const nearbyPlayers = overworld.getPlayers({
@@ -636,14 +636,14 @@ const CHUNK_CACHE_DURATION = 60000; // 1 minute cache for chunk data
 let lastChunkUpdate = 0;
 
 // Get chunk key from coordinates
-function getChunkKey(x, z) {
+function getChunkKey(x: number, z: number): string {
     const chunkX = Math.floor(x / CHUNK_SIZE);
     const chunkZ = Math.floor(z / CHUNK_SIZE);
     return `${chunkX},${chunkZ}`;
 }
 
 // Update active chunks based on spawner locations
-function updateActiveChunks(spawnruleEntities) {
+function updateActiveChunks(spawnruleEntities: Entity[]): void {
     const now = Date.now();
     if (now - lastChunkUpdate < CHUNK_CACHE_DURATION) return;
 
@@ -653,7 +653,7 @@ function updateActiveChunks(spawnruleEntities) {
     let chunkCount = 0;
 
     for (const entity of spawnruleEntities) {
-        if (entity?.isValid && entity.location && chunkCount < MAX_CHUNKS) {
+        if (entity?.isValid() && entity.location && chunkCount < MAX_CHUNKS) {
             const chunkKey = getChunkKey(entity.location.x, entity.location.z);
             if (!ACTIVE_CHUNKS.has(chunkKey)) {
                 ACTIVE_CHUNKS.set(chunkKey, []);
@@ -693,7 +693,7 @@ const maxedSpawners = new Map();
 const entitySpawnerOwnership = new Map();
 
 // Clear maxed spawner cache when upgrading
-export function clearMaxedSpawnerCache(x, y, z) {
+export function clearMaxedSpawnerCache(x: number, y: number, z: number): void {
     const spawnerKey = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
     for (const [key] of maxedSpawners) {
         if (key.endsWith(`:${spawnerKey}`)) {
@@ -709,11 +709,11 @@ let isProcessingJobRunning = false;
 // Cached parsed spawner nameTags to completely eliminate regex GC pressure
 const spawnerParseCache = new Map();
 
-function getSpawnerSpecs(nameTag) {
+function getSpawnerSpecs(nameTag: string): any {
     let specs = spawnerParseCache.get(nameTag);
     if (specs !== undefined) return specs;
 
-    const parsedName = nameTag.replace(/(_)|(spawner)/gi, match =>
+    const parsedName = nameTag.replace(/(_)|(spawner)/gi, (match: string) =>
         match === '_' ? "" : match.toLowerCase() === 'spawner' ? 'still' : ""
     );
 
@@ -779,14 +779,14 @@ function* spawnerProcessingJob() {
             }
 
             // Verify spawner chunk is loaded/valid
-            if (!spawnruleEntity?.isValid) continue;
+            if (!spawnruleEntity?.isValid()) continue;
 
             const location = spawnruleEntity.location;
 
             // Optimized pure JS player distance evaluation (0 script boundary crossings inside loop)
             let playerNear = false;
             for (const player of activePlayers) {
-                if (!player.isValid) continue;
+                if (!player.isValid()) continue;
                 const pLoc = player.location;
                 const dx = pLoc.x - location.x;
                 const dy = pLoc.y - location.y;
@@ -842,7 +842,7 @@ function* spawnerProcessingJob() {
             }
 
             // Double check validation before calling getEntities in potentially unloaded chunks
-            if (!spawnruleEntity.isValid) continue;
+            if (!spawnruleEntity.isValid()) continue;
 
             let nearbyEntities;
             try {
@@ -864,7 +864,7 @@ function* spawnerProcessingJob() {
             const extras = [];
 
             for (const entity of nearbyEntities) {
-                if (!entity || !entity.isValid) continue;
+                if (!entity || !entity.isValid()) continue;
                 const stackSize = extractStackNumber(entity.nameTag || "");
                 totalStack += stackSize;
                 if (stackSize > maxStackInArea) {
@@ -879,18 +879,18 @@ function* spawnerProcessingJob() {
             // Remove extra entities
             for (const entity of extras) {
                 try {
-                    if (entity.isValid) {
+                    if (entity.isValid()) {
                         entitySpawnerMap.delete(entity.id);
                         entitySpawnerOwnership.delete(entity.id);
                         entity.remove();
                         performanceMetrics.entityRemovals++;
                     }
                 } catch (error) {
-                    debugLog(`Failed to remove entity: ${error.message}`);
+                    debugLog(`Failed to remove entity: ${(error as any).message}`);
                 }
             }
 
-            if (primaryEntity && primaryEntity.isValid) {
+            if (primaryEntity && primaryEntity.isValid()) {
                 const newStackSize = Math.min(totalStack + qty, maxStack);
                 const currentStack = extractStackNumber(primaryEntity.nameTag || "");
 
@@ -900,7 +900,7 @@ function* spawnerProcessingJob() {
                             .replace('#', newStackSize.toString())
                             .replace('@', displayName);
                     } catch (err) {
-                        debugLog(`Failed to update primary entity nameTag: ${err.message}`);
+                        debugLog(`Failed to update primary entity nameTag: ${(err as any).message}`);
                     }
                 }
 
@@ -1060,7 +1060,7 @@ system.runInterval(() => {
 }, MEMORY_CLEANUP_INTERVAL);
 
 // Optimized entity spawning function
-function spawnNewStackedEntity(dimension, entityTypeId, location, qty, displayName) {
+function spawnNewStackedEntity(dimension: Dimension, entityTypeId: string, location: Vector3, qty: number, displayName: string): void {
     try {
         const spawnLocation = {
             x: location.x,
@@ -1068,8 +1068,8 @@ function spawnNewStackedEntity(dimension, entityTypeId, location, qty, displayNa
             z: location.z
         };
         const newEntity = dimension.spawnEntity(entityTypeId, spawnLocation);
-        if (newEntity?.isValid) {
-            newEntity.nameTag = nameTagConfig.replace('#', qty).replace('@', displayName);
+        if (newEntity?.isValid()) {
+            newEntity.nameTag = nameTagConfig.replace('#', qty.toString()).replace('@', displayName);
             const spawnerKey = `${Math.floor(location.x)},${Math.floor(location.y)},${Math.floor(location.z)}`;
             entitySpawnerMap.set(newEntity.id, spawnerKey);
             performanceMetrics.entitySpawns++;
@@ -1097,11 +1097,11 @@ let cleanupInterval = system.runInterval(() => {
 }, 600); // Every 30 seconds
 
 // Entity death and loot handling
-if (!globalThis.__stackDieSubscribed) {
-    globalThis.__stackDieSubscribed = true;
+if (!(globalThis as any).__stackDieSubscribed) {
+    (globalThis as any).__stackDieSubscribed = true;
 
     // Entity removal handler for cleanup
-    world.afterEvents.entityDie.subscribe(event => {
+    world.afterEvents.entityDie.subscribe((event: EntityDieAfterEvent) => {
         const { deadEntity } = event;
         if (deadEntity && validEntityTypes.has(deadEntity.typeId)) {
             entitySpawnerMap.delete(deadEntity.id);
@@ -1115,12 +1115,12 @@ if (!globalThis.__stackDieSubscribed) {
         }
     });
 
-    world.afterEvents.entityHurt.subscribe(event => {
+    world.afterEvents.entityHurt.subscribe((event: EntityHurtAfterEvent) => {
         try {
             const { hurtEntity, damageSource } = event;
-            if (!hurtEntity?.isValid) return;
+            if (!hurtEntity?.isValid()) return;
 
-            const health = hurtEntity.getComponent("health");
+            const health = hurtEntity.getComponent("health") as EntityHealthComponent | undefined;
             if (!health || health.currentValue > 0) {
                 // Reactivate spawner on damage
                 const ownerSpawnKey = entitySpawnerOwnership.get(hurtEntity.id);
@@ -1144,16 +1144,14 @@ if (!globalThis.__stackDieSubscribed) {
             // Update statistics for admin panel
             const spawnerKey = entitySpawnerMap.get(hurtEntity.id);
 
-            // FIXED: Bypass string parsing. Pass spawnerKey string directly
-            if (spawnerKey) {
-                updateSpawnerStatisticsDirect(entityTypeId, spawnerKey, damageSource.damagingEntity);
-            } else {
-                const loc = hurtEntity.location;
-                const spawnerKeyFallback = `${Math.floor(loc.x)},${Math.floor(loc.y)},${Math.floor(loc.z)}`;
-                updateSpawnerStatisticsDirect(entityTypeId, spawnerKeyFallback, damageSource.damagingEntity);
-            }
+            const loc = hurtEntity.location;
+            const spawnerKeyFallback = `${Math.floor(loc.x)},${Math.floor(loc.y)},${Math.floor(loc.z)}`;
+            const finalSpawnerKey = spawnerKey || spawnerKeyFallback;
+            const killer = damageSource?.damagingEntity;
+            const killerPlayer = killer?.typeId === "minecraft:player" ? (killer as Player) : undefined;
+            updateSpawnerStatisticsDirect(entityTypeId, finalSpawnerKey, killerPlayer);
 
-            debugLog(`Tracked kill: ${entityTypeId} at ${spawnerLocation.x}, ${spawnerLocation.y}, ${spawnerLocation.z}`);
+            debugLog(`Tracked kill: ${entityTypeId} at ${finalSpawnerKey}`);
 
             // Reactivate spawner
             const ownerSpawnKey = entitySpawnerOwnership.get(hurtEntity.id);
@@ -1189,8 +1187,8 @@ if (!globalThis.__stackDieSubscribed) {
 
                     const newEntity = hurtEntity.dimension.spawnEntity(entityTypeId, oldLocation);
 
-                    if (newEntity && newEntity.isValid) {
-                        newEntity.nameTag = nameTagConfig.replace('#', currentAmount - 1).replace('@', displayName);
+                    if (newEntity && newEntity.isValid()) {
+                        newEntity.nameTag = nameTagConfig.replace('#', (currentAmount - 1).toString()).replace('@', displayName);
                         newEntity.setRotation(oldRotation);
                         if (inheritedSpawnerKey) {
                             entitySpawnerMap.set(newEntity.id, inheritedSpawnerKey);
@@ -1217,7 +1215,7 @@ if (!globalThis.__stackDieSubscribed) {
                     const xpConfig = cacheManager.get('xpDrop', entityTypeId, () => xpDropDatabase.read(entityTypeId));
                     if (xpConfig && (Math.random() * 100 < (xpConfig.chance ?? 100))) {
                         try {
-                            hurtEntity.dimension.spawnEntity(ENTITIES.XP_ORB_TYPE, hurtEntity.location, { amount: xpConfig.amount ?? 1 });
+                            (hurtEntity.dimension as any).spawnEntity(ENTITIES.XP_ORB_TYPE, hurtEntity.location, { amount: xpConfig.amount ?? 1 });
                         } catch (e) {
                             console.error(`Error spawning XP orb for ${entityTypeId}: ${e}`);
                         }

@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { world, ItemStack, EnchantmentType } from '@minecraft/server';
+import { world, ItemStack, EntityDieAfterEvent, Player, Dimension, Vector3 } from '@minecraft/server';
 import { Database } from './database';
 
 // --- DATABASE SETUP ---
@@ -7,17 +6,17 @@ export const lootTableDatabase = new Database('LootTables');
 const configDatabase = new Database('ConfigValues');
 
 // Performance optimizations
-const configCache = new Map();
-const configCacheExpiry = new Map();
+const configCache = new Map<string, any>();
+const configCacheExpiry = new Map<string, number>();
 const CACHE_DURATION = 30000; // 30 seconds
 const MAX_CACHE_SIZE = 50; // Limit cache size to prevent memory bloat
 
 // Cached config getter with TTL and size limits
-function getCachedConfig(key, defaultValue) {
+function getCachedConfig(key: string, defaultValue: any): any {
     const now = Date.now();
     const cacheKey = key;
 
-    if (configCache.has(cacheKey) && configCacheExpiry.get(cacheKey) > now) {
+    if (configCache.has(cacheKey) && (configCacheExpiry.get(cacheKey) ?? 0) > now) {
         return configCache.get(cacheKey);
     }
 
@@ -28,7 +27,7 @@ function getCachedConfig(key, defaultValue) {
     // Enforce cache size limits
     if (configCache.size > MAX_CACHE_SIZE) {
         // Remove expired entries first
-        const expiredKeys = [];
+        const expiredKeys: string[] = [];
         for (const [k, expiry] of configCacheExpiry.entries()) {
             if (expiry <= now) {
                 expiredKeys.push(k);
@@ -54,9 +53,6 @@ function getCachedConfig(key, defaultValue) {
     return value;
 }
 
-// Pre-calculated loot tables for better performance
-const preCalculatedLootTables = new Map();
-
 // --- LOOT MANAGER CLASS DEFINITION ---
 
 /**
@@ -65,7 +61,12 @@ const preCalculatedLootTables = new Map();
  */
 class LootManager {
     // Singleton instance
-    static instance;
+    static instance: LootManager;
+
+    defaultEntities!: Record<string, any>;
+    entities!: Record<string, any>;
+    enchantmentCategories!: Record<string, any[]>;
+    enchantmentIncompatibilities!: Record<string, string[]>;
 
     constructor() {
         if (LootManager.instance) {
@@ -141,7 +142,7 @@ class LootManager {
     /**
      * Loads loot tables from the database or uses defaults.
      */
-    initialize() {
+    initialize(): void {
         for (const entityId in this.defaultEntities) {
             const savedLootTable = lootTableDatabase.read(entityId);
             // If there's a table in the database, use it. Otherwise, use the hardcoded default.
@@ -151,9 +152,9 @@ class LootManager {
 
     /**
      * Saves a specific entity's loot table to the database.
-     * @param {string} entityId The entity ID (e.g., 'mrleefy:zombiestill')
+     * @param entityId The entity ID (e.g., 'mrleefy:zombiestill')
      */
-    saveLootTable(entityId) {
+    saveLootTable(entityId: string): void {
         if (this.entities[entityId] && Object.keys(this.entities[entityId]).length > 0) {
             lootTableDatabase.write(entityId, this.entities[entityId]);
         } else {
@@ -165,16 +166,16 @@ class LootManager {
 
     /**
      * Gets the Looting level from a player's held item.
-     * @param {import('@minecraft/server').Player} player
-     * @returns {number} The level of Looting, or 0 if none.
+     * @param player - Player object
+     * @returns The level of Looting, or 0 if none.
      */
-    getLootLevel(player) {
+    getLootLevel(player: Player): number {
         try {
-            const equipment = player.getComponent('equippable');
+            const equipment: any = player.getComponent('equippable');
             const mainhandItem = equipment?.getEquipment('Mainhand');
             if (!mainhandItem) return 0;
             
-            const enchantments = mainhandItem.getComponent('enchantable')?.getEnchantments();
+            const enchantments: any[] = mainhandItem.getComponent('enchantable')?.getEnchantments() || [];
             const lootingEnchant = enchantments?.find(e => e.type.id === 'looting');
             
             return lootingEnchant ? lootingEnchant.level : 0;
@@ -185,25 +186,25 @@ class LootManager {
 
     /**
      * Calculates the final loot to be dropped based on chance and Looting level.
-     * @param {object} lootTable The loot table to process.
-     * @param {number} lootLevel The level of Looting enchantment.
-     * @returns {object} A final loot object with items and quantities.
+     * @param lootTable The loot table to process.
+     * @param lootLevel The level of Looting enchantment.
+     * @returns A final loot object with items and quantities.
      */
-    calcLoot(lootTable, lootLevel) {
-        const finalLoot = {};
+    calcLoot(lootTable: any, lootLevel: number): Record<string, any> {
+        const finalLoot: Record<string, any> = {};
         const lootTableEntries = Object.entries(lootTable);
 
         // Early return for empty loot tables
         if (lootTableEntries.length === 0) return finalLoot;
 
-        for (const [itemId, config] of lootTableEntries) {
+        for (const [itemId, config] of lootTableEntries as [string, any][]) {
             const baseChance = config.chance ?? 100;
             const modifiedChance = baseChance * (1 + (lootLevel * 0.1)); // 10% bonus per Looting level
 
             if (Math.random() * 100 < modifiedChance) {
                 let dropQuantity = config.quantity ?? 1;
 
-                // Optimized looting logic - calculate all at once instead of loop
+                // Optimized looting logic
                 if (lootLevel > 0 && config.stackable) {
                     // Calculate bonus drops using binomial distribution approximation
                     const bonusChance = 0.25 * lootLevel;
@@ -219,11 +220,11 @@ class LootManager {
 
     /**
      * Handles the entity death event to process and spawn loot.
-     * @param {import('@minecraft/server').EntityDieEvent} event
+     * @param event - EntityDieAfterEvent object
      */
-    onEntityDeath(event) {
+    onEntityDeath(event: EntityDieAfterEvent): void {
         const { deadEntity, damageSource } = event;
-        if (!deadEntity?.isValid) return;
+        if (!deadEntity?.isValid()) return;
 
         const entityId = deadEntity.typeId;
         const lootTable = this.entities[entityId];
@@ -240,7 +241,7 @@ class LootManager {
         const entityLocation = deadEntity.location;
         const entityDimension = deadEntity.dimension;
 
-        // Optimized spill protection - cache item count in location
+        // Optimized spill protection
         const spillCap = getCachedConfig('itemSpillCap', 5);
         const nearbyItems = entityDimension.getEntities({
             type: 'minecraft:item',
@@ -253,7 +254,7 @@ class LootManager {
             return;
         }
 
-        const lootLevel = (killer?.typeId === 'minecraft:player') ? this.getLootLevel(killer) : 0;
+        const lootLevel = (killer?.typeId === 'minecraft:player') ? this.getLootLevel(killer as Player) : 0;
         const finalLoot = this.calcLoot(lootTable, lootLevel);
 
         // Process loot drops with optimized item creation
@@ -262,18 +263,17 @@ class LootManager {
 
     /**
      * Optimized loot drop processing
-     * @param {object} finalLoot - The calculated loot to drop
-     * @param {Dimension} dimension - The dimension to spawn items in
-     * @param {Vector3} location - The location to spawn items at
+     * @param finalLoot - The calculated loot to drop
+     * @param dimension - The dimension to spawn items in
+     * @param location - The location to spawn items at
      */
-    processLootDrops(finalLoot, dimension, location) {
+    processLootDrops(finalLoot: Record<string, any>, dimension: Dimension, location: Vector3): void {
         const lootEntries = Object.entries(finalLoot);
         if (lootEntries.length === 0) return;
 
-        // Pre-allocate arrays for different item types to reduce iterations
-        const xpOrbs = [];
-        const stackableItems = [];
-        const nonStackableItems = [];
+        const xpOrbs: any[] = [];
+        const stackableItems: any[] = [];
+        const nonStackableItems: any[] = [];
 
         for (const [itemId, config] of lootEntries) {
             if (itemId === 'minecraft:xp_orb') {
@@ -288,7 +288,7 @@ class LootManager {
         // Process XP orbs
         for (const config of xpOrbs) {
             try {
-                dimension.spawnEntity("minecraft:experience_orb", location, { amount: config.quantity });
+                (dimension as any).spawnEntity("minecraft:experience_orb", location, { amount: config.quantity });
             } catch (e) {
                 console.warn(`[LootManager] Error spawning XP orb: ${e}`);
             }
@@ -320,20 +320,20 @@ class LootManager {
 
     /**
      * Creates an optimized ItemStack with enchantments and durability
-     * @param {string} itemId - The item identifier
-     * @param {object} config - The item configuration
-     * @returns {ItemStack} The created item stack
+     * @param itemId - The item identifier
+     * @param config - The item configuration
+     * @returns The created item stack
      */
-    createItemStack(itemId, config) {
+    createItemStack(itemId: string, config: any): ItemStack {
         const itemStack = new ItemStack(itemId, config.quantity);
 
         // Apply enchantments if configured
         if (config.enchantments) {
-            const enchComp = itemStack.getComponent('enchantable');
+            const enchComp: any = itemStack.getComponent('enchantable');
             if (enchComp) {
                 try {
                     enchComp.addEnchantment({
-                        type: new EnchantmentType(config.enchantments.category),
+                        type: { id: config.enchantments.category },
                         level: 1
                     });
                 } catch (e) {
@@ -344,7 +344,7 @@ class LootManager {
 
         // Apply random durability if configured
         if (config.randomdurability) {
-            const durability = itemStack.getComponent('durability');
+            const durability: any = itemStack.getComponent('durability');
             if (durability) {
                 durability.damage = Math.floor(Math.random() * durability.maxDurability);
             }
@@ -353,8 +353,6 @@ class LootManager {
         return itemStack;
     }
 }
-
-// --- INITIALIZATION AND EVENT SUBSCRIPTION ---
 
 // Create the single instance of the LootManager
 const lootManagerInstance = new LootManager();

@@ -119,7 +119,7 @@ var ChangeAction = {
   Remove: 1
 };
 function run(thisClass, key, value, action) {
-  if (!thisClass._scoreboard_ || !thisClass._scoreboard_.isValid) {
+  if (!thisClass._scoreboard_ || !thisClass._scoreboard_.isValid()) {
     console.warn(`Database objective "${thisClass._nameId_}" was lost or invalid! Rebuilding...`);
     thisClass.rebuild();
     return;
@@ -133,7 +133,7 @@ function run(thisClass, key, value, action) {
         } catch (e) {
         }
       }
-    } else {
+    } else if (oldParticipant) {
       try {
         thisClass._scoreboard_.removeParticipant(oldParticipant);
       } catch (e) {
@@ -186,13 +186,19 @@ var ScoreboardDatabaseManager = class extends Map {
   _loaded_ = false;
   _saveMode_;
   hasChanges = false;
-  _loadingPromise_;
+  _loadingPromise_ = null;
   _saveScheduled_ = false;
+  _nameId_;
+  interval;
+  _scoreboard_;
+  _source_;
+  _changes_;
+  _maxChanges_;
+  _lastCleanup_;
+  _intervalId;
   get maxLength() {
     return DATABASE.MAX_DATA_LENGTH;
   }
-  _scoreboard_;
-  _source_;
   get _parser_() {
     return JSON;
   }
@@ -201,15 +207,21 @@ var ScoreboardDatabaseManager = class extends Map {
   }
   constructor(objective, saveMode = DatabaseSavingModes.END_TICK_SAVE, interval = 5) {
     super();
-    const namespacedObjective = typeof objective === "string" && !objective.startsWith("ls_db:") ? `ls_db:${objective}` : objective;
+    let namespacedObjective;
+    if (typeof objective === "string") {
+      namespacedObjective = objective.startsWith("ls_db:") ? objective : `ls_db:${objective}`;
+    } else {
+      namespacedObjective = objective;
+    }
     this._saveMode_ = saveMode;
-    this._nameId_ = namespacedObjective;
+    this._nameId_ = typeof namespacedObjective === "string" ? namespacedObjective : namespacedObjective.id;
     this.interval = interval ?? 5;
     if (!namespacedObjective)
       throw new RangeError("First parameter is not valid: " + namespacedObjective);
     this._scoreboard_ = typeof namespacedObjective === "string" ? scoreboard.getObjective(namespacedObjective) ?? scoreboard.addObjective(namespacedObjective, namespacedObjective) : namespacedObjective;
-    if (databases.has(this.id))
-      return databases.get(this.id);
+    const existingInstance = databases.get(this.id);
+    if (existingInstance)
+      return existingInstance;
     this._nameId_ = this.id;
     this._source_ = /* @__PURE__ */ new Map();
     this._changes_ = /* @__PURE__ */ new Map();
@@ -230,7 +242,7 @@ var ScoreboardDatabaseManager = class extends Map {
   }
   // Lightweight self-healing audit on reads
   _assertObjectiveValid() {
-    if (!this._scoreboard_ || !this._scoreboard_.isValid) {
+    if (!this._scoreboard_ || !this._scoreboard_.isValid()) {
       console.warn(`[Database] Read audit failed! Objective "${this._nameId_}" was lost. Recovering...`);
       this.rebuild();
     }
@@ -353,20 +365,20 @@ var ScoreboardDatabaseManager = class extends Map {
       throw new ReferenceError("Database is not loaded");
     this._assertObjectiveValid();
     for (const [key, value] of this.entries()) {
-      callback(key, value);
+      callback(value, key, this);
     }
   }
   keys() {
     if (!this._loaded_)
       throw new ReferenceError("Database is not loaded");
     this._assertObjectiveValid();
-    return Array.from(super.keys());
+    return super.keys();
   }
   values() {
     if (!this._loaded_)
       throw new ReferenceError("Database is not loaded");
     this._assertObjectiveValid();
-    return Array.from(super.values());
+    return super.values();
   }
   get length() {
     this._assertObjectiveValid();
@@ -439,7 +451,7 @@ var ScoreboardDatabaseManager = class extends Map {
     };
   }
   rebuild() {
-    if (this.objective?.isValid)
+    if (this.objective?.isValid())
       return this;
     try {
       const entries = Array.from(super.entries());
@@ -495,6 +507,7 @@ var JsonDatabase = class extends ScoreboardDatabaseManager {
   }
 };
 var Database = class {
+  Database;
   constructor(name) {
     try {
       this.Database = new JsonDatabase(name).load();
@@ -554,18 +567,18 @@ var Database = class {
     return this.Database.delete(key);
   }
   clear() {
-    return this.Database.clear();
+    this.Database.clear();
   }
   keys() {
     try {
-      return this.Database.keys ? this.Database.keys() : [];
+      return this.Database.keys ? Array.from(this.Database.keys()) : [];
     } catch (error) {
       return [];
     }
   }
   values() {
     try {
-      return this.Database.values ? this.Database.values() : [];
+      return this.Database.values ? Array.from(this.Database.values()) : [];
     } catch (error) {
       return [];
     }
@@ -573,15 +586,28 @@ var Database = class {
   forEach(callback) {
     try {
       if (this.Database.forEach) {
-        this.Database.forEach(callback);
+        this.Database.forEach((value, key) => callback(value, key));
       }
     } catch (error) {
+    }
+  }
+  getStats() {
+    try {
+      return this.Database && typeof this.Database.getStats === "function" ? this.Database.getStats() : { size: this.length };
+    } catch (error) {
+      return { error: String(error) };
     }
   }
 };
 
 // src/configuration-service.ts
 var ConfigurationService = class {
+  configDatabase;
+  xpDropDatabase;
+  spawnerDatabase;
+  cache;
+  cacheExpiry;
+  CACHE_DURATION;
   constructor() {
     this.configDatabase = new Database("ConfigValues");
     this.xpDropDatabase = new Database("XPDropValues");
@@ -592,14 +618,14 @@ var ConfigurationService = class {
   }
   /**
    * Get cached configuration value with automatic cache management
-   * @param {string} key - Configuration key
-   * @param {*} defaultValue - Default value if key doesn't exist
-   * @returns {*} The configuration value
+   * @param key - Configuration key
+   * @param defaultValue - Default value if key doesn't exist
+   * @returns The configuration value
    */
   getConfig(key, defaultValue = null) {
     const now = Date.now();
     const cacheKey = `config_${key}`;
-    if (this.cache.has(cacheKey) && this.cacheExpiry.get(cacheKey) > now) {
+    if (this.cache.has(cacheKey) && (this.cacheExpiry.get(cacheKey) ?? 0) > now) {
       return this.cache.get(cacheKey);
     }
     let value;
@@ -625,8 +651,8 @@ var ConfigurationService = class {
   }
   /**
    * Set configuration value with cache invalidation
-   * @param {string} key - Configuration key
-   * @param {*} value - Configuration value
+   * @param key - Configuration key
+   * @param value - Configuration value
    */
   setConfig(key, value) {
     if (!this.validateConfig(key, value)) {
@@ -639,9 +665,9 @@ var ConfigurationService = class {
   }
   /**
    * Validate configuration value
-   * @param {string} key - Configuration key
-   * @param {*} value - Value to validate
-   * @returns {boolean} True if valid
+   * @param key - Configuration key
+   * @param value - Value to validate
+   * @returns True if valid
    */
   validateConfig(key, value) {
     switch (key) {
@@ -658,13 +684,13 @@ var ConfigurationService = class {
   }
   /**
    * Get XP drop configuration for an entity
-   * @param {string} entityId - Entity identifier
-   * @returns {object|null} XP configuration or null
+   * @param entityId - Entity identifier
+   * @returns XP configuration or null
    */
   getXpDropConfig(entityId) {
     const cacheKey = `xp_${entityId}`;
     const now = Date.now();
-    if (this.cache.has(cacheKey) && this.cacheExpiry.get(cacheKey) > now) {
+    if (this.cache.has(cacheKey) && (this.cacheExpiry.get(cacheKey) ?? 0) > now) {
       return this.cache.get(cacheKey);
     }
     const config = this.xpDropDatabase.read(entityId);
@@ -674,8 +700,8 @@ var ConfigurationService = class {
   }
   /**
    * Set XP drop configuration for an entity
-   * @param {string} entityId - Entity identifier
-   * @param {object} config - XP configuration
+   * @param entityId - Entity identifier
+   * @param config - XP configuration
    */
   setXpDropConfig(entityId, config) {
     if (!config || typeof config !== "object") {
@@ -694,13 +720,13 @@ var ConfigurationService = class {
   }
   /**
    * Get spawner location data
-   * @param {string} coordinates - Coordinate string
-   * @returns {object|null} Spawner data or null
+   * @param coordinates - Coordinate string
+   * @returns Spawner data or null
    */
   getSpawnerLocation(coordinates) {
     const cacheKey = `spawner_${coordinates}`;
     const now = Date.now();
-    if (this.cache.has(cacheKey) && this.cacheExpiry.get(cacheKey) > now) {
+    if (this.cache.has(cacheKey) && (this.cacheExpiry.get(cacheKey) ?? 0) > now) {
       return this.cache.get(cacheKey);
     }
     const data = this.spawnerDatabase.read(coordinates);
@@ -710,8 +736,8 @@ var ConfigurationService = class {
   }
   /**
    * Set spawner location data
-   * @param {string} coordinates - Coordinate string
-   * @param {object} data - Spawner data
+   * @param coordinates - Coordinate string
+   * @param data - Spawner data
    */
   setSpawnerLocation(coordinates, data) {
     this.spawnerDatabase.write(coordinates, data);
@@ -721,7 +747,7 @@ var ConfigurationService = class {
   }
   /**
    * Remove spawner location data
-   * @param {string} coordinates - Coordinate string
+   * @param coordinates - Coordinate string
    */
   removeSpawnerLocation(coordinates) {
     this.spawnerDatabase.delete(coordinates);
@@ -738,7 +764,7 @@ var ConfigurationService = class {
   }
   /**
    * Get configuration statistics
-   * @returns {object} Configuration statistics
+   * @returns Configuration statistics
    */
   getStats() {
     return {
@@ -750,7 +776,7 @@ var ConfigurationService = class {
   }
   /**
    * Get all configuration values as an object
-   * @returns {object} All configuration values
+   * @returns All configuration values
    */
   getAllConfig() {
     return {
@@ -774,7 +800,7 @@ import { world as world4, system as system3 } from "@minecraft/server";
 import { ActionFormData as ActionFormData2, ModalFormData as ModalFormData2 } from "@minecraft/server-ui";
 
 // src/loot_table.ts
-import { world as world2, ItemStack, EnchantmentType } from "@minecraft/server";
+import { world as world2, ItemStack } from "@minecraft/server";
 var lootTableDatabase = new Database("LootTables");
 var configDatabase = new Database("ConfigValues");
 var configCache = /* @__PURE__ */ new Map();
@@ -784,7 +810,7 @@ var MAX_CACHE_SIZE = 50;
 function getCachedConfig(key, defaultValue) {
   const now = Date.now();
   const cacheKey = key;
-  if (configCache.has(cacheKey) && configCacheExpiry.get(cacheKey) > now) {
+  if (configCache.has(cacheKey) && (configCacheExpiry.get(cacheKey) ?? 0) > now) {
     return configCache.get(cacheKey);
   }
   const value = configDatabase.read(key) ?? defaultValue;
@@ -816,6 +842,10 @@ function getCachedConfig(key, defaultValue) {
 var LootManager = class _LootManager {
   // Singleton instance
   static instance;
+  defaultEntities;
+  entities;
+  enchantmentCategories;
+  enchantmentIncompatibilities;
   constructor() {
     if (_LootManager.instance) {
       return _LootManager.instance;
@@ -892,7 +922,7 @@ var LootManager = class _LootManager {
   }
   /**
    * Saves a specific entity's loot table to the database.
-   * @param {string} entityId The entity ID (e.g., 'mrleefy:zombiestill')
+   * @param entityId The entity ID (e.g., 'mrleefy:zombiestill')
    */
   saveLootTable(entityId) {
     if (this.entities[entityId] && Object.keys(this.entities[entityId]).length > 0) {
@@ -904,8 +934,8 @@ var LootManager = class _LootManager {
   }
   /**
    * Gets the Looting level from a player's held item.
-   * @param {import('@minecraft/server').Player} player
-   * @returns {number} The level of Looting, or 0 if none.
+   * @param player - Player object
+   * @returns The level of Looting, or 0 if none.
    */
   getLootLevel(player) {
     try {
@@ -913,7 +943,7 @@ var LootManager = class _LootManager {
       const mainhandItem = equipment?.getEquipment("Mainhand");
       if (!mainhandItem)
         return 0;
-      const enchantments = mainhandItem.getComponent("enchantable")?.getEnchantments();
+      const enchantments = mainhandItem.getComponent("enchantable")?.getEnchantments() || [];
       const lootingEnchant = enchantments?.find((e) => e.type.id === "looting");
       return lootingEnchant ? lootingEnchant.level : 0;
     } catch (e) {
@@ -922,9 +952,9 @@ var LootManager = class _LootManager {
   }
   /**
    * Calculates the final loot to be dropped based on chance and Looting level.
-   * @param {object} lootTable The loot table to process.
-   * @param {number} lootLevel The level of Looting enchantment.
-   * @returns {object} A final loot object with items and quantities.
+   * @param lootTable The loot table to process.
+   * @param lootLevel The level of Looting enchantment.
+   * @returns A final loot object with items and quantities.
    */
   calcLoot(lootTable, lootLevel) {
     const finalLoot = {};
@@ -948,11 +978,11 @@ var LootManager = class _LootManager {
   }
   /**
    * Handles the entity death event to process and spawn loot.
-   * @param {import('@minecraft/server').EntityDieEvent} event
+   * @param event - EntityDieAfterEvent object
    */
   onEntityDeath(event) {
     const { deadEntity, damageSource } = event;
-    if (!deadEntity?.isValid)
+    if (!deadEntity?.isValid())
       return;
     const entityId = deadEntity.typeId;
     const lootTable = this.entities[entityId];
@@ -981,9 +1011,9 @@ var LootManager = class _LootManager {
   }
   /**
    * Optimized loot drop processing
-   * @param {object} finalLoot - The calculated loot to drop
-   * @param {Dimension} dimension - The dimension to spawn items in
-   * @param {Vector3} location - The location to spawn items at
+   * @param finalLoot - The calculated loot to drop
+   * @param dimension - The dimension to spawn items in
+   * @param location - The location to spawn items at
    */
   processLootDrops(finalLoot, dimension, location) {
     const lootEntries = Object.entries(finalLoot);
@@ -1030,9 +1060,9 @@ var LootManager = class _LootManager {
   }
   /**
    * Creates an optimized ItemStack with enchantments and durability
-   * @param {string} itemId - The item identifier
-   * @param {object} config - The item configuration
-   * @returns {ItemStack} The created item stack
+   * @param itemId - The item identifier
+   * @param config - The item configuration
+   * @returns The created item stack
    */
   createItemStack(itemId, config) {
     const itemStack = new ItemStack(itemId, config.quantity);
@@ -1041,7 +1071,7 @@ var LootManager = class _LootManager {
       if (enchComp) {
         try {
           enchComp.addEnchantment({
-            type: new EnchantmentType(config.enchantments.category),
+            type: { id: config.enchantments.category },
             level: 1
           });
         } catch (e) {
@@ -1075,12 +1105,9 @@ import {
 } from "@minecraft/server-ui";
 
 // src/VectorMath/index.ts
-var Vector3 = class _Vector3 {
-  /** @type {number}*/
+var Vector32 = class _Vector3 {
   x = 0;
-  /** @type {number}*/
   y = 0;
-  /** @type {number}*/
   z = 0;
   constructor(x, y, z) {
     this.x = x;
@@ -1088,194 +1115,90 @@ var Vector3 = class _Vector3 {
     this.z = z;
   }
   /**
-  *Adds 2 Vector3's together
-  *@param pos1
-  *The first Vector3
-  *@param pos2
-  *The second Vector3
-  *@return
-  *Returns a Vector3 with the inputs added together
-  *
-  * @example 
-  *const pos1 = new Vector3(1, 1, 1);
-  *const pos2 = new Vector3(0, 1, 0);
-  *
-  *let addedValue = Vector3.Add(pos1, pos2); // Returns new Vector3(1, 2, 1)
-  */
+   * Adds 2 Vector3's together
+   */
   static Add(pos1, pos2) {
     return new _Vector3(pos1.x + pos2.x, pos1.y + pos2.y, pos1.z + pos2.z);
   }
   /**
-  *Subtracts a Vector3 from another Vector3
-  *@param pos1
-  *The first Vector3
-  *@param pos2
-  *The second Vector3
-  *@return
-  *Returns a Vector3 with pos1's values subtracted by pos2's values
-  *
-  * @example 
-  *const pos1 = new Vector3(1, 1, 1);
-  *const pos2 = new Vector3(0, 1, 0);
-  *
-  *let subtractedValue = Vector3.Subtract(pos1, pos2); // Returns new Vector3(1, 0, 1)
-  */
+   * Subtracts a Vector3 from another Vector3
+   */
   static Subtract(pos1, pos2) {
     return new _Vector3(pos1.x - pos2.x, pos1.y - pos2.y, pos1.z - pos2.z);
   }
   /**
-  *Divides a Vector3 by another Vector3
-  *@param pos1
-  *The first Vector3
-  *@param pos2
-  *The second Vector3
-  *@return
-  *Returns a Vector3 with pos1's values divided by pos2's values
-  *
-  * @example 
-  *const pos1 = new Vector3(2, 2, 2);
-  *const pos2 = new Vector3(4, 4, 4);
-  *
-  *let dividedValue = Vector3.Divide(pos1, pos2); // Returns new Vector3(0.5, 0.5, 0.5)
-  */
+   * Divides a Vector3 by another Vector3
+   */
   static Divide(pos1, pos2) {
     return new _Vector3(pos1.x / pos2.x, pos1.y / pos2.y, pos1.z / pos2.z);
   }
   /**
-  *Multiplies a Vector3 with a number
-  *@param pos1
-  *The first Vector3
-  *@param scale
-  *The Number
-  *@return
-  *Returns a Vector3 with pos1's values multiplied by the scale
-  *
-  * @example 
-  *const pos1 = new Vector3(1, 1, 1);
-  *const scale = 5
-  *
-  *let multipliedValue = Vector3.Scale(pos1, scale); // Returns new Vector3(5, 5, 5)
-  */
+   * Multiplies a Vector3 with a number
+   */
   static Scale(pos1, num) {
     return new _Vector3(pos1.x * num, pos1.y * num, pos1.z * num);
   }
   /**
-  *Multiplies 2 Vector3's
-  *@param pos1
-  *The first Vector3
-  *@param pos2
-  *The second Vector3
-  *@return
-  *Returns a Vector3 with the inputs multiplied
-  *
-  * @example 
-  *const pos1 = new Vector3(1, 1, 1);
-  *const pos2 = new Vector3(0, 2, 0);
-  *
-  *let multipliedValue = Vector3.Multiply(pos1, pos2); // Returns new Vector3(0, 2, 0)
-  */
+   * Multiplies 2 Vector3's
+   */
   static Multiply(pos1, pos2) {
     return new _Vector3(pos1.x * pos2.x, pos1.y * pos2.y, pos1.z * pos2.z);
   }
   /**
-  *Checks if 2 Vector3s are the same
-  *@param pos1
-  *The first Vector3
-  *@param pos2
-  *The second Vector3
-  *@param tolerance
-  *The range that the floats can differ
-  *@return
-  *Returns true if the Vector3's are the same otherwise it will return false
-  *
-  * @example 
-  *const pos1 = new Vector3(0, 0, 1);
-  *const pos2 = new Vector3(0, 0, 1.05);
-  *
-  *let check = Vector3.Equals(pos1, pos2, 0.1); // Returns true
-  */
+   * Checks if 2 Vector3s are the same
+   */
   static Equals(pos1, pos2, tolerance) {
-    if (tolerance == void 0) {
-      if (pos1.x == pos2.x && pos1.y == pos2.y && pos1.z == pos2.z) {
-        return true;
-      } else {
-        return false;
-      }
+    if (tolerance === void 0) {
+      return pos1.x === pos2.x && pos1.y === pos2.y && pos1.z === pos2.z;
     } else {
       return Math.abs(pos1.x - pos2.x) <= tolerance && Math.abs(pos1.y - pos2.y) <= tolerance && Math.abs(pos1.z - pos2.z) <= tolerance;
     }
   }
   /**
-  *Returns a Vector3 at 0, 0, 0
-  * @example 
-  *let pos = Vector3.Zero(); // pos = new Vector3(0,0,0)
-  */
+   * Returns a Vector3 at 0, 0, 0
+   */
   static Zero() {
     return new _Vector3(0, 0, 0);
   }
   /**
-  *Returns a Vector3 at 0, 1, 0
-  * @example 
-  *let pos = Vector3.Up(); // pos = new Vector3(0,1,0)
-  */
+   * Returns a Vector3 at 0, 1, 0
+   */
   static Up() {
     return new _Vector3(0, 1, 0);
   }
   /**
-  *Returns a Vector3 at 0, -1, 0
-  * @example 
-  *let pos = Vector3.Down(); // pos = new Vector3(0,-1,0)
-  */
+   * Returns a Vector3 at 0, -1, 0
+   */
   static Down() {
     return new _Vector3(0, -1, 0);
   }
   /**
-  *Returns a Vector3 at 0, 0, 1
-  * @example 
-  *let pos = Vector3.Forward(); // pos = new Vector3(0,0,1)
-  */
+   * Returns a Vector3 at 0, 0, 1
+   */
   static Forward() {
     return new _Vector3(0, 0, 1);
   }
   /**
-  *Returns a Vector3 at 0, 0, -1
-  * @example 
-  *let pos = Vector3.Back(); // pos = new Vector3(0,0,-1)
-  */
+   * Returns a Vector3 at 0, 0, -1
+   */
   static Back() {
     return new _Vector3(0, 0, -1);
   }
   /**
-  *Returns a Vector3 at -1, 0, 0
-  * @example 
-  *let pos = Vector3.Left(); // pos = new Vector3(-1,0,0)
-  */
+   * Returns a Vector3 at -1, 0, 0
+   */
   static Left() {
     return new _Vector3(-1, 0, 0);
   }
   /**
-  *Returns a Vector3 at 1, 0, 0
-  * @example 
-  *let pos = Vector3.Right(); // pos = new Vector3(1,0,0)
-  */
+   * Returns a Vector3 at 1, 0, 0
+   */
   static Right() {
     return new _Vector3(1, 0, 0);
   }
   /**
-  *Gets the distance between 2 Vector3's
-  *@param pos1
-  *The first Vector3
-  *@param pos2
-  *The second Vector3
-  *@return
-  *Returns the distance between the 2 Vectors
-  *
-  * @example 
-  *const pos1 = new Vector3(0, 0, 0);
-  *const pos2 = new Vector3(0, 1, 0);
-  *   
-  *let distance = Vector3.Distance(pos1, pos2); // Returns 1
-  */
+   * Gets the distance between 2 Vector3's
+   */
   static Distance(pos1, pos2) {
     const dx = pos2.x - pos1.x;
     const dy = pos2.y - pos1.y;
@@ -1283,60 +1206,23 @@ var Vector3 = class _Vector3 {
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
   }
   /**
-  *Linearly interpolates a Vector3 to a Vector3 by a Number
-  *@param pos1
-  *The starting Vector3
-  *@param pos2
-  *The Vector3 to linearly interpolate to
-  *@param tParam
-  *The Number at which the interpolation will be returning a value from (Should be from 0 to 1)
-  *@return
-  *Returns a Number between the first inputs based on the tParam value (if tParam is 0.5 that is half the distance from a to b)
-  *
-  * @example 
-  *const startPos = new Vector3(0, 0, 0);
-  *const endPos = new Vector3(0, 10, 0);
-  *let newPos = Vector3.Lerp(newPos, endPos, 0.5) // Returns (0, 5, 0)
-  */
+   * Linearly interpolates a Vector3 to a Vector3 by a Number
+   */
   static Lerp(pos1, pos2, tParam) {
-    let x = pos1.x + (pos2.x - pos1.x) * tParam;
-    let y = pos1.y + (pos2.y - pos1.y) * tParam;
-    let z = pos1.z + (pos2.z - pos1.z) * tParam;
+    const x = pos1.x + (pos2.x - pos1.x) * tParam;
+    const y = pos1.y + (pos2.y - pos1.y) * tParam;
+    const z = pos1.z + (pos2.z - pos1.z) * tParam;
     return new _Vector3(x, y, z);
   }
   /**
-  *Gets the dot product of 2 vectors
-  *@param pos1
-  *The first Vector3
-  *@param pos2
-  *The second Vector3
-  *@return
-  *Returns the dot product of the 2 Vectors
-  *
-  * @example 
-  *const pos1 = new Vector3(2, 2, 2);
-  *const pos2 = new Vector3(1, 1, 2);
-  *   
-  *let dot = Vector3.Dot(pos1, pos2); // Returns 8
-  */
+   * Gets the dot product of 2 vectors
+   */
   static Dot(pos1, pos2) {
     return pos1.x * pos2.x + pos1.y * pos2.y + pos1.z * pos2.z;
   }
   /**
-  *Gets the cross product of 2 vectors
-  *@param pos1
-  *The first Vector3
-  *@param pos2
-  *The second Vector3
-  *@return
-  *Returns a vector perpendicular to both input vectors
-  *
-  * @example 
-  *const pos1 = new Vector3(2, 2, 2);
-  *const pos2 = new Vector3(1, 1, 2);
-  *   
-  *let cross = Vector3.Cross(pos1, pos2); // Returns new Vector3(2, -2, 0)
-  */
+   * Gets the cross product of 2 vectors
+   */
   static Cross(pos1, pos2) {
     const x = pos1.y * pos2.z - pos1.z * pos2.y;
     const y = pos1.z * pos2.x - pos1.x * pos2.z;
@@ -1344,50 +1230,20 @@ var Vector3 = class _Vector3 {
     return new _Vector3(x, y, z);
   }
   /**
-  *Gets the magnitude of a vector
-  *@param pos1
-  *The Vector3
-  *@return
-  *Returns the length of a vector
-  *
-  * @example 
-  *const pos = new Vector3(2, 2, 2);
-  *   
-  *let mag = Vector3.Magnitude(pos); // Returns ~3.464
-  */
+   * Gets the magnitude of a vector
+   */
   static Magnitude(pos) {
     return Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
   }
   /**
-  *Gets the square magnitude of a vector
-  *@param pos1
-  *The Vector3
-  *@return
-  *Returns the squared length of a vector
-  *
-  * @example 
-  *const pos = new Vector3(2, 2, 2);
-  *   
-  *let sqrMag = Vector3.SqrMagnitude(pos); // Returns 12
-  */
+   * Gets the square magnitude of a vector
+   */
   static SqrMagnitude(pos) {
     return pos.x * pos.x + pos.y * pos.y + pos.z * pos.z;
   }
   /**
-  *Gets the squared distance between 2 vectors
-  *@param pos1
-  *The first Vector3
-  *@param pos1
-  *The second Vector3
-  *@return
-  *Returns the squared distance between 2 vectors
-  *
-  * @example 
-  *const pos1 = new Vector3(2, 2, 2);
-  *const pos2 = new Vector3(0, 0, 0);
-  *   
-  *let sqrDst = Vector3.SqrDistance(pos1, pos2); // Returns 12
-  */
+   * Gets the squared distance between 2 vectors
+   */
   static SqrDistance(pos1, pos2) {
     const dx = pos2.x - pos1.x;
     const dy = pos2.y - pos1.y;
@@ -1395,17 +1251,8 @@ var Vector3 = class _Vector3 {
     return dx * dx + dy * dy + dz * dz;
   }
   /**
-  *Normalizes the vector
-  *@param dir
-  *The first Vector3
-  *@return
-  *Returns the normalized Vector
-  *
-  * @example 
-  *const dir = new Vector3(2, 1, 2);
-  *   
-  *let normalizedDir = Vector3.Normalize(dir); // Returns new Vector3(0.6666, 0.3333, 0.6666)
-  */
+   * Normalizes the vector
+   */
   static Normalize(dir) {
     const mag = _Vector3.Magnitude(dir);
     if (mag !== 0) {
@@ -1464,7 +1311,7 @@ world3.beforeEvents.playerBreakBlock.subscribe((data) => {
         for (let dz = -nearbyRadius; dz <= nearbyRadius; dz++) {
           const nearbyCoordinates = `${block.x + dx},${block.y + dy},${block.z + dz}`;
           if (spawnerDatabase.has(nearbyCoordinates)) {
-            const nearbyBlock = dimension.getBlock(new Vector3(block.x + dx, block.y + dy, block.z + dz));
+            const nearbyBlock = dimension.getBlock(new Vector32(block.x + dx, block.y + dy, block.z + dz));
             if (!nearbyBlock || !nearbyBlock.typeId.startsWith("mrleefy:")) {
               spawnerDatabase.delete(nearbyCoordinates);
               if (!nearbyBlock || !nearbyBlock.typeId.endsWith("_display")) {
@@ -1480,7 +1327,7 @@ world3.beforeEvents.playerBreakBlock.subscribe((data) => {
 world3.afterEvents.pistonActivate.subscribe((eventData) => {
   try {
     const dimension = eventData.dimension;
-    const attachedBlocks = eventData.getAttachedBlocks();
+    const attachedBlocks = eventData.piston.getAttachedBlocksLocations();
     for (const blockCoord of attachedBlocks) {
       const block = dimension.getBlock(blockCoord);
       if (block && block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner") && !block.typeId.endsWith("_display")) {
@@ -1498,7 +1345,7 @@ world3.afterEvents.pistonActivate.subscribe((eventData) => {
 world3.beforeEvents.explosion.subscribe((eventData) => {
   const dimension = eventData.dimension;
   const allowedBlocks = eventData.getImpactedBlocks().filter((blockCoord) => {
-    const block = dimension.getBlock(new Vector3(blockCoord.x, blockCoord.y, blockCoord.z));
+    const block = dimension.getBlock(new Vector32(blockCoord.x, blockCoord.y, blockCoord.z));
     if (block && block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner") && !block.typeId.endsWith("_display")) {
       return false;
     }
@@ -1572,7 +1419,7 @@ world3.beforeEvents.playerInteractWithBlock.subscribe((data) => {
   });
 });
 function isPlayerNearBlock(player, x, y, z, maxDistance = 10) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return false;
   const pLoc = player.location;
   const dx = pLoc.x - (x + 0.5);
@@ -1581,7 +1428,7 @@ function isPlayerNearBlock(player, x, y, z, maxDistance = 10) {
   return dx * dx + dy * dy + dz * dz <= maxDistance * maxDistance;
 }
 function validateSpawnerInteraction(player, block, level, x, y, z) {
-  if (!player || !player.isValid) {
+  if (!player || !player.isValid()) {
     console.error(ERROR_MESSAGES.INVALID_PLAYER);
     return false;
   }
@@ -1589,7 +1436,7 @@ function validateSpawnerInteraction(player, block, level, x, y, z) {
     player.sendMessage("\xA7cYou are too far from the spawner.");
     return false;
   }
-  if (!block || !block.isValid) {
+  if (!block || !block.isValid()) {
     player.sendMessage(ERROR_MESSAGES.INVALID_BLOCK);
     return false;
   }
@@ -1651,7 +1498,7 @@ function createSpawnerForm(player, level, upgradee, downgradee, spawnerType, blo
                 \xA77Level: \xA72${level}\xA7r
 
 `);
-  let buttonActions = [];
+  const buttonActions = [];
   if (level < UI.MAX_SPAWNER_LEVEL) {
     form12.button(`\xA7l\xA72Upgrade\xA78 to Lvl ${upgradee}`, "textures/carrot_golden");
     buttonActions.push(() => upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z));
@@ -1697,7 +1544,7 @@ function form1(player, level, cost, block, typeId, upgradee, downgradee, percent
         activeForms.set(coordinates, { player, timestamp: Date.now() });
       }
       const dimension = block.dimension;
-      const currentBlock = dimension.getBlock(new Vector3(x, y, z));
+      const currentBlock = dimension.getBlock(new Vector32(x, y, z));
       if (!currentBlock || currentBlock.typeId !== typeId) {
         player.sendMessage(ERROR_MESSAGES.INVALID_BLOCK);
         spawnerDatabase.delete(coordinates);
@@ -1718,7 +1565,7 @@ var INTERACTION_WINDOW_MILLIS = 120 * 1e3;
 var INTERACTION_LIMIT = 3;
 var GLOBAL_COOLDOWN_MILLIS = 10 * 60 * 1e3;
 function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
-  if (!player || !player.isValid) {
+  if (!player || !player.isValid()) {
     console.error("Invalid player provided to teleportSpawnerStack");
     return;
   }
@@ -1726,7 +1573,7 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
     player.sendMessage("\xA7cYou are too far from the spawner.");
     return;
   }
-  if (!block || !block.isValid) {
+  if (!block || !block.isValid()) {
     player.sendMessage("\xA7cInvalid spawner block detected.");
     return;
   }
@@ -1784,7 +1631,7 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
   let closestDistance = Infinity;
   for (const entity of nearbyEntities) {
     try {
-      if (!entity || !entity.isValid)
+      if (!entity || !entity.isValid())
         continue;
       const distance = Math.sqrt(
         Math.pow(entity.location.x - x, 2) + Math.pow(entity.location.y - y, 2) + Math.pow(entity.location.z - z, 2)
@@ -1802,7 +1649,7 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
     const centerY = y + 1;
     const centerZ = z + 0.5;
     closestEntity.teleport(
-      new Vector3(centerX, centerY, centerZ),
+      new Vector32(centerX, centerY, centerZ),
       { keepVelocity: true }
     );
     player.sendMessage(`\xA7aTeleported ${sanitizedSpawnerType} stack to spawner`);
@@ -1811,7 +1658,7 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
   }
 }
 function slider(player, spawnerType, block, level, cost, typeId, upgradee, downgradee, percentrefund, refu, x, y, z) {
-  if (!player || !player.isValid) {
+  if (!player || !player.isValid()) {
     console.error("Invalid player provided to slider");
     return;
   }
@@ -1826,7 +1673,7 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
     activeForms.delete(coordinates);
     return;
   }
-  if (!block || !block.isValid) {
+  if (!block || !block.isValid()) {
     player.sendMessage("\xA7cInvalid spawner block detected.");
     activeForms.delete(coordinates);
     return;
@@ -1845,11 +1692,11 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
   }
   const slider2 = new ModalFormData();
   slider2.title("Select Spawner Level");
-  slider2.slider("Set Range", 1, 32, { defaultValue: 1 });
+  slider2.slider("Set Range", 1, 32, 1, 1);
   system2.run(() => {
     slider2.show(player).then((response) => {
       activeForms.delete(coordinates);
-      if (!player || !player.isValid || !player.hasTag(`admin`)) {
+      if (!player || !player.isValid() || !player.hasTag(`admin`)) {
         player.sendMessage("\xA7cYou don't have permission to use this feature.");
         return;
       }
@@ -1858,13 +1705,13 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
         return;
       }
       if (response.formValues && response.formValues.length > 0) {
-        let newLevel = response.formValues[0];
+        const newLevel = response.formValues[0];
         if (newLevel) {
           player.sendMessage(`\xA76Level \xA77set to \xA72${newLevel}`);
-          let newBlockType = `mrleefy:${spawnerType}spawner${newLevel}`;
+          const newBlockType = `mrleefy:${spawnerType}spawner${newLevel}`;
           block.setType(newBlockType);
           clearMaxedSpawnerCache(x, y, z);
-          let newTypeId = newBlockType;
+          const newTypeId = newBlockType;
           try {
             player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
             player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
@@ -1880,7 +1727,7 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
   });
 }
 function showInstructions(player) {
-  let instructions = new ActionFormData();
+  const instructions = new ActionFormData();
   instructions.title("\xA7l\xA7eHow To Use Spawners");
   instructions.body(
     "\xA7f\xA7lGetting Started\xA7r\n\xA77Place your spawner and tap it to open this menu!\n\n\xA7a\xA7lUpgrading\xA7r\n\xA77- Have spawners of the \xA7esame type\xA77 in your inventory\n\xA77- Tap \xA7aUpgrade\xA77 to combine them\n\xA77- Higher levels = \xA7efaster spawns\xA77 + \xA7ebigger stacks\xA77!\n\n\xA7c\xA7lDowngrading\xA7r\n\xA77- Only works at Level 2+\n\xA77- Get a spawner back in your inventory\n\n\xA7b\xA7lMax Upgrade\xA7r\n\xA77- Uses ALL your spawners at once\n\xA77- Upgrades to the highest level possible (max 32)\n\xA77- Leftover spawners are returned to you\n\n\xA7d\xA7lTeleport Stack\xA7r\n\xA77- Brings nearby stacked mobs to this spawner\n\n\xA78Max level is 32. Each level boosts spawn rate and stack size!"
@@ -1889,7 +1736,7 @@ function showInstructions(player) {
   instructions.show(player);
 }
 function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!isPlayerNearBlock(player, x, y, z, 10)) {
     player.sendMessage("\xA7cYou are too far from the spawner.");
@@ -1899,14 +1746,14 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     player.sendMessage("\xA74Cannot upgrade further. Maximum level reached.");
     return;
   }
-  let inventory = player.getComponent("inventory").container;
-  let spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
-  let spawnerEntries = [];
+  const inventory = player.getComponent("inventory").container;
+  const spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
+  const spawnerEntries = [];
   let totalAvailableLevels = 0;
   for (let i = 0; i < inventory.size; i++) {
-    let item = inventory.getItem(i);
+    const item = inventory.getItem(i);
     if (item && item.typeId.startsWith(spawnerItemPrefix)) {
-      let itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, "")) || 1;
+      const itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, "")) || 1;
       spawnerEntries.push({ slot: i, item, level: itemLevel });
       totalAvailableLevels += itemLevel * item.amount;
     }
@@ -1916,14 +1763,14 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     return;
   }
   spawnerEntries.sort((a, b) => a.level - b.level);
-  let levelsNeeded = 32 - level;
+  const levelsNeeded = 32 - level;
   let levelsConsumed = 0;
-  let spawnersToRemove = [];
+  const spawnersToRemove = [];
   let refundAmount = 0;
-  for (let entry of spawnerEntries) {
+  for (const entry of spawnerEntries) {
     if (levelsConsumed >= levelsNeeded)
       break;
-    let { slot, item, level: itemLevel } = entry;
+    const { slot, item, level: itemLevel } = entry;
     let amountToConsume = 0;
     for (let count = 1; count <= item.amount; count++) {
       levelsConsumed += itemLevel;
@@ -1937,8 +1784,8 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     }
     spawnersToRemove.push({ slot, item, amount: amountToConsume });
   }
-  for (let entry of spawnersToRemove) {
-    let { slot, item, amount } = entry;
+  for (const entry of spawnersToRemove) {
+    const { slot, item, amount } = entry;
     if (item.amount <= amount) {
       inventory.setItem(slot, null);
     } else {
@@ -1946,7 +1793,7 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
       inventory.setItem(slot, item);
     }
   }
-  let newLevel = level + Math.min(levelsNeeded, levelsConsumed - refundAmount);
+  const newLevel = level + Math.min(levelsNeeded, levelsConsumed - refundAmount);
   const newTypeId = `${spawnerItemPrefix}${newLevel}`;
   block.setType(newTypeId);
   const coordinates = `${x},${y},${z}`;
@@ -1972,7 +1819,7 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
   try {
     block.dimension.spawnParticle(
       "minecraft:crop_growth_area_emitter",
-      new Vector3(block.x + 0.5, block.y + 0.5, block.z + 0.5),
+      new Vector32(block.x + 0.5, block.y + 0.5, block.z + 0.5),
       new MolangVariableMap()
     );
   } catch (e) {
@@ -1987,33 +1834,33 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
   }
 }
 function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!isPlayerNearBlock(player, x, y, z, 10)) {
     player.sendMessage("\xA7cYou are too far from the spawner.");
     return;
   }
-  let inventory = player.getComponent("inventory").container;
-  let spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
-  let newLevel = level + 1;
+  const inventory = player.getComponent("inventory").container;
+  const spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
+  const newLevel = level + 1;
   if (newLevel > 32) {
     player.sendMessage("\xA74Cannot upgrade further. Maximum level reached.");
     return;
   }
   let totalLevels = 0;
-  let refundQueue = [];
-  let spawnersToRemove = [];
-  let spawnerLevels = [];
+  const refundQueue = [];
+  const spawnersToRemove = [];
+  const spawnerLevels = [];
   for (let i = 0; i < inventory.size; i++) {
-    let item = inventory.getItem(i);
+    const item = inventory.getItem(i);
     if (item && item.typeId.startsWith(spawnerItemPrefix)) {
-      let itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, "")) || 1;
+      const itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, "")) || 1;
       spawnerLevels.push({ slot: i, item, level: itemLevel });
     }
   }
   spawnerLevels.sort((a, b) => a.level - b.level);
-  for (let entry of spawnerLevels) {
-    let { slot, item, level: itemLevel } = entry;
+  for (const entry of spawnerLevels) {
+    const { slot, item, level: itemLevel } = entry;
     if (itemLevel === 1) {
       spawnersToRemove.push({ slot, item, amount: 1 });
       totalLevels += 1;
@@ -2031,8 +1878,8 @@ function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     player.sendMessage(`\xA74You don't have enough spawners in your inventory to upgrade.`);
     return;
   }
-  for (let entry of spawnersToRemove) {
-    let { slot, item, amount } = entry;
+  for (const entry of spawnersToRemove) {
+    const { slot, item, amount } = entry;
     if (item.amount <= amount) {
       inventory.setItem(slot, null);
     } else {
@@ -2040,7 +1887,7 @@ function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
       inventory.setItem(slot, item);
     }
   }
-  for (let refund of refundQueue) {
+  for (const refund of refundQueue) {
     player.runCommand(`give @s ${spawnerItemPrefix}1 ${refund.amount}`);
   }
   block.setType(`${spawnerItemPrefix}${newLevel}`);
@@ -2062,13 +1909,13 @@ function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
   }
 }
 function downgrade(player, block, level, spawnerType, percentrefund, refu, x, y, z) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!isPlayerNearBlock(player, x, y, z, 10)) {
     player.sendMessage("\xA7cYou are too far from the spawner.");
     return;
   }
-  if (!block || !block.isValid) {
+  if (!block || !block.isValid()) {
     player.sendMessage("\xA7cInvalid spawner block detected.");
     return;
   }
@@ -2078,12 +1925,12 @@ function downgrade(player, block, level, spawnerType, percentrefund, refu, x, y,
   }
   const coordinates = `${x},${y},${z}`;
   const dimension = block.dimension;
-  const currentBlock = dimension.getBlock(new Vector3(x, y, z));
+  const currentBlock = dimension.getBlock(new Vector32(x, y, z));
   if (!currentBlock || currentBlock.typeId !== `mrleefy:${spawnerType}spawner${level}`) {
     player.sendMessage("\xA7cNo spawner block found at the recorded location, action canceled.");
     return;
   }
-  let inventory = player.getComponent("inventory").container;
+  const inventory = player.getComponent("inventory").container;
   let hasEmptySlot = false;
   for (let i = 0; i < inventory.size; i++) {
     if (!inventory.getItem(i)) {
@@ -2124,7 +1971,7 @@ function downgrade(player, block, level, spawnerType, percentrefund, refu, x, y,
   try {
     dimension.spawnParticle(
       "minecraft:villager_angry",
-      new Vector3(block.x + 0.5, block.y + 0.5, block.z + 0.5),
+      new Vector32(block.x + 0.5, block.y + 0.5, block.z + 0.5),
       new MolangVariableMap()
     );
   } catch (e) {
@@ -2139,7 +1986,7 @@ function removeSpawnruleAtLocation(x, y, z, dimension) {
     });
     system2.run(() => {
       for (const entity of spawnruleEntities) {
-        if (entity?.isValid) {
+        if (entity?.isValid()) {
           try {
             entity.remove();
           } catch (removeError) {
@@ -2163,7 +2010,7 @@ function enforcePlayerMemoryLimits() {
   for (const [key, activeData] of activeForms.entries()) {
     const player = activeData.player || activeData;
     const timestamp = activeData.timestamp || now;
-    if (!player || !player.isValid || now - timestamp > formTimeout) {
+    if (!player || !player.isValid() || now - timestamp > formTimeout) {
       activeForms.delete(key);
     }
   }
@@ -2295,15 +2142,16 @@ var SecurityService = class {
     ]);
     this.ipWhitelist = /* @__PURE__ */ new Set();
     this.sessionTokens = /* @__PURE__ */ new Map();
+    this.securityEvents = [];
   }
   /**
    * Check if player has required permission level
-   * @param {Player} player - The player to check
-   * @param {number} requiredLevel - Required permission level
-   * @returns {boolean} True if player has permission
+   * @param player - The player to check
+   * @param requiredLevel - Required permission level
+   * @returns True if player has permission
    */
   hasPermission(player, requiredLevel = this.permissionLevels.USER) {
-    if (!player?.isValid)
+    if (!player?.isValid())
       return false;
     try {
       if (player.hasTag(UI.OWNER_PERMISSION_TAG)) {
@@ -2325,12 +2173,12 @@ var SecurityService = class {
   }
   /**
    * Check if player has specific tag-based permission
-   * @param {Player} player - The player to check
-   * @param {string} permissionTag - The permission tag to check
-   * @returns {boolean} True if player has permission
+   * @param player - The player to check
+   * @param permissionTag - The permission tag to check
+   * @returns True if player has permission
    */
   hasTagPermission(player, permissionTag) {
-    if (!player?.isValid || !permissionTag)
+    if (!player?.isValid() || !permissionTag)
       return false;
     try {
       return player.hasTag(permissionTag);
@@ -2341,10 +2189,10 @@ var SecurityService = class {
   }
   /**
    * Grant permission to player
-   * @param {Player} granter - Player granting permission
-   * @param {Player} target - Player receiving permission
-   * @param {string} permissionTag - Permission tag to grant
-   * @returns {boolean} True if permission was granted
+   * @param granter - Player granting permission
+   * @param target - Player receiving permission
+   * @param permissionTag - Permission tag to grant
+   * @returns True if permission was granted
    */
   grantPermission(granter, target, permissionTag) {
     if (!this.hasPermission(granter, this.permissionLevels.OWNER)) {
@@ -2354,7 +2202,7 @@ var SecurityService = class {
       });
       return false;
     }
-    if (!target?.isValid || !permissionTag)
+    if (!target?.isValid() || !permissionTag)
       return false;
     try {
       target.addTag(permissionTag);
@@ -2370,10 +2218,10 @@ var SecurityService = class {
   }
   /**
    * Revoke permission from player
-   * @param {Player} revoker - Player revoking permission
-   * @param {Player} target - Player losing permission
-   * @param {string} permissionTag - Permission tag to revoke
-   * @returns {boolean} True if permission was revoked
+   * @param revoker - Player revoking permission
+   * @param target - Player losing permission
+   * @param permissionTag - Permission tag to revoke
+   * @returns True if permission was revoked
    */
   revokePermission(revoker, target, permissionTag) {
     if (!this.hasPermission(revoker, this.permissionLevels.OWNER)) {
@@ -2383,7 +2231,7 @@ var SecurityService = class {
       });
       return false;
     }
-    if (!target?.isValid || !permissionTag)
+    if (!target?.isValid() || !permissionTag)
       return false;
     try {
       target.removeTag(permissionTag);
@@ -2399,10 +2247,10 @@ var SecurityService = class {
   }
   /**
    * Validate command input for security
-   * @param {Player} player - Player executing command
-   * @param {string} command - Command to validate
-   * @param {string[]} args - Command arguments
-   * @returns {object} Validation result with isValid and error message
+   * @param player - Player executing command
+   * @param command - Command to validate
+   * @param args - Command arguments
+   * @returns Validation result with isValid and error message
    */
   validateCommand(player, command, args = []) {
     const validation = {
@@ -2457,9 +2305,9 @@ var SecurityService = class {
   }
   /**
    * Validate command arguments
-   * @param {string} command - Command name
-   * @param {string[]} args - Command arguments
-   * @returns {object} Validation result
+   * @param command - Command name
+   * @param args - Command arguments
+   * @returns Validation result
    */
   validateCommandArguments(command, args) {
     const result = { isValid: true, error: null };
@@ -2488,8 +2336,8 @@ var SecurityService = class {
   }
   /**
    * Detect suspicious patterns in command arguments
-   * @param {string[]} args - Command arguments
-   * @returns {string[]} Array of suspicious patterns found
+   * @param args - Command arguments
+   * @returns Array of suspicious patterns found
    */
   detectSuspiciousPatterns(args) {
     const patterns = [];
@@ -2519,11 +2367,11 @@ var SecurityService = class {
   }
   /**
    * Check if player is rate limited
-   * @param {Player} player - Player to check
-   * @param {string} action - Action being performed
-   * @param {number} maxActions - Maximum actions allowed
-   * @param {number} timeWindow - Time window in milliseconds
-   * @returns {boolean} True if rate limited
+   * @param player - Player to check
+   * @param action - Action being performed
+   * @param maxActions - Maximum actions allowed
+   * @param timeWindow - Time window in milliseconds
+   * @returns True if rate limited
    */
   isRateLimited(player, action, maxActions = 10, timeWindow = 6e4) {
     const now = Date.now();
@@ -2544,7 +2392,7 @@ var SecurityService = class {
   }
   /**
    * Clean up expired cooldowns
-   * @param {number} now - Current timestamp
+   * @param now - Current timestamp
    */
   cleanupExpiredCooldowns(now) {
     const cutoff = now - 6e4;
@@ -2556,9 +2404,9 @@ var SecurityService = class {
   }
   /**
    * Log security event
-   * @param {string} eventType - Type of security event
-   * @param {Player} player - Player involved
-   * @param {object} details - Additional event details
+   * @param eventType - Type of security event
+   * @param player - Player involved
+   * @param details - Additional event details
    */
   logSecurityEvent(eventType, player, details = {}) {
     const event = {
@@ -2582,8 +2430,8 @@ var SecurityService = class {
   }
   /**
    * Get severity level for security event
-   * @param {string} eventType - Type of event
-   * @returns {string} Severity level (low, medium, high)
+   * @param eventType - Type of event
+   * @returns Severity level (low, medium, high)
    */
   getEventSeverity(eventType) {
     const highSeverity = [
@@ -2605,7 +2453,7 @@ var SecurityService = class {
   }
   /**
    * Store security event for admin review
-   * @param {object} event - Security event to store
+   * @param event - Security event to store
    */
   storeSecurityEvent(event) {
     if (!this.securityEvents) {
@@ -2618,9 +2466,9 @@ var SecurityService = class {
   }
   /**
    * Get recent security events
-   * @param {number} count - Number of events to return
-   * @param {string} severity - Filter by severity (optional)
-   * @returns {object[]} Array of security events
+   * @param count - Number of events to return
+   * @param severity - Filter by severity (optional)
+   * @returns Array of security events
    */
   getSecurityEvents(count = 50, severity = null) {
     let events = this.securityEvents || [];
@@ -2631,7 +2479,7 @@ var SecurityService = class {
   }
   /**
    * Get security statistics
-   * @returns {object} Security statistics
+   * @returns Security statistics
    */
   getSecurityStats() {
     const events = this.securityEvents || [];
@@ -2652,8 +2500,8 @@ var SecurityService = class {
   }
   /**
    * Clear security data (admin only)
-   * @param {Player} admin - Admin requesting the clear
-   * @returns {boolean} True if cleared successfully
+   * @param admin - Admin requesting the clear
+   * @returns True if cleared successfully
    */
   clearSecurityData(admin) {
     if (!this.hasPermission(admin, this.permissionLevels.OWNER)) {
@@ -2697,7 +2545,7 @@ var aaLookup = Array.from({ length: 33 }, () => ({ qty: 0, speed: 0, maxStack: 1
 function rebuildAALookup() {
   try {
     aaLookup.fill({ qty: 0, speed: 0, maxStack: 100 });
-    aaDatabase.forEach((range, value) => {
+    aaDatabase.forEach((value, range) => {
       if (!value)
         return;
       const { qty = 0, speed = 0, maxStack = 100 } = value;
@@ -2738,7 +2586,7 @@ world4.beforeEvents.chatSend.subscribe((event) => {
   }
 });
 function openAdminMenu(player) {
-  if (!player || !player.isValid) {
+  if (!player || !player.isValid()) {
     console.error(ERROR_MESSAGES.INVALID_PLAYER);
     return;
   }
@@ -2806,13 +2654,13 @@ function openAdminMenu(player) {
   }).catch((error) => {
     console.error(`Error in openAdminMenu: ${error}`);
     player.sendMessage("\xA7cAn error occurred while opening the admin menu.");
-    securityService.recordError("admin_menu_error", error.message);
+    performanceMonitor.recordError("admin_menu_error", error instanceof Error ? error.message : String(error));
   }).finally(() => {
     cooldowns.set(player.name, Date.now());
   });
 }
 function openToggleLootDropForm(player) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -2821,7 +2669,7 @@ function openToggleLootDropForm(player) {
   const currentCap = configDatabase2.read("itemSpillCap") || 5;
   const currentXpCap = configDatabase2.read("xpSpillCap") || 3;
   const playerKillOnly = configDatabase2.read("playerKillOnly") ?? false;
-  new ModalFormData2().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", { defaultValue: playerKillOnly }).textField("Max item drops near stack:", "Enter integer (>=1)", { defaultValue: `${currentCap}` }).textField("Max XP orbs near stack:", "Enter integer (>=1)", { defaultValue: `${currentXpCap}` }).show(player).then((r) => {
+  new ModalFormData2().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", playerKillOnly).textField("Max item drops near stack:", "Enter integer (>=1)", `${currentCap}`).textField("Max XP orbs near stack:", "Enter integer (>=1)", `${currentXpCap}`).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -2841,14 +2689,10 @@ function openToggleLootDropForm(player) {
   });
 }
 function openPerformanceConfigForm(player) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
-    return;
-  }
-  if (!player || !player.isValid) {
-    console.error("Invalid player provided to openPerformanceConfigForm");
     return;
   }
   const currentActivationRadius = configDatabase2.read("performanceActivationRadius") || 50;
@@ -2858,18 +2702,18 @@ function openPerformanceConfigForm(player) {
   const form = new ModalFormData2().title("Performance Settings").textField(
     "\xA7bPlayer Activation Radius:\xA7r\n\n\xA77Distance (in blocks) players must be within to activate spawners.\n\xA77Lower = Better performance (spawners pause sooner)\n\xA77Higher = Spawners active from further away\n\xA7eDefault: 50 blocks\xA7r",
     "Enter radius (10-128)",
-    { defaultValue: `${currentActivationRadius}` }
+    `${currentActivationRadius}`
   ).textField(
     "\xA7bMax Spawns Per Cycle:\xA7r\n\n\xA77Maximum entities that can spawn per second.\n\xA77Lower = Smoother performance, slower spawning\n\xA77Higher = Faster spawning, potential lag spikes\n\xA7eDefault: 25 spawns/second\xA7r",
     "Enter max spawns (5-100)",
-    { defaultValue: `${currentMaxSpawns}` }
+    `${currentMaxSpawns}`
   ).toggle(
     "\xA7bRandom Initial Spawn Delays:\xA7r\n\n\xA77Randomizes first spawn time (0-100% of interval).\n\xA77Prevents all spawners from syncing up.\n\xA7aRecommended: Enabled\xA7r",
-    { defaultValue: currentRandomDelay }
+    currentRandomDelay
   ).textField(
     "\xA7bSpawn Check Interval (Advanced):\xA7r\n\n\xA77How often (in ticks) to check spawners.\n\xA77Lower = More responsive, higher CPU usage\n\xA77Higher = More efficient, less responsive\n\xA7c\u26A0 Only change if you know what you're doing!\n\xA7eDefault: 20 ticks (1 second)\xA7r",
     "Enter ticks (10-100)",
-    { defaultValue: `${currentSpawnInterval}` }
+    `${currentSpawnInterval}`
   );
   form.show(player).then((r) => {
     if (r.canceled || !r.formValues)
@@ -2933,12 +2777,12 @@ function openPerformanceConfigForm(player) {
   });
 }
 function openRadiusConfigForm(player) {
-  if (!player || !player.isValid) {
+  if (!player || !player.isValid()) {
     console.error("Invalid player provided to openRadiusConfigForm");
     return;
   }
   const radius = configDatabase2.read("stackRadius") || 50;
-  new ModalFormData2().title("Configure Stack Radius").textField("Stacking Radius:", `Current: ${radius}`, { defaultValue: `${radius}` }).show(player).then((r) => {
+  new ModalFormData2().title("Configure Stack Radius").textField("Stacking Radius:", `Current: ${radius}`, `${radius}`).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -2967,13 +2811,13 @@ function openRadiusConfigForm(player) {
   }).catch((error) => {
     console.error(`Error in openRadiusConfigForm: ${error}`);
     player.sendMessage("\xA7cAn error occurred while updating the configuration.");
-    securityService.recordError("radius_config_error", error.message);
+    performanceMonitor.recordError("radius_config_error", error instanceof Error ? error.message : String(error));
   }).finally(() => {
     cooldowns.set(player.name, Date.now());
   });
 }
 function openLootTableConfigForm(player) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -2992,14 +2836,14 @@ function openLootTableConfigForm(player) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
       return;
     }
-    if (!r.canceled)
+    if (!r.canceled && r.selection !== void 0)
       openEntityLootConfigForm(player, sortedMobs[r.selection].typeId);
   }).finally(() => {
     cooldowns.set(player.name, Date.now());
   });
 }
 function openEntityLootConfigForm(player, entityId) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -3012,7 +2856,7 @@ function openEntityLootConfigForm(player, entityId) {
   form.button("Add New Item", "textures/ui/plus.png");
   form.button("XP Manager", "textures/items/experience_bottle.png");
   form.show(player).then((r) => {
-    if (r.canceled)
+    if (r.canceled || r.selection === void 0)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -3030,14 +2874,14 @@ function openEntityLootConfigForm(player, entityId) {
   });
 }
 function openXPDropManagerForm(player, entityId) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
     return;
   }
   const config = xpDropDatabase.read(entityId) || {};
-  new ModalFormData2().title(`XP Manager: ${entityId}`).textField("XP Amount:", "XP to drop on death", { defaultValue: `${config.amount ?? 1}` }).slider("Drop Chance (%)", 1, 100, { defaultValue: config.chance ?? 100 }).show(player).then((r) => {
+  new ModalFormData2().title(`XP Manager: ${entityId}`).textField("XP Amount:", "XP to drop on death", `${config.amount ?? 1}`).slider("Drop Chance (%)", 1, 100, 1, config.chance ?? 100).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3057,7 +2901,7 @@ function openXPDropManagerForm(player, entityId) {
   });
 }
 function openAddNewLootItemForm(player, entityId) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -3065,7 +2909,7 @@ function openAddNewLootItemForm(player, entityId) {
   }
   const lootManager = lootManagerInstance;
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
-  new ModalFormData2().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", { defaultValue: "" }).textField("Chance:", "[0.01-100]", { defaultValue: "100" }).toggle("Enchantable?", { defaultValue: false }).dropdown("Enchantment Category:", categories, { defaultValue: 0 }).textField("Enchant Chance:", "[0-100]", { defaultValue: "50" }).toggle("Stackable?", { defaultValue: true }).toggle("Random Durability?", { defaultValue: false }).show(player).then((r) => {
+  new ModalFormData2().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", "").textField("Chance:", "[0.01-100]", "100").toggle("Enchantable?", false).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", "50").toggle("Stackable?", true).toggle("Random Durability?", false).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3094,7 +2938,7 @@ function openAddNewLootItemForm(player, entityId) {
   });
 }
 function openEditLootItemForm(player, entityId, itemId) {
-  if (!player || !player.isValid)
+  if (!player || !player.isValid())
     return;
   if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -3104,14 +2948,14 @@ function openEditLootItemForm(player, entityId, itemId) {
   const config = lootManager.entities[entityId][itemId];
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
   const catIdx = config.enchantments ? categories.indexOf(config.enchantments.category) : 0;
-  new ModalFormData2().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", { defaultValue: `${config.chance}` }).toggle("Enchantable?", { defaultValue: !!config.enchantments }).dropdown("Category:", categories, { defaultValue: Math.max(0, catIdx) }).textField("Enchant Chance:", "[0-100]", { defaultValue: `${config.enchantments?.chance ?? 50}` }).toggle("Stackable?", { defaultValue: config.stackable !== false }).toggle("Random Durability?", { defaultValue: config.randomdurability === true }).toggle("\xA7cDELETE THIS ITEM?\xA7r", { defaultValue: false }).show(player).then((r) => {
+  new ModalFormData2().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", `${config.chance}`).toggle("Enchantable?", !!config.enchantments).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", `${config.enchantments?.chance ?? 50}`).toggle("Stackable?", config.stackable !== false).toggle("Random Durability?", config.randomdurability === true).toggle("\xA7cDELETE THIS ITEM?\xA7r", false).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
       return;
     }
-    const [chance, ench, catIdx2, enchChance, stack, dura, del] = r.formValues;
+    const [chance, ench, catIdxSelected, enchChance, stack, dura, del] = r.formValues;
     if (del)
       delete lootManager.entities[entityId][itemId];
     else {
@@ -3121,7 +2965,7 @@ function openEditLootItemForm(player, entityId, itemId) {
         return;
       }
       config.chance = pChance;
-      config.enchantments = ench && categories[catIdx2] !== "None" ? { chance: parseFloat(enchChance), category: categories[catIdx2] } : void 0;
+      config.enchantments = ench && categories[catIdxSelected] !== "None" ? { chance: parseFloat(enchChance), category: categories[catIdxSelected] } : void 0;
       config.stackable = stack;
       config.randomdurability = dura;
     }
@@ -3133,7 +2977,7 @@ function openEditLootItemForm(player, entityId, itemId) {
   });
 }
 function openAAConfigForm(player) {
-  if (!player || !player.isValid) {
+  if (!player || !player.isValid()) {
     console.error(ERROR_MESSAGES.INVALID_PLAYER);
     return;
   }
@@ -3144,16 +2988,16 @@ function openAAConfigForm(player) {
   }
   const form = new ModalFormData2().title("Spawner Settings");
   const entries = [];
-  aaDatabase.forEach((key, val) => entries.push([key, val]));
-  form.textField("Add New Range:", "e.g., 1-10 or 33-33", { defaultValue: "" });
-  form.textField("New Range - Quantity:", "e.g., 1", { defaultValue: "" });
-  form.textField("New Range - Speed (sec):", "e.g., 10", { defaultValue: "" });
-  form.textField("New Range - Max Stack:", "e.g., 100", { defaultValue: "" });
+  aaDatabase.forEach((val, key) => entries.push([key, val]));
+  form.textField("Add New Range:", "e.g., 1-10 or 33-33", "");
+  form.textField("New Range - Quantity:", "e.g., 1", "");
+  form.textField("New Range - Speed (sec):", "e.g., 10", "");
+  form.textField("New Range - Max Stack:", "e.g., 100", "");
   entries.forEach(([range, { qty, speed, maxStack }]) => {
-    form.textField(`Qty for ${range}:`, `Update`, { defaultValue: `${qty}` });
-    form.textField(`Speed for ${range}:`, `Update`, { defaultValue: `${speed}` });
-    form.textField(`Max Stack for ${range}:`, `Update`, { defaultValue: `${maxStack}` });
-    form.toggle(`\xA7cRemove Range ${range}?\xA7r`, { defaultValue: false });
+    form.textField(`Qty for ${range}:`, `Update`, `${qty}`);
+    form.textField(`Speed for ${range}:`, `Update`, `${speed}`);
+    form.textField(`Max Stack for ${range}:`, `Update`, `${maxStack}`);
+    form.toggle(`\xA7cRemove Range ${range}?\xA7r`, false);
   });
   form.show(player).then((r) => {
     if (r.canceled || !r.formValues)
@@ -3163,7 +3007,7 @@ function openAAConfigForm(player) {
       return;
     }
     const vals = r.formValues;
-    if (vals[0].trim()) {
+    if (typeof vals[0] === "string" && vals[0].trim()) {
       let range = vals[0].trim();
       if (!range.includes("-"))
         range = `${range}-${range}`;
@@ -3193,7 +3037,7 @@ function openAAConfigForm(player) {
 }
 function toggleLogging(player) {
   try {
-    if (!player || !player.isValid) {
+    if (!player || !player.isValid()) {
       console.error("Invalid player provided to toggleLogging");
       return;
     }
@@ -3216,7 +3060,7 @@ function toggleLogging(player) {
 }
 function openSpawnerStatisticsForm(player) {
   try {
-    if (!player || !player.isValid) {
+    if (!player || !player.isValid()) {
       console.error("Invalid player provided to openSpawnerStatisticsForm");
       return;
     }
@@ -3248,8 +3092,8 @@ function openSpawnerStatisticsForm(player) {
     } else {
       memoryLevel = "Very High";
     }
-    const topMobs = Array.from(spawnerStatistics.entitiesKilled.entries()).sort(([, a], [, b]) => b - a).slice(0, 10);
-    const topPlayers = Array.from(spawnerStatistics.playerStats.entries()).sort(([, a], [, b]) => (b.entitiesKilled || 0) - (a.entitiesKilled || 0)).slice(0, 10);
+    const topMobs = Array.from(spawnerStatistics.entitiesKilled.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const topPlayers = Array.from(spawnerStatistics.playerStats.entries()).sort((a, b) => (b[1].entitiesKilled || 0) - (a[1].entitiesKilled || 0)).slice(0, 10);
     let bodyText = `\xA76\xA7lSERVER STATISTICS\xA7r
 
 `;
@@ -3290,12 +3134,12 @@ function openSpawnerStatisticsForm(player) {
     bodyText += `\xA76\xA7lTOP 10 KILLERS\xA7r
 `;
     if (topPlayers.length > 0) {
-      topPlayers.forEach((player2, index) => {
+      topPlayers.forEach((playerEntry, index) => {
         const rank = index + 1;
-        const totalKills2 = player2[1].entitiesKilled?.toLocaleString() || 0;
-        bodyText += `\xA77${rank}. \xA7f${player2[0]} \xA77(${totalKills2} total kills)
+        const totalKillsCount = playerEntry[1].entitiesKilled?.toLocaleString() || 0;
+        bodyText += `\xA77${rank}. \xA7f${playerEntry[0]} \xA77(${totalKillsCount} total kills)
 `;
-        const playerTopKills = getPlayerTopKills(player2[1], 3);
+        const playerTopKills = getPlayerTopKills(playerEntry[1], 3);
         playerTopKills.forEach((killType) => {
           bodyText += `   \xA78- \xA77${killType.displayName}: ${killType.count.toLocaleString()}
 `;
@@ -3320,29 +3164,28 @@ function openSpawnerStatisticsForm(player) {
         return;
       }
       if (response.selection === 2) {
-        const confirmForm = new ModalFormData2().title("Confirm Reset").textField("Confirm", "Type 'RESET' to confirm", { defaultValue: "" }).submitButton("CONFIRM");
+        const confirmForm = new ModalFormData2().title("Confirm Reset").textField("Confirm", "Type 'RESET' to confirm", "").submitButton("CONFIRM");
         confirmForm.show(player).then((confirmResponse) => {
           if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
           }
-          if (!confirmResponse.canceled) {
-            const confirmationText = confirmResponse.formValues[0]?.toUpperCase().trim();
-            if (confirmationText === "RESET") {
-              resetSpawnerStatistics();
-              player.sendMessage("All statistics have been reset!");
-              system3.run(() => openSpawnerStatisticsForm(player));
-            } else if (confirmationText && confirmationText !== "") {
-              player.sendMessage("Reset cancelled - confirmation text was incorrect.");
-            }
+          if (confirmResponse.canceled || !confirmResponse.formValues)
+            return;
+          const confirmationText = confirmResponse.formValues[0]?.toUpperCase().trim();
+          if (confirmationText === "RESET") {
+            resetSpawnerStatistics();
+            player.sendMessage("\xA7a\u2713 All statistics have been reset successfully!");
+          } else {
+            player.sendMessage("\xA7cReset cancelled - confirmation code was incorrect.");
           }
         }).catch((error) => {
-          console.error(`Error in reset confirmation: ${error}`);
+          console.error(`Error in spawner stats reset confirmation: ${error}`);
         });
       }
     }).catch((error) => {
       console.error(`Error in openSpawnerStatisticsForm: ${error}`);
-      player.sendMessage("\xA7cAn error occurred while opening the statistics form.");
+      player.sendMessage("\xA7cAn error occurred while showing statistics.");
     });
   } catch (error) {
     console.error(`Critical error in openSpawnerStatisticsForm: ${error}`);
@@ -3351,7 +3194,7 @@ function openSpawnerStatisticsForm(player) {
 }
 function openSpawnerTeleportForm(player) {
   try {
-    if (!player || !player.isValid) {
+    if (!player || !player.isValid()) {
       console.error("Invalid player provided to openSpawnerTeleportForm");
       return;
     }
@@ -3359,7 +3202,6 @@ function openSpawnerTeleportForm(player) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
       return;
     }
-    scanAndUpdateSpawnerDatabase();
     const playerSpawners = /* @__PURE__ */ new Map();
     const allSpawners = {};
     const allSpawnerKeys = spawnerDatabase.keys();
@@ -3370,43 +3212,45 @@ function openSpawnerTeleportForm(player) {
         if (!playerSpawners.has(playerName)) {
           playerSpawners.set(playerName, []);
         }
-        playerSpawners.get(playerName).push({
+        const details = {
           location: key,
           typeId: spawnerData.typeId,
-          placedAt: spawnerData.placedAt,
-          entitiesKilled: spawnerData.entitiesKilled || 0
-        });
+          placedAt: spawnerData.placedAt
+        };
+        playerSpawners.get(playerName).push(details);
         allSpawners[key] = spawnerData;
       }
     }
+    if (playerSpawners.size === 0) {
+      player.sendMessage("\xA7cNo active spawners found in the database.");
+      return;
+    }
     const totalSpawners = Array.from(playerSpawners.values()).reduce((sum, spawners) => sum + spawners.length, 0);
-    const sortedPlayers = Array.from(playerSpawners.entries()).sort(([, a], [, b]) => b.length - a.length);
-    const currentPlayerName = player.name || player.nameTag || "Unknown";
-    const hasOwnSpawners = playerSpawners.has(currentPlayerName);
-    debugLog2(`Found ${totalSpawners} total spawners`);
-    debugLog2(`Players with spawners:`, Array.from(playerSpawners.keys()));
-    debugLog2(`Current player: ${currentPlayerName}`);
-    debugLog2(`Current player has spawners: ${hasOwnSpawners}`);
-    const form = new ActionFormData2().title(`Teleport to Spawner (${totalSpawners} total)`).body(`Found ${playerSpawners.size} players with spawners${hasOwnSpawners ? " (including you)" : ""}. Select a player:`);
-    form.button(" Search by Location", "textures/ui/magnifyingGlass");
-    form.button(" Player List", "textures/items/book_normal");
+    const sortedPlayers = Array.from(playerSpawners.entries()).sort((a, b) => b[1].length - a[1].length);
+    const form = new ActionFormData2().title("Spawner Teleport System").body(`Database size: ${totalSpawners} spawners across ${playerSpawners.size} players. Select a player to view their spawners:`);
+    form.button("\u{1F50D} Search by Location", "textures/ui/magnifying_glass");
+    sortedPlayers.forEach(([playerName, spawners]) => {
+      form.button(`\u{1F464} ${playerName} (${spawners.length} spawners)`, "textures/ui/steve_head");
+    });
     form.show(player).then((r) => {
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
         return;
       }
-      if (r.canceled)
+      if (r.canceled || r.selection === void 0)
         return;
       if (r.selection === 0) {
         openLocationSearchForm(player, allSpawners);
         return;
-      } else if (r.selection === 1) {
-        openSimplePlayerListForm(player, sortedPlayers);
-        return;
+      }
+      const selectedPlayerData = sortedPlayers[r.selection - 1];
+      if (selectedPlayerData) {
+        const [selectedPlayer, spawners] = selectedPlayerData;
+        openSpawnerSelectionForm(player, selectedPlayer, spawners);
       }
     }).catch((error) => {
       console.error(`Error in openSpawnerTeleportForm: ${error}`);
-      player.sendMessage("\xA7cAn error occurred while opening the teleport form.");
+      player.sendMessage("\xA7cAn error occurred while showing the spawner teleport form.");
     });
   } catch (error) {
     console.error(`Critical error in openSpawnerTeleportForm: ${error}`);
@@ -3415,18 +3259,13 @@ function openSpawnerTeleportForm(player) {
 }
 function openSpawnerSelectionForm(player, playerName, spawners) {
   try {
-    if (!player || !player.isValid)
+    if (!player || !player.isValid())
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
       return;
     }
-    debugLog2(`openSpawnerSelectionForm called with ${spawners.length} spawners for ${playerName}`);
-    spawners.forEach((spawner, index) => {
-      debugLog2(`Spawner ${index}:`, spawner);
-    });
     const validSpawners = spawners.filter((spawner) => spawner !== void 0 && spawner !== null);
-    debugLog2(`After filtering: ${validSpawners.length} valid spawners`);
     const spawnerDetails = validSpawners.map((spawner) => {
       let x = 0, y = 0, z = 0;
       try {
@@ -3445,68 +3284,43 @@ function openSpawnerSelectionForm(player, playerName, spawners) {
       const mobType = typeId.replace("mrleefy:", "").replace(/spawner\d+/, "").replace(/_/g, "");
       const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || "Unknown";
       const activeEntities = countEntitiesNearSpawner(x, y, z);
-      const playerLoc = player.location;
-      let distance = 0;
-      if (playerLoc) {
-        distance = Math.sqrt(
-          Math.pow(x - playerLoc.x, 2) + Math.pow(y - playerLoc.y, 2) + Math.pow(z - playerLoc.z, 2)
-        );
-      }
-      const efficiency = level > 0 ? (activeEntities / level * 100).toFixed(0) : "0";
       return {
         ...spawner,
         displayName,
         level,
         activeEntities,
-        distance: Math.floor(distance),
-        efficiency: parseInt(efficiency),
         x,
         y,
         z
       };
     });
-    spawnerDetails.sort((a, b) => a.distance - b.distance);
     const totalEntities = spawnerDetails.reduce((sum, s) => sum + (s.activeEntities || 0), 0);
     const avgLevel = spawnerDetails.length > 0 ? spawnerDetails.reduce((sum, s) => sum + (s.level || 1), 0) / spawnerDetails.length : 0;
-    const form = new ActionFormData2().title(`Spawners Placed by ${playerName} (${spawners.length} total)`).body(`${playerName} has placed ${spawners.length} spawner(s).
-Total Entities: ${totalEntities} \u2022 Average Level: ${avgLevel.toFixed(1)}
-
-Select a spawner to teleport:`);
-    for (const detail of spawnerDetails) {
-      try {
-        const status = (detail.activeEntities || 0) > 0 ? "[ACTIVE]" : "[IDLE]";
-        const placedTime = detail.hasOwnProperty("placedAt") && detail.placedAt ? new Date(detail.placedAt).toLocaleDateString() : "Unknown";
-        const buttonText = `${status} ${detail.displayName || "Unknown"} L${detail.level || 1} (${detail.efficiency || 0}% efficient)
-Location: ${detail.x || 0},${detail.y || 0},${detail.z || 0} \u2022 ${detail.distance || 0} blocks \u2022 ${detail.activeEntities || 0} entities
-Placed: ${placedTime}`;
-        form.button(buttonText, "textures/blocks/mob_spawner");
-      } catch (buttonError) {
-        console.error(`Error creating button for spawner at ${detail?.x},${detail?.y},${detail?.z}:`, buttonError);
-        form.button(`Spawner at ${detail?.x || 0},${detail?.y || 0},${detail?.z || 0}`, "textures/blocks/mob_spawner");
-      }
-    }
-    form.button("Spawner Information", "textures/ui/infobulb");
+    const form = new ActionFormData2().title(`${playerName}'s Spawners`).body(`Total: ${spawnerDetails.length} spawners | Active Mobs: ${totalEntities} | Avg Level: ${avgLevel.toFixed(1)}`);
+    spawnerDetails.forEach((spawner) => {
+      const status = spawner.activeEntities > 0 ? `\xA7a[Active: ${spawner.activeEntities}]` : "\xA78[Idle]";
+      form.button(`${status} \xA77Lvl ${spawner.level} \xA7f${spawner.displayName}
+\xA78Coord: ${spawner.x}, ${spawner.y}, ${spawner.z}`);
+    });
+    form.button("\xA76\u{1F4CA} View Player Statistics", "textures/ui/book_normal");
     form.show(player).then((r) => {
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
         return;
       }
-      if (r.canceled)
+      if (r.canceled || r.selection === void 0)
         return;
       if (r.selection === spawnerDetails.length) {
         openSpawnerInfoForm(player, playerName, spawnerDetails);
         return;
       }
       const selectedDetail = spawnerDetails[r.selection];
-      if (selectedDetail && typeof selectedDetail.x === "number" && typeof selectedDetail.y === "number" && typeof selectedDetail.z === "number") {
+      if (selectedDetail) {
         teleportToSpawner(player, selectedDetail.x, selectedDetail.y, selectedDetail.z);
-      } else {
-        debugLog2(`Invalid spawner detail selected:`, selectedDetail);
-        player.sendMessage("\xA7cInvalid spawner data - cannot teleport.");
       }
     }).catch((error) => {
       console.error(`Error in openSpawnerSelectionForm: ${error}`);
-      player.sendMessage("\xA7cAn error occurred while selecting spawner.");
+      player.sendMessage("\xA7cAn error occurred while opening selection form.");
     });
   } catch (error) {
     console.error(`Critical error in openSpawnerSelectionForm: ${error}`);
@@ -3515,59 +3329,50 @@ Placed: ${placedTime}`;
 }
 function teleportToSpawner(player, x, y, z) {
   try {
-    if (!player || !player.isValid)
+    if (!player || !player.isValid())
       return;
-    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
-      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
-      return;
-    }
-    if (typeof x !== "number" || typeof y !== "number" || typeof z !== "number" || isNaN(x) || isNaN(y) || isNaN(z)) {
-      console.error(`Invalid coordinates provided to teleportToSpawner: x=${x}, y=${y}, z=${z}`);
-      player.sendMessage("\xA7cInvalid spawner location - cannot teleport.");
-      return;
-    }
-    const teleportLocation = { x: x + 0.5, y: y + 1, z: z + 0.5 };
+    player.sendMessage(`\xA7aTeleporting to spawner at ${x}, ${y}, ${z}...`);
     system3.run(() => {
       try {
-        player.teleport(teleportLocation);
-        player.sendMessage(`\xA7aTeleported to spawner at ${x}, ${y + 1}, ${z}`);
+        const dimension = player.dimension;
+        player.teleport({ x: x + 0.5, y: y + 1.5, z: z + 0.5 }, { dimension });
       } catch (teleportError) {
-        console.error(`Teleport error: ${teleportError}`);
-        player.sendMessage("\xA7cFailed to teleport to spawner location.");
+        console.error(`Teleport logic failed: ${teleportError}`);
+        player.sendMessage(`\xA7cTeleport failed. Check if coordinate is in a loaded area or try again.`);
       }
     });
   } catch (error) {
-    console.error(`Critical error in teleportToSpawner: ${error}`);
-    player.sendMessage("\xA7cA critical error occurred during teleport.");
+    console.error(`Error in teleportToSpawner: ${error}`);
+    player.sendMessage("\xA7cA critical error occurred during teleportation.");
   }
 }
 function countEntitiesNearSpawner(x, y, z) {
   try {
     const overworld = world4.getDimension("overworld");
+    const location = { x, y, z };
     const nearbyEntities = overworld.getEntities({
-      location: { x, y, z },
+      location,
       maxDistance: 10
-      // Check within 10 blocks of spawner
     });
     return nearbyEntities.filter((entity) => {
       return entity?.nameTag && entity.nameTag.includes("x") && entity.typeId.startsWith("mrleefy:");
     }).length;
   } catch (error) {
-    console.error(`Error counting entities near spawner: ${error}`);
     return 0;
   }
 }
 function openLocationSearchForm(player, allSpawners) {
   try {
-    if (!player || !player.isValid)
+    if (!player || !player.isValid())
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
       return;
     }
-    const playerX = Math.floor(player.location.x);
-    const playerZ = Math.floor(player.location.z);
-    const form = new ModalFormData2().title("Search Spawners by Location").toggle("Use current location", { defaultValue: true }).textField("X Coordinate", "Enter X coordinate", { defaultValue: playerX.toString() }).textField("Z Coordinate", "Enter Z coordinate", { defaultValue: playerZ.toString() }).slider("Search Radius", 10, 500, { defaultValue: 50 }).toggle("Include inactive spawners", { defaultValue: true });
+    const playerLocation = player.location;
+    const playerX = Math.round(playerLocation.x);
+    const playerZ = Math.round(playerLocation.z);
+    const form = new ModalFormData2().title("Search Spawners by Location").toggle("Use current location", true).textField("X Coordinate", "Enter X coordinate", playerX.toString()).textField("Z Coordinate", "Enter Z coordinate", playerZ.toString()).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", true);
     form.show(player).then((r) => {
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -3582,41 +3387,38 @@ function openLocationSearchForm(player, allSpawners) {
       const includeInactive = r.formValues[4];
       const searchX = useCurrentLocation ? playerX : parseInt(enteredX);
       const searchZ = useCurrentLocation ? playerZ : parseInt(enteredZ);
-      debugLog2(`Location search: useCurrent=${useCurrentLocation}, enteredX=${enteredX}, enteredZ=${enteredZ}, searchX=${searchX}, searchZ=${searchZ}, radius=${radius}`);
       if (isNaN(searchX) || isNaN(searchZ)) {
-        player.sendMessage("\xA7cInvalid coordinates provided.");
+        player.sendMessage("\xA7cInvalid coordinates entered.");
         return;
       }
-      const nearbySpawners = [];
-      debugLog2(`Searching for spawners - allSpawners keys: ${Object.keys(allSpawners).length}`);
-      for (const [location, data] of Object.entries(allSpawners)) {
+      const results = [];
+      Object.entries(allSpawners).forEach(([coordinates, data]) => {
         try {
-          const [x, y, z] = location.split(",").map(Number);
+          const [x, y, z] = coordinates.split(",").map((coord) => parseFloat(coord.trim()));
           const distance = Math.sqrt(Math.pow(x - searchX, 2) + Math.pow(z - searchZ, 2));
           if (distance <= radius) {
-            const entityCount = countEntitiesNearSpawner(x, y, z);
-            if (includeInactive || entityCount > 0) {
-              nearbySpawners.push({
-                location,
+            const activeCount = countEntitiesNearSpawner(x, y, z);
+            if (activeCount > 0 || includeInactive) {
+              results.push({
+                coordinates,
                 data,
-                distance: Math.floor(distance),
-                entityCount
+                distance,
+                activeCount,
+                x,
+                y,
+                z
               });
             }
           }
-        } catch (error) {
-          console.error(`Error processing spawner at ${location}: ${error}`);
+        } catch (e) {
+          console.error("Error matching distance search coords:", e);
         }
-      }
-      nearbySpawners.sort((a, b) => a.distance - b.distance);
-      if (nearbySpawners.length === 0) {
-        player.sendMessage(`\xA7cNo spawners found within ${radius} blocks of ${searchX}, ${searchZ}.`);
-        return;
-      }
-      openLocationResultsForm(player, nearbySpawners, searchX, searchZ, radius);
+      });
+      results.sort((a, b) => a.distance - b.distance);
+      openLocationResultsForm(player, results, searchX, searchZ, radius);
     }).catch((error) => {
       console.error(`Error in openLocationSearchForm: ${error}`);
-      player.sendMessage("\xA7cAn error occurred while searching.");
+      player.sendMessage("\xA7cAn error occurred during search.");
     });
   } catch (error) {
     console.error(`Critical error in openLocationSearchForm: ${error}`);
@@ -3625,57 +3427,32 @@ function openLocationSearchForm(player, allSpawners) {
 }
 function openLocationResultsForm(player, spawners, searchX, searchZ, radius) {
   try {
-    if (!player || !player.isValid)
+    if (!player || !player.isValid())
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
       return;
     }
     const validSpawners = [];
-    for (const spawner of spawners) {
-      try {
-        const [x, y, z] = spawner.location.split(",").map(Number);
-        const typeId = spawner.data?.typeId || spawner.typeId;
-        if (!typeId) {
-          debugLog2(`Skipping spawner at ${spawner.location} - missing typeId`);
-          continue;
-        }
-        const levelMatch = typeId.match(/spawner(\d+)/);
-        const level = levelMatch ? levelMatch[1] : "1";
-        const mobType = typeId.replace("mrleefy:", "").replace(/spawner\d+/, "").replace(/_/g, "");
-        const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || "Unknown";
-        const status = spawner.entityCount > 0 ? "[ACTIVE]" : "[IDLE]";
-        const placedBy = spawner.data?.placedBy || spawner.placedBy || "Unknown";
-        validSpawners.push({
-          ...spawner,
-          x,
-          y,
-          z,
-          typeId,
-          level,
-          displayName,
-          status,
-          placedBy
-        });
-      } catch (error) {
-        debugLog2(`Error processing spawner ${spawner.location}: ${error}`);
-      }
-    }
-    if (validSpawners.length === 0) {
-      player.sendMessage(`\xA7cNo valid spawners found within ${radius} blocks of ${searchX}, ${searchZ}.`);
-      return;
-    }
-    const form = new ActionFormData2().title(`Spawners near ${searchX}, ${searchZ} (Radius: ${radius})`).body(`Found ${validSpawners.length} valid spawner(s):`);
-    for (const validSpawner of validSpawners) {
-      const buttonText = `${validSpawner.status} ${validSpawner.displayName} Level ${validSpawner.level} (${validSpawner.x},${validSpawner.z}) - ${validSpawner.distance} blocks away`;
-      form.button(buttonText, "textures/blocks/mob_spawner");
-    }
+    const form = new ActionFormData2().title("Search Results").body(`Found ${spawners.length} spawners within ${radius} blocks of ${searchX}, ${searchZ}:`);
+    spawners.forEach((result) => {
+      const spawner = result.data;
+      const status = result.activeCount > 0 ? `\xA7a[Active: ${result.activeCount}]` : "\xA78[Idle]";
+      const typeId = spawner.typeId || "unknown";
+      const levelMatch = typeId.match(/spawner(\d+)/);
+      const level = levelMatch ? levelMatch[1] : "1";
+      const mobType = typeId.replace("mrleefy:", "").replace(/spawner\d+/, "").replace(/_/g, "");
+      const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || "Unknown";
+      form.button(`${status} \xA77Lvl ${level} \xA7f${displayName}
+\xA77Player: ${spawner.placedBy || "Unknown"} (${Math.round(result.distance)}m away)`);
+      validSpawners.push(result);
+    });
     form.show(player).then((r) => {
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
         return;
       }
-      if (r.canceled)
+      if (r.canceled || r.selection === void 0)
         return;
       const selectedSpawner = validSpawners[r.selection];
       if (selectedSpawner) {
@@ -3683,7 +3460,7 @@ function openLocationResultsForm(player, spawners, searchX, searchZ, radius) {
       }
     }).catch((error) => {
       console.error(`Error in openLocationResultsForm: ${error}`);
-      player.sendMessage("\xA7cAn error occurred while showing results.");
+      player.sendMessage("\xA7cAn error occurred while selecting spawner from search results.");
     });
   } catch (error) {
     console.error(`Critical error in openLocationResultsForm: ${error}`);
@@ -3699,73 +3476,30 @@ function getMobDisplayName(entityTypeId) {
     "mrleefy:chickenstill": "Chicken",
     "mrleefy:emeraldgolemstill": "Emerald Golem",
     "mrleefy:netheritegolemstill": "Netherite Golem",
-    "mrleefy:irongolemstill": "Iron Golem",
     "mrleefy:diamondgolemstill": "Diamond Golem",
     "mrleefy:goldgolemstill": "Gold Golem",
-    "mrleefy:endermanstill": "Enderman",
+    "mrleefy:irongolemstill": "Iron Golem",
     "mrleefy:creeperstill": "Creeper",
-    "mrleefy:magmacubestill": "Magma Cube",
-    "mrleefy:guardianstill": "Guardian",
-    "mrleefy:witherskeletonstill": "Wither Skeleton",
-    "mrleefy:zombiestill": "Zombie",
-    "mrleefy:witherstill": "Wither",
-    "mrleefy:spiderstill": "Spider",
-    "mrleefy:slimestill": "Slime",
-    "mrleefy:vindicatorstill": "Vindicator",
     "mrleefy:skeletonstill": "Skeleton",
-    "mrleefy:shulkerstill": "Shulker",
-    "mrleefy:breezestill": "Breeze",
-    "mrleefy:piglinbrutestill": "Piglin Brute",
-    "mrleefy:wardenstill": "Warden",
+    "mrleefy:zombiestill": "Zombie",
+    "mrleefy:spiderstill": "Spider",
+    "mrleefy:witchstill": "Witch",
+    "mrleefy:slimeskill": "Slime",
+    "mrleefy:magmacubestill": "Magma Cube",
+    "mrleefy:ghaststill": "Ghast",
+    "mrleefy:endermanstill": "Enderman",
+    "mrleefy:cavespiderstill": "Cave Spider",
+    "mrleefy:guardianstill": "Guardian",
+    "mrleefy:elderguardianstill": "Elder Guardian",
+    "mrleefy:witherstill": "Wither",
+    "mrleefy:witherskeletonstill": "Wither Skeleton",
     "mrleefy:ravagerstill": "Ravager"
   };
   return nameMap[entityTypeId] || "Unknown";
 }
-function scanAndUpdateSpawnerDatabase() {
-  try {
-    const overworld = world4.getDimension("overworld");
-    const spawnruleEntities = overworld.getEntities({ type: ENTITIES.SPAWNRULE_ENTITY_TYPE });
-    let addedCount = 0;
-    let updatedCount = 0;
-    for (const entity of spawnruleEntities) {
-      if (!entity?.isValid)
-        continue;
-      const x = Math.floor(entity.location.x);
-      const y = Math.floor(entity.location.y);
-      const z = Math.floor(entity.location.z);
-      const coordinates = `${x},${y},${z}`;
-      const existingData = spawnerDatabase.read(coordinates);
-      if (!existingData) {
-        const spawnerData = {
-          typeId: "unknown_spawner",
-          // Will be updated when interacted with
-          placedBy: "Existing",
-          // Indicates this was found during scan
-          placedAt: Date.now(),
-          entitiesKilled: 0,
-          lastAccessed: Date.now(),
-          scannedAt: Date.now()
-          // Mark when it was discovered
-        };
-        spawnerDatabase.write(coordinates, spawnerData);
-        addedCount++;
-      } else if (!existingData.scannedAt) {
-        existingData.scannedAt = Date.now();
-        existingData.lastAccessed = Date.now();
-        spawnerDatabase.write(coordinates, existingData);
-        updatedCount++;
-      }
-    }
-    if (addedCount > 0 || updatedCount > 0) {
-      debugLog2(`Spawner database updated: ${addedCount} added, ${updatedCount} updated`);
-    }
-  } catch (error) {
-    console.error(`Error scanning spawner database: ${error}`);
-  }
-}
 function verifyAndCleanSpawnerDatabase(player) {
   try {
-    if (!player || !player.isValid) {
+    if (!player || !player.isValid()) {
       console.error("Invalid player provided to verifyAndCleanSpawnerDatabase");
       return;
     }
@@ -3773,74 +3507,49 @@ function verifyAndCleanSpawnerDatabase(player) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
       return;
     }
-    player.sendMessage("\xA7e\u{1F50D} Verifying spawner database...");
-    player.sendMessage("\xA77This may take a moment for spawners in unloaded chunks...");
+    player.sendMessage("\xA7aStarting database verification and cleanup...");
+    player.sendMessage("\xA77This process runs in batches to prevent lag.");
     const overworld = world4.getDimension("overworld");
     const allSpawnerKeys = spawnerDatabase.keys();
-    let removedBlocks = 0;
-    let removedEntities = 0;
-    let verifiedSpawners = 0;
-    let processedCount = 0;
     const totalCount = allSpawnerKeys.length;
     let currentIndex = 0;
+    let verifiedSpawners = 0;
+    let removedBlocks = 0;
+    let removedEntities = 0;
+    let processedCount = 0;
+    const BATCH_SIZE = 5;
     const processBatch = () => {
-      const BATCH_SIZE = 5;
-      const endIndex = Math.min(currentIndex + BATCH_SIZE, totalCount);
-      for (let i = currentIndex; i < endIndex; i++) {
+      const batchLimit = Math.min(currentIndex + BATCH_SIZE, totalCount);
+      for (let i = currentIndex; i < batchLimit; i++) {
         const coordinates = allSpawnerKeys[i];
-        const [x, y, z] = coordinates.split(",").map(Number);
-        if (isNaN(x) || isNaN(y) || isNaN(z)) {
-          debugLog2(`Invalid coordinates in database: ${coordinates}`);
-          processedCount++;
-          continue;
-        }
         try {
-          const tickingAreaName = `verify_${x}_${y}_${z}`;
-          try {
-            player.runCommand(`tickingarea add ${x - 1} ${y - 1} ${z - 1} ${x + 1} ${y + 1} ${z + 1} ${tickingAreaName}`);
-          } catch (tickError) {
-            debugLog2(`Could not add ticking area at ${coordinates}: ${tickError}`);
-          }
+          const [x, y, z] = coordinates.split(",").map((coord) => parseFloat(coord.trim()));
+          const tickingAreaName = `db_verify_${x}_${y}_${z}`;
+          player.runCommand(`tickingarea add ${x - 2} ${y - 2} ${z - 2} ${x + 2} ${y + 2} ${z + 2} ${tickingAreaName} true`);
           system3.runTimeout(() => {
             try {
               const block = overworld.getBlock({ x, y, z });
-              const isSpawnerBlock = block && block.typeId && block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner");
-              if (!isSpawnerBlock) {
+              if (!block || block.typeId !== "mrleefy:spawner") {
                 spawnerDatabase.delete(coordinates);
                 removedBlocks++;
-                const spawnruleEntities = overworld.getEntities({
-                  type: ENTITIES.SPAWNRULE_ENTITY_TYPE,
+                debugLog2(`[CLEANUP] Deleted stale spawner coordinates from DB: ${coordinates}`);
+                const nearbyEntities = overworld.getEntities({
                   location: { x, y, z },
-                  maxDistance: 1
+                  maxDistance: 8
                 });
-                for (const entity of spawnruleEntities) {
-                  if (entity?.isValid) {
-                    try {
-                      entity.remove();
-                      removedEntities++;
-                    } catch (removeError) {
-                      console.error(`Failed to remove spawnrule entity at ${coordinates}:`, removeError);
-                    }
+                nearbyEntities.forEach((entity) => {
+                  if (entity?.isValid() && entity.typeId.startsWith("mrleefy:") && entity.typeId.endsWith("still")) {
+                    entity.remove();
+                    removedEntities++;
+                    debugLog2(`[CLEANUP] Removed orphaned spawnrule entity: ${entity.typeId} at ${coordinates}`);
                   }
-                }
-                debugLog2(`Removed stale spawner entry: ${coordinates}`);
+                });
               } else {
                 verifiedSpawners++;
-                const spawnerData = spawnerDatabase.read(coordinates);
-                if (spawnerData && spawnerData.typeId !== block.typeId) {
-                  spawnerData.typeId = block.typeId;
-                  spawnerData.lastVerified = Date.now();
-                  spawnerDatabase.write(coordinates, spawnerData);
-                  debugLog2(`Updated spawner typeId at ${coordinates} to ${block.typeId}`);
-                } else if (spawnerData) {
-                  spawnerData.lastVerified = Date.now();
-                  spawnerDatabase.write(coordinates, spawnerData);
-                }
               }
               try {
                 player.runCommand(`tickingarea remove ${tickingAreaName}`);
-              } catch (removeTickError) {
-                debugLog2(`Could not remove ticking area ${tickingAreaName}: ${removeTickError}`);
+              } catch (e) {
               }
             } catch (blockError) {
               console.error(`Error checking block at ${coordinates}:`, blockError);
@@ -3895,39 +3604,6 @@ function reportVerificationResults(player, verifiedSpawners, removedBlocks, remo
     console.error(`Error reporting verification results: ${error}`);
   }
 }
-function openSimplePlayerListForm(player, sortedPlayers) {
-  try {
-    if (!player || !player.isValid)
-      return;
-    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
-      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
-      return;
-    }
-    const alphaPlayers = Array.from(sortedPlayers).sort(([a], [b]) => a.localeCompare(b));
-    const form = new ActionFormData2().title(`Spawner Owners (${alphaPlayers.length} players)`).body("Select a player to view spawners they have placed:");
-    for (const [playerName, spawners] of alphaPlayers) {
-      form.button(`\u{1F464} ${playerName} (${spawners.length} spawners)`, "textures/ui/steve_head");
-    }
-    form.show(player).then((r) => {
-      if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
-        player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
-        return;
-      }
-      if (r.canceled)
-        return;
-      const [selectedPlayer, spawners] = alphaPlayers[r.selection];
-      if (selectedPlayer) {
-        openSpawnerSelectionForm(player, selectedPlayer, spawners);
-      }
-    }).catch((error) => {
-      console.error(`Error in openSimplePlayerListForm: ${error}`);
-      player.sendMessage("\xA7cAn error occurred while showing the player list.");
-    });
-  } catch (error) {
-    console.error(`Critical error in openSimplePlayerListForm: ${error}`);
-    player.sendMessage("\xA7cA critical error occurred. Please try again.");
-  }
-}
 function openPlayerStatsSelectionForm(player) {
   try {
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3955,7 +3631,7 @@ function openPlayerStatsSelectionForm(player) {
       player.sendMessage("\xA7cNo spawner data found in the database.");
       return;
     }
-    const sortedPlayers = Array.from(playerSpawners.entries()).sort(([, a], [, b]) => b.length - a.length);
+    const sortedPlayers = Array.from(playerSpawners.entries()).sort((a, b) => b[1].length - a[1].length);
     const form = new ActionFormData2().title("Select Player for Detailed Stats").body(`Found ${playerSpawners.size} players with spawners. Select a player to view their detailed spawner information:`);
     for (const [playerName, spawners] of sortedPlayers) {
       const totalEntities = spawners.reduce((sum, spawner) => {
@@ -3970,7 +3646,7 @@ function openPlayerStatsSelectionForm(player) {
 \xA77${spawners.length} spawners \u2022 ${totalEntities} entities \u2022 Avg Level ${avgLevel.toFixed(1)}`, "textures/ui/steve_head");
     }
     form.show(player).then((r) => {
-      if (r.canceled)
+      if (r.canceled || r.selection === void 0)
         return;
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -4020,7 +3696,7 @@ function openPlayerStatsSelectionForm(player) {
 }
 function openSpawnerInfoForm(player, playerName, spawnerDetails) {
   try {
-    if (!player || !player.isValid)
+    if (!player || !player.isValid())
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -4036,7 +3712,7 @@ function openSpawnerInfoForm(player, playerName, spawnerDetails) {
       const type = spawner.displayName;
       typeDistribution[type] = (typeDistribution[type] || 0) + 1;
     });
-    const topType = Object.entries(typeDistribution).sort(([, a], [, b]) => b - a)[0];
+    const topType = Object.entries(typeDistribution).sort((a, b) => b[1] - a[1])[0];
     let infoText = `**${playerName}'s Spawner Overview**
 
 `;
@@ -4055,7 +3731,7 @@ function openSpawnerInfoForm(player, playerName, spawnerDetails) {
 `;
     infoText += `**Spawner Types:**
 `;
-    Object.entries(typeDistribution).sort(([, a], [, b]) => b - a).forEach(([type, count]) => {
+    Object.entries(typeDistribution).sort((a, b) => b[1] - a[1]).forEach(([type, count]) => {
       infoText += `\u2022 ${type}: ${count}
 `;
     });
@@ -4420,6 +4096,8 @@ var configDatabase2 = new Database("ConfigValues");
 var xpDropDatabase = new Database("XPDropValues");
 var spawnerDatabase2 = new Database("SpawnerLocations");
 var UnifiedCacheManager = class {
+  caches = /* @__PURE__ */ new Map();
+  cacheConfigs = /* @__PURE__ */ new Map();
   constructor() {
     this.caches = /* @__PURE__ */ new Map();
     this.cacheConfigs = /* @__PURE__ */ new Map();
@@ -4649,12 +4327,12 @@ function* spawnerProcessingJob() {
         yield;
         tickStartTime = Date.now();
       }
-      if (!spawnruleEntity?.isValid)
+      if (!spawnruleEntity?.isValid())
         continue;
       const location = spawnruleEntity.location;
       let playerNear = false;
       for (const player of activePlayers) {
-        if (!player.isValid)
+        if (!player.isValid())
           continue;
         const pLoc = player.location;
         const dx = pLoc.x - location.x;
@@ -4701,7 +4379,7 @@ function* spawnerProcessingJob() {
       if (spawnsThisCycle >= PERFORMANCE_CONFIG.MAX_SPAWNS_PER_CYCLE) {
         continue;
       }
-      if (!spawnruleEntity.isValid)
+      if (!spawnruleEntity.isValid())
         continue;
       let nearbyEntities;
       try {
@@ -4719,7 +4397,7 @@ function* spawnerProcessingJob() {
       let totalStack = 0;
       const extras = [];
       for (const entity of nearbyEntities) {
-        if (!entity || !entity.isValid)
+        if (!entity || !entity.isValid())
           continue;
         const stackSize = extractStackNumber(entity.nameTag || "");
         totalStack += stackSize;
@@ -4734,7 +4412,7 @@ function* spawnerProcessingJob() {
       }
       for (const entity of extras) {
         try {
-          if (entity.isValid) {
+          if (entity.isValid()) {
             entitySpawnerMap.delete(entity.id);
             entitySpawnerOwnership.delete(entity.id);
             entity.remove();
@@ -4744,7 +4422,7 @@ function* spawnerProcessingJob() {
           debugLog2(`Failed to remove entity: ${error.message}`);
         }
       }
-      if (primaryEntity && primaryEntity.isValid) {
+      if (primaryEntity && primaryEntity.isValid()) {
         const newStackSize = Math.min(totalStack + qty, maxStack);
         const currentStack = extractStackNumber(primaryEntity.nameTag || "");
         if (currentStack !== newStackSize) {
@@ -4893,8 +4571,8 @@ function spawnNewStackedEntity(dimension, entityTypeId, location, qty, displayNa
       z: location.z
     };
     const newEntity = dimension.spawnEntity(entityTypeId, spawnLocation);
-    if (newEntity?.isValid) {
-      newEntity.nameTag = nameTagConfig.replace("#", qty).replace("@", displayName);
+    if (newEntity?.isValid()) {
+      newEntity.nameTag = nameTagConfig.replace("#", qty.toString()).replace("@", displayName);
       const spawnerKey = `${Math.floor(location.x)},${Math.floor(location.y)},${Math.floor(location.z)}`;
       entitySpawnerMap.set(newEntity.id, spawnerKey);
       performanceMetrics.entitySpawns++;
@@ -4935,7 +4613,7 @@ if (!globalThis.__stackDieSubscribed) {
   world5.afterEvents.entityHurt.subscribe((event) => {
     try {
       const { hurtEntity, damageSource } = event;
-      if (!hurtEntity?.isValid)
+      if (!hurtEntity?.isValid())
         return;
       const health = hurtEntity.getComponent("health");
       if (!health || health.currentValue > 0) {
@@ -4954,14 +4632,13 @@ if (!globalThis.__stackDieSubscribed) {
         return;
       }
       const spawnerKey = entitySpawnerMap.get(hurtEntity.id);
-      if (spawnerKey) {
-        updateSpawnerStatisticsDirect(entityTypeId, spawnerKey, damageSource.damagingEntity);
-      } else {
-        const loc = hurtEntity.location;
-        const spawnerKeyFallback = `${Math.floor(loc.x)},${Math.floor(loc.y)},${Math.floor(loc.z)}`;
-        updateSpawnerStatisticsDirect(entityTypeId, spawnerKeyFallback, damageSource.damagingEntity);
-      }
-      debugLog2(`Tracked kill: ${entityTypeId} at ${spawnerLocation.x}, ${spawnerLocation.y}, ${spawnerLocation.z}`);
+      const loc = hurtEntity.location;
+      const spawnerKeyFallback = `${Math.floor(loc.x)},${Math.floor(loc.y)},${Math.floor(loc.z)}`;
+      const finalSpawnerKey = spawnerKey || spawnerKeyFallback;
+      const killer = damageSource?.damagingEntity;
+      const killerPlayer = killer?.typeId === "minecraft:player" ? killer : void 0;
+      updateSpawnerStatisticsDirect(entityTypeId, finalSpawnerKey, killerPlayer);
+      debugLog2(`Tracked kill: ${entityTypeId} at ${finalSpawnerKey}`);
       const ownerSpawnKey = entitySpawnerOwnership.get(hurtEntity.id);
       if (ownerSpawnKey) {
         maxedSpawners.delete(ownerSpawnKey);
@@ -4989,8 +4666,8 @@ if (!globalThis.__stackDieSubscribed) {
             return;
           }
           const newEntity = hurtEntity.dimension.spawnEntity(entityTypeId, oldLocation);
-          if (newEntity && newEntity.isValid) {
-            newEntity.nameTag = nameTagConfig.replace("#", currentAmount - 1).replace("@", displayName);
+          if (newEntity && newEntity.isValid()) {
+            newEntity.nameTag = nameTagConfig.replace("#", (currentAmount - 1).toString()).replace("@", displayName);
             newEntity.setRotation(oldRotation);
             if (inheritedSpawnerKey) {
               entitySpawnerMap.set(newEntity.id, inheritedSpawnerKey);
@@ -5004,8 +4681,8 @@ if (!globalThis.__stackDieSubscribed) {
       }
       try {
         const playerKillOnly = getCachedConfig2("playerKillOnly", false);
-        const killer = damageSource.damagingEntity;
-        if (playerKillOnly && (!killer || killer.typeId !== "minecraft:player"))
+        const killer2 = damageSource.damagingEntity;
+        if (playerKillOnly && (!killer2 || killer2.typeId !== "minecraft:player"))
           return;
         const xpSpillCap = getCachedConfig2("xpSpillCap", ENTITIES.DEFAULT_XP_SPILL_CAP);
         if (hurtEntity.dimension.getEntities({ type: ENTITIES.XP_ORB_TYPE, location: hurtEntity.location, maxDistance: 3, closest: xpSpillCap }).length < xpSpillCap) {
@@ -5033,6 +4710,7 @@ var PerformanceMonitor = class {
   timingStack;
   alerts;
   thresholds;
+  _intervalId;
   constructor() {
     this.metrics = {
       stackingOperations: 0,
@@ -5059,8 +4737,8 @@ var PerformanceMonitor = class {
   }
   /**
    * Start timing for an operation
-   * @param {string} operation - Operation name
-   * @returns {string} Timer ID
+   * @param operation - Operation name
+   * @returns Timer ID
    */
   startTiming(operation) {
     const timerId = `${operation}_${Date.now()}_${Math.random()}`;
@@ -5069,9 +4747,9 @@ var PerformanceMonitor = class {
   }
   /**
    * End timing for an operation and record the duration
-   * @param {string} timerId - Timer ID from startTiming
-   * @param {string} operation - Operation name (fallback)
-   * @returns {number} Duration in milliseconds
+   * @param timerId - Timer ID from startTiming
+   * @param operation - Operation name (fallback)
+   * @returns Duration in milliseconds
    */
   endTiming(timerId, operation = "unknown") {
     const startTime = this.timingStack.get(timerId);
@@ -5090,8 +4768,8 @@ var PerformanceMonitor = class {
   }
   /**
    * Record a performance event
-   * @param {string} eventType - Type of event (e.g., 'entitySpawn', 'lootDrop')
-   * @param {number} value - Value to record (optional)
+   * @param eventType - Type of event (e.g., 'entitySpawn', 'lootDrop')
+   * @param value - Value to record (optional)
    */
   recordEvent(eventType, value = 1) {
     if (this.metrics.hasOwnProperty(eventType)) {
@@ -5102,7 +4780,7 @@ var PerformanceMonitor = class {
   }
   /**
    * Record a cache hit or miss
-   * @param {boolean} isHit - True for cache hit, false for cache miss
+   * @param isHit - True for cache hit, false for cache miss
    */
   recordCacheAccess(isHit) {
     if (isHit) {
@@ -5113,8 +4791,8 @@ var PerformanceMonitor = class {
   }
   /**
    * Record a database operation
-   * @param {string} operation - 'read' or 'write'
-   * @param {string} table - Table name (optional)
+   * @param operation - 'read' or 'write'
+   * @param table - Table name (optional)
    */
   recordDatabaseOperation(operation, table = "unknown") {
     if (operation === "read") {
@@ -5125,8 +4803,8 @@ var PerformanceMonitor = class {
   }
   /**
    * Record an error
-   * @param {string} errorType - Type of error
-   * @param {string} message - Error message
+   * @param errorType - Type of error
+   * @param message - Error message
    */
   recordError(errorType, message) {
     this.metrics.errors++;
@@ -5138,7 +4816,7 @@ var PerformanceMonitor = class {
   }
   /**
    * Add a performance alert
-   * @param {string} message - Alert message
+   * @param message - Alert message
    */
   addAlert(message) {
     const alert = {
@@ -5153,7 +4831,7 @@ var PerformanceMonitor = class {
   }
   /**
    * Get current performance statistics
-   * @returns {object} Performance statistics
+   * @returns Performance statistics
    */
   getStats() {
     const now = Date.now();
@@ -5171,7 +4849,7 @@ var PerformanceMonitor = class {
   }
   /**
    * Get errors per minute
-   * @returns {number} Errors per minute
+   * @returns Errors per minute
    */
   getErrorsPerMinute() {
     const uptimeMinutes = (Date.now() - this.metrics.lastReset) / 6e4;
@@ -5179,7 +4857,7 @@ var PerformanceMonitor = class {
   }
   /**
    * Get cache hit rate percentage
-   * @returns {number} Cache hit rate (0-100)
+   * @returns Cache hit rate (0-100)
    */
   getCacheHitRate() {
     const total = this.metrics.cacheHits + this.metrics.cacheMisses;
@@ -5203,7 +4881,7 @@ var PerformanceMonitor = class {
    * Start periodic performance monitoring
    */
   startPeriodicMonitoring() {
-    system5.runInterval(() => {
+    this._intervalId = system5.runInterval(() => {
       const stats = this.getStats();
       if (stats.errors > 0 || stats.operationsPerMinute > 1e3) {
         debugLog2(`Performance Stats: ${JSON.stringify(stats, null, 2)}`);
@@ -5223,7 +4901,7 @@ var PerformanceMonitor = class {
   }
   /**
    * Get performance health status
-   * @returns {object} Health status
+   * @returns Health status
    */
   getHealthStatus() {
     const stats = this.getStats();
@@ -5245,8 +4923,8 @@ var PerformanceMonitor = class {
   }
   /**
    * Get recent alerts
-   * @param {number} count - Number of recent alerts to return
-   * @returns {Array} Recent alerts
+   * @param count - Number of recent alerts to return
+   * @returns Recent alerts
    */
   getRecentAlerts(count = 10) {
     return this.alerts.slice(-count);
@@ -5255,10 +4933,7 @@ var PerformanceMonitor = class {
 var performanceMonitor = new PerformanceMonitor();
 
 // src/stack_remover.ts
-import {
-  system as system6,
-  world as world6
-} from "@minecraft/server";
+import { system as system6, world as world6 } from "@minecraft/server";
 var validEntityTypes2 = new Set(validMobs.map((mob) => mob.typeId));
 world6.afterEvents.entityHitEntity.subscribe((evd) => {
   system6.run(() => {
@@ -5273,7 +4948,7 @@ world6.afterEvents.entityHitEntity.subscribe((evd) => {
     }
     const inventory = equippableComponent.getEquipment("Mainhand");
     const item = inventory;
-    if (item?.typeId == `mrleefy:stack_killer_sword`) {
+    if (item?.typeId === `mrleefy:stack_killer_sword`) {
       if (validEntityTypes2.has(entityTypeId)) {
         try {
           entity.remove();
@@ -5299,7 +4974,7 @@ function isOnCooldown(playerId) {
   const now = Date.now();
   if (formCooldowns.has(playerId)) {
     const lastInteraction = formCooldowns.get(playerId);
-    if (now - lastInteraction < FORM_COOLDOWN_MS) {
+    if (lastInteraction !== void 0 && now - lastInteraction < FORM_COOLDOWN_MS) {
       return true;
     }
   }
@@ -5433,6 +5108,8 @@ function removePlayerMoney(player, amount) {
 }
 async function showAdminForm(player, blockId, blockLocation) {
   const entityId = SPAWNER_TO_ENTITY_MAP[blockId];
+  if (!entityId)
+    return;
   const mobName = getFriendlyName(blockId);
   const currentPrice = getPrice(blockId);
   const moneyObjective = getMoneyObjective();
@@ -5466,7 +5143,7 @@ async function showChangePriceForm(player, blockId, blockLocation) {
 
 \xA77Enter new price:`,
     "e.g., 50000",
-    { defaultValue: currentPrice.toString() }
+    currentPrice.toString()
   );
   try {
     const response = await form.show(player);
@@ -5477,12 +5154,16 @@ async function showChangePriceForm(player, blockId, blockLocation) {
     const newPrice = parseInt(newPriceText);
     if (isNaN(newPrice) || newPrice < 0) {
       player.sendMessage(`\xA7c\u2717 Invalid price! Please enter a valid number.`);
-      system7.run(() => showAdminForm(player, blockId, blockLocation));
+      system7.run(() => {
+        showAdminForm(player, blockId, blockLocation);
+      });
       return;
     }
     setPrice(blockId, newPrice);
     player.sendMessage(`\xA7a\u2713 Price updated to \xA7e$${newPrice.toLocaleString()} \xA7afor ${mobName} Spawner!`);
-    system7.run(() => showAdminForm(player, blockId, blockLocation));
+    system7.run(() => {
+      showAdminForm(player, blockId, blockLocation);
+    });
   } catch (error) {
     console.warn(`[Display Spawner] Error showing price form: ${error}`);
   }
@@ -5501,7 +5182,7 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
 
 \xA77Objective Name:`,
     "e.g., money",
-    { defaultValue: currentObjective }
+    currentObjective
   );
   try {
     const response = await form.show(player);
@@ -5511,7 +5192,9 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
     const newObjective = response.formValues[0].trim();
     if (!newObjective || newObjective.length === 0) {
       player.sendMessage(`\xA7c\u2717 Invalid objective name!`);
-      system7.run(() => showAdminForm(player, blockId, blockLocation));
+      system7.run(() => {
+        showAdminForm(player, blockId, blockLocation);
+      });
       return;
     }
     try {
@@ -5543,12 +5226,16 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
       }
     } catch (error) {
       player.sendMessage(`\xA7c\u2717 Error setting up objective: ${error.message}`);
-      system7.run(() => showAdminForm(player, blockId, blockLocation));
+      system7.run(() => {
+        showAdminForm(player, blockId, blockLocation);
+      });
       return;
     }
     setMoneyObjective(newObjective);
     player.sendMessage(`\xA7a\u2713 Money objective updated to \xA7e${newObjective}\xA7a!`);
-    system7.run(() => showAdminForm(player, blockId, blockLocation));
+    system7.run(() => {
+      showAdminForm(player, blockId, blockLocation);
+    });
   } catch (error) {
     console.warn(`[Display Spawner] Error showing money objective form: ${error}`);
   }
@@ -5572,7 +5259,7 @@ async function showShopForm(player, blockId) {
 \xA77Select quantity:`,
     1,
     maxAffordable,
-    { defaultValue: 1 }
+    1
   );
   try {
     const response = await form.show(player);
@@ -5672,11 +5359,12 @@ world7.beforeEvents.playerInteractWithEntity.subscribe((event) => {
     if (isOnCooldown(player.id)) {
       return;
     }
+    const finalBlockId = blockId;
     system7.run(() => {
       if (player.hasTag("admin") && player.isSneaking) {
-        showAdminForm(player, blockId, blockLocation);
+        showAdminForm(player, finalBlockId, blockLocation);
       } else {
-        showShopForm(player, blockId);
+        showShopForm(player, finalBlockId);
       }
     });
   } catch (error) {

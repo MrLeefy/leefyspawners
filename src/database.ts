@@ -1,9 +1,8 @@
-// @ts-nocheck
-import { world, ScoreboardObjective, ScoreboardIdentityType, system, Entity } from "@minecraft/server";
+import { world, ScoreboardObjective, ScoreboardIdentityType, system } from "@minecraft/server";
 import { DATABASE } from "./constants";
 
 const { scoreboard } = world, { FakePlayer } = ScoreboardIdentityType;
-const databases = new Map();
+const databases = new Map<string, ScoreboardDatabaseManager>();
 const split = DATABASE.SPLIT_DELIMITER;
 
 const CHUNK_SIZE = 150;
@@ -13,7 +12,7 @@ const CHUNK_PREFIX = "__chunk__";
 let isShutdownRegistered = false;
 
 // Safe surrogate slicing to prevent character corruption
-function safeSubstring(str, start, end) {
+function safeSubstring(str: string, start: number, end: number): string {
     if (start >= str.length) return "";
     
     // Adjust start index if it falls inside a surrogate pair
@@ -31,13 +30,13 @@ function safeSubstring(str, start, end) {
     return str.substring(adjStart, adjEnd);
 }
 
-function isSurrogatePairAt(str, idx) {
+function isSurrogatePairAt(str: string, idx: number): boolean {
     const code = str.charCodeAt(idx);
     return code >= 0xD800 && code <= 0xDBFF; // High surrogate check
 }
 
 // Database cleanup and management
-export function cleanupDatabases() {
+export function cleanupDatabases(): void {
     console.warn("[Database] Flushing all pending changes before unload...");
     for (const [id, db] of databases.entries()) {
         try {
@@ -57,8 +56,8 @@ if (!isShutdownRegistered) {
     isShutdownRegistered = true;
 }
 
-export function getDatabaseStats() {
-    const stats = {
+export function getDatabaseStats(): any {
+    const stats: any = {
         totalDatabases: databases.size,
         databases: {}
     };
@@ -79,16 +78,20 @@ export const DatabaseSavingModes = {
     ONE_TIME_SAVE: "OneTimeSave",
     END_TICK_SAVE: "EndTickSave",
     TICK_INTERVAL: "TickInterval"
-}
+} as const;
+
+export type DatabaseSavingModeType = typeof DatabaseSavingModes[keyof typeof DatabaseSavingModes];
 
 const ChangeAction = {
     Change: 0,
     Remove: 1
-}
+} as const;
 
-function run(thisClass, key, value, action) {
+type ChangeActionType = typeof ChangeAction[keyof typeof ChangeAction];
+
+function run(thisClass: ScoreboardDatabaseManager, key: string, value: any, action: ChangeActionType): void {
     // 1. Verify self-healing: if scoreboard is invalid, trigger rebuild and abort
-    if (!thisClass._scoreboard_ || !thisClass._scoreboard_.isValid) {
+    if (!thisClass._scoreboard_ || !thisClass._scoreboard_.isValid()) {
         console.warn(`Database objective "${thisClass._nameId_}" was lost or invalid! Rebuilding...`);
         thisClass.rebuild();
         return; // Rebuild will write everything, including this pending change
@@ -101,7 +104,7 @@ function run(thisClass, key, value, action) {
             for (const p of oldParticipant) {
                 try { thisClass._scoreboard_.removeParticipant(p); } catch (e) {}
             }
-        } else {
+        } else if (oldParticipant) {
             try { thisClass._scoreboard_.removeParticipant(oldParticipant); } catch (e) {}
         }
     }
@@ -130,7 +133,7 @@ function run(thisClass, key, value, action) {
     }
 }
 
-const SavingModes = {
+const SavingModes: Record<DatabaseSavingModeType, (thisClass: ScoreboardDatabaseManager, key: string, value: any, action: ChangeActionType) => void> = {
     [DatabaseSavingModes.ONE_TIME_SAVE](thisClass, key, value, action) {
         run(thisClass, key, value, action);
     },
@@ -150,31 +153,40 @@ const SavingModes = {
         thisClass._changes_.set(key, { action, value });
         thisClass.hasChanges = true;
     }
-}
+};
 
-class ScoreboardDatabaseManager extends Map {
+class ScoreboardDatabaseManager extends Map<string, any> {
     _loaded_ = false;
-    _saveMode_;
+    _saveMode_: DatabaseSavingModeType;
     hasChanges = false;
-    _loadingPromise_;
+    _loadingPromise_: Promise<ScoreboardDatabaseManager> | null = null;
     _saveScheduled_ = false;
+    _nameId_: string;
+    interval: number;
+    _scoreboard_: ScoreboardObjective;
+    _source_!: Map<string, string | string[]>;
+    _changes_!: Map<string, { action: ChangeActionType; value: any }>;
+    _maxChanges_!: number;
+    _lastCleanup_!: number;
+    _intervalId?: number;
     
-    get maxLength() { return DATABASE.MAX_DATA_LENGTH; }
-    _scoreboard_;
-    _source_;
+    get maxLength(): number { return DATABASE.MAX_DATA_LENGTH; }
     
-    get _parser_() { return JSON; }
-    get savingMode() { return this._saveMode_; }
+    get _parser_(): JSON { return JSON; }
+    get savingMode(): DatabaseSavingModeType { return this._saveMode_; }
     
-    constructor(objective, saveMode = DatabaseSavingModes.END_TICK_SAVE, interval = 5) {
+    constructor(objective: string | ScoreboardObjective, saveMode: DatabaseSavingModeType = DatabaseSavingModes.END_TICK_SAVE, interval = 5) {
         super();
-        // Namespace protection to avoid scoreboard conflicts
-        const namespacedObjective = typeof objective === "string" && !objective.startsWith("ls_db:") 
-            ? `ls_db:${objective}` 
-            : objective;
+        
+        let namespacedObjective: string | ScoreboardObjective;
+        if (typeof objective === "string") {
+            namespacedObjective = objective.startsWith("ls_db:") ? objective : `ls_db:${objective}`;
+        } else {
+            namespacedObjective = objective;
+        }
             
         this._saveMode_ = saveMode;
-        this._nameId_ = namespacedObjective;
+        this._nameId_ = typeof namespacedObjective === "string" ? namespacedObjective : namespacedObjective.id;
         this.interval = interval ?? 5;
         
         if (!namespacedObjective) throw new RangeError("First parameter is not valid: " + namespacedObjective);
@@ -183,10 +195,12 @@ class ScoreboardDatabaseManager extends Map {
             ? (scoreboard.getObjective(namespacedObjective) ?? scoreboard.addObjective(namespacedObjective, namespacedObjective)) 
             : namespacedObjective;
         
-        if (databases.has(this.id)) return databases.get(this.id);
+        const existingInstance = databases.get(this.id);
+        if (existingInstance) return existingInstance;
+        
         this._nameId_ = this.id;
-        this._source_ = new Map();
-        this._changes_ = new Map();
+        this._source_ = new Map<string, string | string[]>();
+        this._changes_ = new Map<string, { action: ChangeActionType; value: any }>();
 
         this._maxChanges_ = DATABASE.MAX_CHANGES_BEFORE_CLEANUP;
         this._lastCleanup_ = Date.now();
@@ -206,18 +220,18 @@ class ScoreboardDatabaseManager extends Map {
     }
     
     // Lightweight self-healing audit on reads
-    _assertObjectiveValid() {
-        if (!this._scoreboard_ || !this._scoreboard_.isValid) {
+    _assertObjectiveValid(): void {
+        if (!this._scoreboard_ || !this._scoreboard_.isValid()) {
             console.warn(`[Database] Read audit failed! Objective "${this._nameId_}" was lost. Recovering...`);
             this.rebuild();
         }
     }
     
-    load() {
+    load(): this {
         if (this._loaded_) return this;
         
-        const chunkedData = new Map(); // key -> Array of { index, total, data }
-        this._source_ = new Map();
+        const chunkedData = new Map<string, any[]>(); // key -> Array of { index, total, data }
+        this._source_ = new Map<string, string | string[]>();
         super.clear();
 
         this._assertObjectiveValid();
@@ -237,7 +251,7 @@ class ScoreboardDatabaseManager extends Map {
                     if (isNaN(index) || isNaN(total)) continue; // Filter corrupted parts
                     
                     if (!chunkedData.has(key)) chunkedData.set(key, []);
-                    chunkedData.get(key).push({ index, total, data, rawName: displayName });
+                    chunkedData.get(key)!.push({ index, total, data, rawName: displayName });
                 }
             } else {
                 const parts = displayName.split(split);
@@ -257,7 +271,7 @@ class ScoreboardDatabaseManager extends Map {
         // Reconstruct chunked entries with duplicate chunk mitigation
         for (const [key, chunks] of chunkedData.entries()) {
             // Remove duplicates by keeping only the last occurrence of each index
-            const uniqueChunks = new Map();
+            const uniqueChunks = new Map<number, any>();
             for (const c of chunks) {
                 uniqueChunks.set(c.index, c);
             }
@@ -283,23 +297,23 @@ class ScoreboardDatabaseManager extends Map {
         return this;
     }
     
-    loadAsync() {
-        if (this._loaded_) return this._loadingPromise_ ?? Promise.resolve(this);
+    loadAsync(): Promise<this> {
+        if (this._loaded_) return (this._loadingPromise_ ?? Promise.resolve(this)) as Promise<this>;
         const promise = (async () => {
             return this.load();
         })();
-        this._loadingPromise_ = promise;
-        return promise;
+        this._loadingPromise_ = promise as any;
+        return promise as any;
     }
     
-    set(key, value) {
+    set(key: string, value: any): this {
         if (!this._loaded_) throw new ReferenceError("Database is not loaded");
         this._assertObjectiveValid();
         
         const serializedValue = this._parser_.stringify(value);
         const singleParticipantString = `${key}${split}${serializedValue}`;
         
-        let changeValue;
+        let changeValue: any;
         if (singleParticipantString.length <= 240) {
             changeValue = { isChunked: false, part: singleParticipantString };
         } else {
@@ -308,7 +322,7 @@ class ScoreboardDatabaseManager extends Map {
                 throw new RangeError(`Value is too large: ${serializedValue.length} characters (max: ${this.maxLength})`);
             }
             
-            const parts = [];
+            const parts: string[] = [];
             for (let i = 0; i < totalChunks; i++) {
                 const chunkData = safeSubstring(serializedValue, i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
                 const partString = `${CHUNK_PREFIX}${split}${key}${split}${i}${split}${totalChunks}${split}${chunkData}`;
@@ -325,7 +339,7 @@ class ScoreboardDatabaseManager extends Map {
         return this;
     }
     
-    delete(key) {
+    delete(key: string): boolean {
         if (!this._loaded_) throw new ReferenceError("Database is not loaded");
         this._assertObjectiveValid();
         
@@ -338,39 +352,39 @@ class ScoreboardDatabaseManager extends Map {
         return true;
     }
     
-    clear() {
+    clear(): void {
         if (!this._loaded_) throw new ReferenceError("Database is not loaded");
         for (const key of this.keys()) {
             this.delete(key);
         }
     }
     
-    forEach(callback) {
+    forEach(callback: (value: any, key: string, map: Map<string, any>) => void): void {
         if (!this._loaded_) throw new ReferenceError("Database is not loaded");
         this._assertObjectiveValid();
         for (const [key, value] of this.entries()) {
-            callback(key, value);
+            callback(value, key, this);
         }
     }
     
-    keys() {
+    keys(): IterableIterator<string> {
         if (!this._loaded_) throw new ReferenceError("Database is not loaded");
         this._assertObjectiveValid();
-        return Array.from(super.keys());
+        return super.keys();
     }
     
-    values() {
+    values(): IterableIterator<any> {
         if (!this._loaded_) throw new ReferenceError("Database is not loaded");
         this._assertObjectiveValid();
-        return Array.from(super.values());
+        return super.values();
     }
     
-    get length() {
+    get length(): number {
         this._assertObjectiveValid();
         return super.size;
     }
     
-    _onChange_(key, value, action) {
+    _onChange_(key: string, value: any, action: ChangeActionType): void {
         if (!this._loaded_) throw new ReferenceError("Database is not loaded");
 
         if (this._changes_.size > this._maxChanges_) {
@@ -380,7 +394,7 @@ class ScoreboardDatabaseManager extends Map {
         SavingModes[this._saveMode_](this, key, value, action);
     }
 
-    _cleanupChanges() {
+    _cleanupChanges(): void {
         try {
             this._executeSave();
             this._lastCleanup_ = Date.now();
@@ -389,7 +403,7 @@ class ScoreboardDatabaseManager extends Map {
         }
     }
     
-    _executeSave() {
+    _executeSave(): void {
         if (this._changes_.size === 0) return;
         
         const pending = new Map(this._changes_);
@@ -405,7 +419,7 @@ class ScoreboardDatabaseManager extends Map {
         }
     }
 
-    _clearInMemory() {
+    _clearInMemory(): void {
         super.clear();
         this._source_.clear();
         // FIX: Never clear `this._changes_` during an external rebuild,
@@ -413,20 +427,20 @@ class ScoreboardDatabaseManager extends Map {
         this.hasChanges = false;
     }
 
-    get objective() { return this._scoreboard_; }
-    get id() { return this._scoreboard_.id; }
-    get loaded() { return this._loaded_; }
-    get type() { return "DefaultJsonType"; }
-    get loadingAwaiter() { return this._loadingPromise_ ?? this.loadAsync(); }
+    get objective(): ScoreboardObjective { return this._scoreboard_; }
+    get id(): string { return this._scoreboard_.id; }
+    get loaded(): boolean { return this._loaded_; }
+    get type(): string { return "DefaultJsonType"; }
+    get loadingAwaiter(): Promise<this> { return (this._loadingPromise_ as Promise<this> | null) ?? this.loadAsync(); }
 
-    cleanup() {
+    cleanup(): this {
         if (this._loaded_) {
             this._cleanupChanges();
         }
         return this;
     }
 
-    getStats() {
+    getStats(): any {
         return {
             size: this.length,
             pendingChanges: this._changes_.size,
@@ -437,8 +451,8 @@ class ScoreboardDatabaseManager extends Map {
         };
     }
 
-    rebuild() {
-        if (this.objective?.isValid) return this;
+    rebuild(): this {
+        if (this.objective?.isValid()) return this;
 
         try {
             const entries = Array.from(super.entries());
@@ -469,7 +483,7 @@ class ScoreboardDatabaseManager extends Map {
                         this._source_.set(k, singleStr);
                     } else {
                         const totalChunks = Math.ceil(serializedValue.length / CHUNK_SIZE);
-                        const parts = [];
+                        const parts: string[] = [];
                         for (let i = 0; i < totalChunks; i++) {
                             const chunkData = safeSubstring(serializedValue, i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
                             const partString = `${CHUNK_PREFIX}${split}${k}${split}${i}${split}${totalChunks}${split}${chunkData}`;
@@ -494,17 +508,19 @@ class ScoreboardDatabaseManager extends Map {
         return this;
     }
     
-    async rebuildAsync() {
+    async rebuildAsync(): Promise<this> {
         return this.rebuild();
     }
 }
 
 export class JsonDatabase extends ScoreboardDatabaseManager {
-    get type() { return "JsonType"; }
+    get type(): string { return "JsonType"; }
 }
 
 export class Database {
-    constructor(name) {
+    Database: any;
+    
+    constructor(name: string) {
         try {
             this.Database = new JsonDatabase(name).load();
             if (!this.Database) {
@@ -528,7 +544,7 @@ export class Database {
         }
     }
     
-    get length() {
+    get length(): number {
         try {
             return this.Database.size || this.Database.length || 0;
         } catch (error) {
@@ -536,7 +552,7 @@ export class Database {
         }
     }
     
-    read(key) {
+    read(key: string): any {
         try {
             return this.Database.get ? this.Database.get(key) : undefined;
         } catch (error) {
@@ -544,7 +560,7 @@ export class Database {
         }
     }
     
-    write(key, value) {
+    write(key: string, value: any): any {
         try {
             if (this.Database.set) {
                 return this.Database.set(key, value);
@@ -556,7 +572,7 @@ export class Database {
         }
     }
     
-    has(key) {
+    has(key: string): boolean {
         try {
             return this.Database.has ? this.Database.has(key) : false;
         } catch (error) {
@@ -564,35 +580,43 @@ export class Database {
         }
     }
 
-    delete(key) {
+    delete(key: string): boolean {
         return this.Database.delete(key)
     }
 
-    clear() {
-        return this.Database.clear()
+    clear(): void {
+        this.Database.clear();
     }
 
-    keys() {
+    keys(): string[] {
         try {
-            return this.Database.keys ? this.Database.keys() : [];
+            return this.Database.keys ? Array.from(this.Database.keys()) : [];
         } catch (error) {
             return [];
         }
     }
 
-    values() {
+    values(): any[] {
         try {
-            return this.Database.values ? this.Database.values() : [];
+            return this.Database.values ? Array.from(this.Database.values()) : [];
         } catch (error) {
             return [];
         }
     }
 
-    forEach(callback) {
+    forEach(callback: (value: any, key: string) => void): void {
         try {
             if (this.Database.forEach) {
-                this.Database.forEach(callback);
+                this.Database.forEach((value: any, key: string) => callback(value, key));
             }
         } catch (error) {}
+    }
+
+    getStats(): any {
+        try {
+            return this.Database && typeof this.Database.getStats === 'function' ? this.Database.getStats() : { size: this.length };
+        } catch (error) {
+            return { error: String(error) };
+        }
     }
 }

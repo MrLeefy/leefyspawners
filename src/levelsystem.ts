@@ -1,22 +1,28 @@
-// @ts-nocheck
 import {
     world,
     system,
-    MolangVariableMap
-} from "@minecraft/server"
+    MolangVariableMap,
+    PlayerBreakBlockBeforeEvent,
+    PistonActivateAfterEvent,
+    ExplosionBeforeEvent,
+    PlayerPlaceBlockAfterEvent,
+    PlayerInteractWithBlockBeforeEvent,
+    Block,
+    Dimension,
+    Player
+} from "@minecraft/server";
 import {
     ActionFormData,
-    MessageFormData,
     ModalFormData
-} from "@minecraft/server-ui"
+} from "@minecraft/server-ui";
 
 import { Database } from "./database";
 import { Vector3 } from "./VectorMath/index";
 import { configDatabase, debugLog, clearMaxedSpawnerCache } from "./mobstacker-core";
-import { TIMING, UI, ERROR_MESSAGES, SUCCESS_MESSAGES, VALIDATION } from "./constants";
+import { TIMING, UI, ERROR_MESSAGES, VALIDATION } from "./constants";
 
 // Define shared cooldown map here and export it for other scripts
-export const cooldowns = new Map();
+export const cooldowns = new Map<string, number>();
 
 // Initialize the database for spawner locations
 const spawnerDatabase = new Database("SpawnerLocations");
@@ -24,7 +30,7 @@ const spawnerDatabase = new Database("SpawnerLocations");
 // Custom character mapping
 const charMap = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
-const activeForms = new Map();
+const activeForms = new Map<string, any>();
 
 // Memory limits for player interaction tracking
 const PLAYER_MEMORY_LIMITS = {
@@ -38,11 +44,11 @@ const PLAYER_MEMORY_LIMITS = {
 const PLAYER_CLEANUP_INTERVAL = 150 * 20; // Every 2.5 minutes
 
 const cooldownTime = TIMING.FORM_COOLDOWN;
-const messageTimes = new Map();
+const messageTimes = new Map<string, number>();
 const messageDelay = TIMING.MESSAGE_DELAY;
 
 // Hook into the playerBreakBlock event to prevent breaking certain blocks
-world.beforeEvents.playerBreakBlock.subscribe(data => {
+world.beforeEvents.playerBreakBlock.subscribe((data: PlayerBreakBlockBeforeEvent) => {
     const { player, block } = data;
     const coordinates = `${block.x},${block.y},${block.z}`;
 
@@ -95,10 +101,10 @@ world.beforeEvents.playerBreakBlock.subscribe(data => {
 });
 
 // Handle piston block movement - remove spawnrule entities when spawner blocks are moved
-world.afterEvents.pistonActivate.subscribe((eventData) => {
+world.afterEvents.pistonActivate.subscribe((eventData: PistonActivateAfterEvent) => {
     try {
         const dimension = eventData.dimension;
-        const attachedBlocks = eventData.getAttachedBlocks();
+        const attachedBlocks = eventData.piston.getAttachedBlocksLocations();
 
         // Check all attached blocks for spawner blocks
         for (const blockCoord of attachedBlocks) {
@@ -119,7 +125,7 @@ world.afterEvents.pistonActivate.subscribe((eventData) => {
     }
 });
 
-world.beforeEvents.explosion.subscribe((eventData) => {
+world.beforeEvents.explosion.subscribe((eventData: ExplosionBeforeEvent) => {
     const dimension = eventData.dimension;
     // Filter the impacted blocks to exclude spawner blocks in the correct dimension
     const allowedBlocks = eventData.getImpactedBlocks().filter(blockCoord => {
@@ -134,7 +140,7 @@ world.beforeEvents.explosion.subscribe((eventData) => {
 });
 
 // Function to encode the coordinates using a custom character mapping
-export function encodeCoordinates(x, y, z) {
+export function encodeCoordinates(x: number, y: number, z: number): string {
     const shift = 3;
     const encodedX = charMap[(x + shift) % charMap.length];
     const encodedY = charMap[(y + shift) % charMap.length];
@@ -143,7 +149,7 @@ export function encodeCoordinates(x, y, z) {
 }
 
 // Function to decode the encoded coordinates
-export function decodeCoordinates(encodedString) {
+export function decodeCoordinates(encodedString: string): { x: number; y: number; z: number } | null {
     const match = encodedString.match(/X(.)Y(.)Z(.)/);
     if (match) {
         const x = charMap.indexOf(match[1]);
@@ -154,7 +160,7 @@ export function decodeCoordinates(encodedString) {
     return null;
 }
 
-world.afterEvents.playerPlaceBlock.subscribe(data => {
+world.afterEvents.playerPlaceBlock.subscribe((data: PlayerPlaceBlockAfterEvent) => {
     const player = data.player;
     const block = data.block;
     const typeId = block.typeId;
@@ -183,7 +189,7 @@ world.afterEvents.playerPlaceBlock.subscribe(data => {
 });
 
 // SINGLE MERGED AND SECURE BLOCK INTERACTION HANDLER
-world.beforeEvents.playerInteractWithBlock.subscribe(data => {
+(world.beforeEvents as any).playerInteractWithBlock.subscribe((data: PlayerInteractWithBlockBeforeEvent) => {
     const { player, block } = data;
     const coordinates = `${block.x},${block.y},${block.z}`;
     const typeId = block.typeId;
@@ -239,8 +245,8 @@ world.beforeEvents.playerInteractWithBlock.subscribe(data => {
     });
 });
 
-function isPlayerNearBlock(player, x, y, z, maxDistance = 10) {
-    if (!player || !player.isValid) return false;
+function isPlayerNearBlock(player: Player, x: number, y: number, z: number, maxDistance = 10): boolean {
+    if (!player || !player.isValid()) return false;
     const pLoc = player.location;
     const dx = pLoc.x - (x + 0.5);
     const dy = pLoc.y - (y + 0.5);
@@ -248,8 +254,8 @@ function isPlayerNearBlock(player, x, y, z, maxDistance = 10) {
     return (dx * dx + dy * dy + dz * dz) <= (maxDistance * maxDistance);
 }
 
-function validateSpawnerInteraction(player, block, level, x, y, z) {
-    if (!player || !player.isValid) {
+function validateSpawnerInteraction(player: Player, block: Block, level: number, x: number, y: number, z: number): boolean {
+    if (!player || !player.isValid()) {
         console.error(ERROR_MESSAGES.INVALID_PLAYER);
         return false;
     }
@@ -257,7 +263,7 @@ function validateSpawnerInteraction(player, block, level, x, y, z) {
         player.sendMessage("§cYou are too far from the spawner.");
         return false;
     }
-    if (!block || !block.isValid) {
+    if (!block || !block.isValid()) {
         player.sendMessage(ERROR_MESSAGES.INVALID_BLOCK);
         return false;
     }
@@ -274,17 +280,17 @@ function validateSpawnerInteraction(player, block, level, x, y, z) {
     return true;
 }
 
-function checkPlayerCooldown(player, coordinates) {
+function checkPlayerCooldown(player: Player, coordinates: string): boolean {
     const currentTime = Date.now();
     const key = player.name; // Persistent gamertag instead of runtime Entity ID
 
     if (cooldowns.has(key)) {
-        const lastInteractionTime = cooldowns.get(key);
+        const lastInteractionTime = cooldowns.get(key)!;
         const timeSinceLastInteraction = currentTime - lastInteractionTime;
         if (timeSinceLastInteraction < cooldownTime) {
             const remainingTime = Math.ceil((cooldownTime - timeSinceLastInteraction) / 1000);
 
-            if (!messageTimes.has(key) || currentTime - messageTimes.get(key) > messageDelay) {
+            if (!messageTimes.has(key) || currentTime - messageTimes.get(key)! > messageDelay) {
                 player.sendMessage(`§cWait ${remainingTime}s before interacting again.`);
                 messageTimes.set(key, currentTime);
             }
@@ -297,7 +303,7 @@ function checkPlayerCooldown(player, coordinates) {
     return true;
 }
 
-function ensureSpawnruleEntity(player, x, y, z, typeId) {
+function ensureSpawnruleEntity(player: Player, x: number, y: number, z: number, typeId: string): void {
     if (typeof x !== 'number' || typeof y !== 'number' || typeof z !== 'number') {
         console.error(`Invalid coordinates: x=${x}, y=${y}, z=${z}`);
         return;
@@ -320,12 +326,12 @@ function ensureSpawnruleEntity(player, x, y, z, typeId) {
     }
 }
 
-function createSpawnerForm(player, level, upgradee, downgradee, spawnerType, block, typeId, percentrefund, refu, x, y, z, coordinates) {
+function createSpawnerForm(player: Player, level: number, upgradee: number, downgradee: number, spawnerType: string, block: Block, typeId: string, percentrefund: number, refu: number, x: number, y: number, z: number, coordinates: string): any {
     const form1 = new ActionFormData();
     form1.title(`§l§8${spawnerType}Spawner§2§r`);
     form1.body(`§7§l\n                §7Level: §2${level}§r\n\n`);
 
-    let buttonActions = [];
+    const buttonActions: (() => void)[] = [];
 
     if (level < UI.MAX_SPAWNER_LEVEL) {
         form1.button(`§l§2Upgrade§8 to Lvl ${upgradee}`, 'textures/carrot_golden');
@@ -352,7 +358,7 @@ function createSpawnerForm(player, level, upgradee, downgradee, spawnerType, blo
         form1.button(`§8§lChoose Level`, 'textures/items/diamond');
         const chooseLevelAction = () =>
             slider(player, spawnerType, block, level, 10000 * level, typeId, upgradee, downgradee, percentrefund, refu, x, y, z);
-        chooseLevelAction.isNested = true;
+        (chooseLevelAction as any).isNested = true;
         buttonActions.push(chooseLevelAction);
     }
 
@@ -362,7 +368,7 @@ function createSpawnerForm(player, level, upgradee, downgradee, spawnerType, blo
     return { form: form1, buttonActions };
 }
 
-function form1(player, level, cost, block, typeId, upgradee, downgradee, percentrefund, refu, spawnerType, x, y, z) {
+function form1(player: Player, level: number, cost: number, block: Block, typeId: string, upgradee: number, downgradee: number, percentrefund: number, refu: number, spawnerType: string, x: number, y: number, z: number): void {
     const coordinates = `${x},${y},${z}`;
 
     if (!validateSpawnerInteraction(player, block, level, x, y, z)) {
@@ -378,8 +384,8 @@ function form1(player, level, cost, block, typeId, upgradee, downgradee, percent
     const { form, buttonActions } = createSpawnerForm(player, level, upgradee, downgradee, spawnerType, block, typeId, percentrefund, refu, x, y, z, coordinates);
 
     system.run(() => {
-        form.show(player).then((response) => {
-            const isNested = response.selection !== undefined && buttonActions[response.selection] && buttonActions[response.selection].isNested;
+        form.show(player).then((response: any) => {
+            const isNested = response.selection !== undefined && buttonActions[response.selection] && (buttonActions[response.selection] as any).isNested;
             if (!isNested) {
                 activeForms.delete(coordinates);
             } else {
@@ -404,14 +410,14 @@ function form1(player, level, cost, block, typeId, upgradee, downgradee, percent
     });
 }
 
-const interactionTimestamps = new Map();
-const globalCooldowns = new Map();
+const interactionTimestamps = new Map<string, number[]>();
+const globalCooldowns = new Map<string, number>();
 const INTERACTION_WINDOW_MILLIS = 120 * 1000;
 const INTERACTION_LIMIT = 3;
 const GLOBAL_COOLDOWN_MILLIS = 10 * 60 * 1000;
 
-function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
-    if (!player || !player.isValid) {
+function teleportSpawnerStack(player: Player, block: Block, spawnerType: string, x: number, y: number, z: number): void {
+    if (!player || !player.isValid()) {
         console.error("Invalid player provided to teleportSpawnerStack");
         return;
     }
@@ -419,7 +425,7 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
         player.sendMessage("§cYou are too far from the spawner.");
         return;
     }
-    if (!block || !block.isValid) {
+    if (!block || !block.isValid()) {
         player.sendMessage("§cInvalid spawner block detected.");
         return;
     }
@@ -438,7 +444,7 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
     const key = player.name; // Persistent gamertag instead of runtime Entity ID
 
     if (globalCooldowns.has(key)) {
-        const lastCooldownTime = globalCooldowns.get(key);
+        const lastCooldownTime = globalCooldowns.get(key)!;
         const timeElapsed = currentTime - lastCooldownTime;
 
         if (timeElapsed < GLOBAL_COOLDOWN_MILLIS) {
@@ -453,7 +459,7 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
     if (!interactionTimestamps.has(key)) {
         interactionTimestamps.set(key, []);
     }
-    const timestamps = interactionTimestamps.get(key);
+    const timestamps = interactionTimestamps.get(key)!;
 
     while (timestamps.length > 0 && currentTime - timestamps[0] > INTERACTION_WINDOW_MILLIS) {
         timestamps.shift();
@@ -485,12 +491,12 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
         return;
     }
 
-    let closestEntity = null;
+    let closestEntity: any = null;
     let closestDistance = Infinity;
 
     for (const entity of nearbyEntities) {
         try {
-            if (!entity || !entity.isValid) continue;
+            if (!entity || !entity.isValid()) continue;
 
             const distance = Math.sqrt(
                 Math.pow(entity.location.x - x, 2) +
@@ -502,7 +508,7 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
                 closestDistance = distance;
                 closestEntity = entity;
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(`Error processing entity: ${error.message}`);
         }
     }
@@ -522,8 +528,8 @@ function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
     }
 }
 
-function slider(player, spawnerType, block, level, cost, typeId, upgradee, downgradee, percentrefund, refu, x, y, z) {
-    if (!player || !player.isValid) {
+function slider(player: Player, spawnerType: string, block: Block, level: number, cost: number, typeId: string, upgradee: number, downgradee: number, percentrefund: number, refu: number, x: number, y: number, z: number): void {
+    if (!player || !player.isValid()) {
         console.error("Invalid player provided to slider");
         return;
     }
@@ -538,7 +544,7 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
         activeForms.delete(coordinates);
         return;
     }
-    if (!block || !block.isValid) {
+    if (!block || !block.isValid()) {
         player.sendMessage("§cInvalid spawner block detected.");
         activeForms.delete(coordinates);
         return;
@@ -558,14 +564,14 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
 
     const slider = new ModalFormData();
     slider.title('Select Spawner Level');
-    slider.slider('Set Range', 1, 32, { defaultValue: 1 });
+    slider.slider('Set Range', 1, 32, 1, 1);
 
     system.run(() => {
         slider.show(player).then((response) => {
             activeForms.delete(coordinates); // Release lock
 
-            // Re-validate permission and proximity inside .then() to prevent session-tag-revocation bypass
-            if (!player || !player.isValid || !player.hasTag(`admin`)) {
+            // Re-validate permission and proximity
+            if (!player || !player.isValid() || !player.hasTag(`admin`)) {
                 player.sendMessage("§cYou don't have permission to use this feature.");
                 return;
             }
@@ -574,15 +580,15 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
                 return;
             }
             if (response.formValues && response.formValues.length > 0) {
-                let newLevel = response.formValues[0];
+                const newLevel = response.formValues[0];
                 if (newLevel) {
                     player.sendMessage(`§6Level §7set to §2${newLevel}`);
-                    let newBlockType = `mrleefy:${spawnerType}spawner${newLevel}`;
+                    const newBlockType = `mrleefy:${spawnerType}spawner${newLevel}`;
                     block.setType(newBlockType);
 
                     clearMaxedSpawnerCache(x, y, z);
 
-                    let newTypeId = newBlockType;
+                    const newTypeId = newBlockType;
                     try {
                         player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
                         player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
@@ -598,8 +604,8 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
     });
 }
 
-function showInstructions(player) {
-    let instructions = new ActionFormData();
+function showInstructions(player: Player): void {
+    const instructions = new ActionFormData();
     instructions.title('§l§eHow To Use Spawners');
     instructions.body(
         '§f§lGetting Started§r\n' +
@@ -624,8 +630,8 @@ function showInstructions(player) {
 }
 
 // SAFE AND EXPLOIT-FREE MAX UPGRADE ALGORITHM
-function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
-    if (!player || !player.isValid) return;
+function maxUpgradeSpawner(player: Player, block: Block, level: number, spawnerType: string, typeId: string, x: number, y: number, z: number): void {
+    if (!player || !player.isValid()) return;
     if (!isPlayerNearBlock(player, x, y, z, 10)) {
         player.sendMessage("§cYou are too far from the spawner.");
         return;
@@ -635,16 +641,16 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
         return;
     }
 
-    let inventory = player.getComponent('inventory').container;
-    let spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
+    const inventory: any = (player.getComponent('inventory') as any).container;
+    const spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
 
     // 1. Gather all spawner items and compute levels in inventory
-    let spawnerEntries = [];
+    const spawnerEntries = [];
     let totalAvailableLevels = 0;
     for (let i = 0; i < inventory.size; i++) {
-        let item = inventory.getItem(i);
+        const item = inventory.getItem(i);
         if (item && item.typeId.startsWith(spawnerItemPrefix)) {
-            let itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, '')) || 1;
+            const itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, '')) || 1;
             spawnerEntries.push({ slot: i, item, level: itemLevel });
             totalAvailableLevels += itemLevel * item.amount;
         }
@@ -658,16 +664,16 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     // Sort to consume lowest level spawners first
     spawnerEntries.sort((a, b) => a.level - b.level);
 
-    let levelsNeeded = 32 - level;
+    const levelsNeeded = 32 - level;
     let levelsConsumed = 0;
-    let spawnersToRemove = [];
+    const spawnersToRemove = [];
     let refundAmount = 0;
 
     // 2. Determine exactly which items/amounts to consume
-    for (let entry of spawnerEntries) {
+    for (const entry of spawnerEntries) {
         if (levelsConsumed >= levelsNeeded) break;
 
-        let { slot, item, level: itemLevel } = entry;
+        const { slot, item, level: itemLevel } = entry;
         let amountToConsume = 0;
 
         for (let count = 1; count <= item.amount; count++) {
@@ -684,8 +690,8 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     }
 
     // 3. Consume items safely from inventory
-    for (let entry of spawnersToRemove) {
-        let { slot, item, amount } = entry;
+    for (const entry of spawnersToRemove) {
+        const { slot, item, amount } = entry;
         if (item.amount <= amount) {
             inventory.setItem(slot, null);
         } else {
@@ -695,7 +701,7 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     }
 
     // 4. Update the spawner block and database
-    let newLevel = level + Math.min(levelsNeeded, levelsConsumed - refundAmount);
+    const newLevel = level + Math.min(levelsNeeded, levelsConsumed - refundAmount);
     const newTypeId = `${spawnerItemPrefix}${newLevel}`;
     block.setType(newTypeId);
 
@@ -742,15 +748,15 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     }
 }
 
-function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
-    if (!player || !player.isValid) return;
+function upgradeSpawner(player: Player, block: Block, level: number, spawnerType: string, typeId: string, x: number, y: number, z: number): void {
+    if (!player || !player.isValid()) return;
     if (!isPlayerNearBlock(player, x, y, z, 10)) {
         player.sendMessage("§cYou are too far from the spawner.");
         return;
     }
-    let inventory = player.getComponent('inventory').container;
-    let spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
-    let newLevel = level + 1;
+    const inventory: any = (player.getComponent('inventory') as any).container;
+    const spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
+    const newLevel = level + 1;
 
     if (newLevel > 32) {
         player.sendMessage("§4Cannot upgrade further. Maximum level reached.");
@@ -758,22 +764,22 @@ function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     }
 
     let totalLevels = 0;
-    let refundQueue = [];
-    let spawnersToRemove = [];
+    const refundQueue: { level: number; amount: number }[] = [];
+    const spawnersToRemove: { slot: number; item: any; amount: number }[] = [];
 
-    let spawnerLevels = [];
+    const spawnerLevels = [];
     for (let i = 0; i < inventory.size; i++) {
-        let item = inventory.getItem(i);
+        const item = inventory.getItem(i);
         if (item && item.typeId.startsWith(spawnerItemPrefix)) {
-            let itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, '')) || 1;
+            const itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, '')) || 1;
             spawnerLevels.push({ slot: i, item, level: itemLevel });
         }
     }
 
     spawnerLevels.sort((a, b) => a.level - b.level);
 
-    for (let entry of spawnerLevels) {
-        let { slot, item, level: itemLevel } = entry;
+    for (const entry of spawnerLevels) {
+        const { slot, item, level: itemLevel } = entry;
 
         if (itemLevel === 1) {
             spawnersToRemove.push({ slot, item, amount: 1 });
@@ -794,8 +800,8 @@ function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
         return;
     }
 
-    for (let entry of spawnersToRemove) {
-        let { slot, item, amount } = entry;
+    for (const entry of spawnersToRemove) {
+        const { slot, item, amount } = entry;
         if (item.amount <= amount) {
             inventory.setItem(slot, null);
         } else {
@@ -804,7 +810,7 @@ function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
         }
     }
 
-    for (let refund of refundQueue) {
+    for (const refund of refundQueue) {
         player.runCommand(`give @s ${spawnerItemPrefix}1 ${refund.amount}`);
     }
 
@@ -831,13 +837,13 @@ function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
 }
 
 // SAFE AND EXPLOIT-FREE DOWNGRADE ALGORITHM
-function downgrade(player, block, level, spawnerType, percentrefund, refu, x, y, z) {
-    if (!player || !player.isValid) return;
+function downgrade(player: Player, block: Block, level: number, spawnerType: string, percentrefund: number, refu: number, x: number, y: number, z: number): void {
+    if (!player || !player.isValid()) return;
     if (!isPlayerNearBlock(player, x, y, z, 10)) {
         player.sendMessage("§cYou are too far from the spawner.");
         return;
     }
-    if (!block || !block.isValid) {
+    if (!block || !block.isValid()) {
         player.sendMessage("§cInvalid spawner block detected.");
         return;
     }
@@ -856,7 +862,7 @@ function downgrade(player, block, level, spawnerType, percentrefund, refu, x, y,
     }
 
     // Verify empty slot for downgrade refund
-    let inventory = player.getComponent('inventory').container;
+    const inventory: any = (player.getComponent('inventory') as any).container;
     let hasEmptySlot = false;
     for (let i = 0; i < inventory.size; i++) {
         if (!inventory.getItem(i)) {
@@ -912,7 +918,7 @@ function downgrade(player, block, level, spawnerType, percentrefund, refu, x, y,
     } catch (e) {}
 }
 
-function removeSpawnruleAtLocation(x, y, z, dimension) {
+function removeSpawnruleAtLocation(x: number, y: number, z: number, dimension: Dimension): void {
     try {
         const spawnruleEntities = dimension.getEntities({
             type: 'mrleefy:spawnrule',
@@ -922,7 +928,7 @@ function removeSpawnruleAtLocation(x, y, z, dimension) {
 
         system.run(() => {
             for (const entity of spawnruleEntities) {
-                if (entity?.isValid) {
+                if (entity?.isValid()) {
                     try {
                         entity.remove();
                     } catch (removeError) {
@@ -936,7 +942,7 @@ function removeSpawnruleAtLocation(x, y, z, dimension) {
     }
 }
 
-function enforcePlayerMemoryLimits() {
+function enforcePlayerMemoryLimits(): void {
     const now = Date.now();
 
     if (activeForms.size > PLAYER_MEMORY_LIMITS.ACTIVE_FORMS) {
@@ -949,7 +955,7 @@ function enforcePlayerMemoryLimits() {
     for (const [key, activeData] of activeForms.entries()) {
         const player = activeData.player || activeData;
         const timestamp = activeData.timestamp || now;
-        if (!player || !player.isValid || (now - timestamp) > formTimeout) {
+        if (!player || !player.isValid() || (now - timestamp) > formTimeout) {
             activeForms.delete(key);
         }
     }
@@ -1022,11 +1028,11 @@ system.runInterval(() => {
     }
 }, PLAYER_CLEANUP_INTERVAL);
 
-function exit(player) {
+function exit(player: Player): void {
     return;
 }
 
-function updateSpawnerDatabaseOnInteraction(coordinates, typeId, player) {
+function updateSpawnerDatabaseOnInteraction(coordinates: string, typeId: string, player: Player): void {
     try {
         const existingData = spawnerDatabase.read(coordinates);
 

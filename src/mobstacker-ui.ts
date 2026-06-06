@@ -1,20 +1,19 @@
-// @ts-nocheck
-// mobstacker-ui.js
+// mobstacker-ui.ts
 
-import { world, system } from "@minecraft/server";
+import { world, system, Player, Block, Entity, Vector3, Dimension } from "@minecraft/server";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 import { Database } from "./database";
 import { LootManager } from './loot_table';
-import { cooldowns, spawnerDatabase } from "./levelsystem"; // <-- CORRECTLY IMPORTED COOLDOWNS AND DATABASE
+import { cooldowns, spawnerDatabase } from "./levelsystem";
 import { validMobs, configDatabase, xpDropDatabase, spawnerStatistics, calculateSpawnerTotals, performanceMetrics, getMemoryUsage, saveSpawnerStatistics, loadSpawnerStatistics, resetSpawnerStatistics, getPlayerTopKills, ACTIVE_CHUNKS, enableLogging, disableLogging, isLoggingEnabled, debugLog } from "./mobstacker-core";
 import { securityService } from "./security-service";
 import { UI, ERROR_MESSAGES, ENTITIES } from "./constants";
+import { performanceMonitor } from "./performance-monitor";
 
 // --- CONFIGURATION MANAGEMENT ---
 const aaDatabase = new Database("AAValues");
 const MAX_ALLOWED_SPEED = 60;
 const MAX_ALLOWED_STACK = 5000;
-
 
 const defaultAAValues = {
   "1-10": { qty: 1, speed: 15, maxStack: 100 },
@@ -39,14 +38,20 @@ try {
   console.error("Failed to initialize AA database:", error);
 }
 
-const aaLookup = Array.from({ length: 33 }, () => ({ qty: 0, speed: 0, maxStack: 100 }));
+interface AALookupValue {
+  qty: number;
+  speed: number;
+  maxStack: number;
+}
 
-export function rebuildAALookup() {
+const aaLookup: AALookupValue[] = Array.from({ length: 33 }, () => ({ qty: 0, speed: 0, maxStack: 100 }));
+
+export function rebuildAALookup(): void {
   try {
     aaLookup.fill({ qty: 0, speed: 0, maxStack: 100 });
-    aaDatabase.forEach((range, value) => {
+    aaDatabase.forEach((value, range) => {
       if (!value) return;
-      const { qty = 0, speed = 0, maxStack = 100 } = value;
+      const { qty = 0, speed = 0, maxStack = 100 } = value as AALookupValue;
       const [min, max] = range.split("-").map(Number);
       if (!isNaN(min) && !isNaN(max)) {
         for (let lvl = min; lvl <= max && lvl < aaLookup.length; lvl++) {
@@ -69,21 +74,20 @@ export function rebuildAALookup() {
 }
 rebuildAALookup();
 
-export function getAAValueForLevel(level) {
+export function getAAValueForLevel(level: number): AALookupValue {
     return aaLookup[level] || { qty: 0, speed: 0, maxStack: 100 };
 }
-
 
 // --- ADMIN UI & EVENT LISTENERS ---
 
 world.afterEvents.itemUse.subscribe(event => {
   const { source, itemStack } = event;
   if (itemStack.typeId === "minecraft:blaze_rod" && source.hasTag("admin")) {
-    openAdminMenu(source);
+    openAdminMenu(source as Player);
   }
 });
 
-world.beforeEvents.chatSend.subscribe(event => {
+((world.beforeEvents as any).chatSend as any).subscribe((event: any) => {
   const { sender, message } = event;
   if (message.trim() === "-help") {
       event.cancel = true;
@@ -91,9 +95,9 @@ world.beforeEvents.chatSend.subscribe(event => {
   }
 });
 
-function openAdminMenu(player) {
+function openAdminMenu(player: Player): void {
     // Security validation using security service
-    if (!player || !player.isValid) {
+    if (!player || !player.isValid()) {
         console.error(ERROR_MESSAGES.INVALID_PLAYER);
         return;
     }
@@ -105,8 +109,6 @@ function openAdminMenu(player) {
         });
         return;
     }
-
-    // Admin access - no rate limiting for administrators
 
     const form = new ActionFormData()
       .title("Leefy Spawner Settings")
@@ -120,7 +122,8 @@ function openAdminMenu(player) {
       .button("Teleport to Spawner", "textures/items/ender_pearl")
       .button("Verify & Clean Database", "textures/items/book_normal")
       .button(isLoggingEnabled() ? "Disable Logging" : "Enable Logging", "textures/items/paper");
-    form.show(player).then((r) => {
+
+    form.show(player).then((r: any) => {
       if (r.canceled) return;
 
       // Validate admin permission again before executing actions
@@ -141,7 +144,7 @@ function openAdminMenu(player) {
 
       // Show warnings if any
       if (commandValidation.warnings.length > 0) {
-        commandValidation.warnings.forEach(warning => {
+        commandValidation.warnings.forEach((warning: string) => {
           console.warn(`Admin action warning for ${player.name}: ${warning}`);
         });
       }
@@ -163,17 +166,17 @@ function openAdminMenu(player) {
         warnings: commandValidation.warnings.length
       });
 
-    }).catch((error) => {
+    }).catch((error: any) => {
         console.error(`Error in openAdminMenu: ${error}`);
         player.sendMessage("§cAn error occurred while opening the admin menu.");
-        securityService.recordError('admin_menu_error', error.message);
-    }).finally(() => { // <-- COOLDOWN FUNCTIONALITY RESTORED
+        performanceMonitor.recordError('admin_menu_error', error instanceof Error ? error.message : String(error));
+    }).finally(() => {
         cooldowns.set(player.name, Date.now());
     });
 }
 
-function openToggleLootDropForm(player) {
-  if (!player || !player.isValid) return;
+function openToggleLootDropForm(player: Player): void {
+  if (!player || !player.isValid()) return;
   if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
     return;
@@ -184,36 +187,31 @@ function openToggleLootDropForm(player) {
   
   new ModalFormData()
     .title("Loot Drop Rules")
-    .toggle("Player Kills Only (Lag Protection)", {defaultValue: playerKillOnly})
-    .textField("Max item drops near stack:", "Enter integer (>=1)", { defaultValue: `${currentCap}`})
-    .textField("Max XP orbs near stack:", "Enter integer (>=1)", { defaultValue: `${currentXpCap}`})
-    .show(player).then((r) => {
+    .toggle("Player Kills Only (Lag Protection)", playerKillOnly)
+    .textField("Max item drops near stack:", "Enter integer (>=1)", `${currentCap}`)
+    .textField("Max XP orbs near stack:", "Enter integer (>=1)", `${currentXpCap}`)
+    .show(player).then((r: any) => {
         if (r.canceled || !r.formValues) return;
         // Re-validate permission inside .then() to prevent session-tag-revocation bypass
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
-        configDatabase.write("playerKillOnly", r.formValues[0]);
-        const capInput = parseInt(r.formValues[1]);
+        configDatabase.write("playerKillOnly", r.formValues[0] as boolean);
+        const capInput = parseInt(r.formValues[1] as string);
         if (!isNaN(capInput) && capInput >= 1) configDatabase.write("itemSpillCap", capInput);
-        const xpCapInput = parseInt(r.formValues[2]);
+        const xpCapInput = parseInt(r.formValues[2] as string);
         if (!isNaN(xpCapInput) && xpCapInput >= 1) configDatabase.write("xpSpillCap", xpCapInput);
         player.sendMessage(`§aLoot drop rules updated!`);
-    }).finally(() => { // <-- COOLDOWN FUNCTIONALITY RESTORED
+    }).finally(() => {
         cooldowns.set(player.name, Date.now());
     });
 }
 
-function openPerformanceConfigForm(player) {
-    if (!player || !player.isValid) return;
+function openPerformanceConfigForm(player: Player): void {
+    if (!player || !player.isValid()) return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
-        return;
-    }
-    // Input validation
-    if (!player || !player.isValid) {
-        console.error("Invalid player provided to openPerformanceConfigForm");
         return;
     }
 
@@ -232,7 +230,7 @@ function openPerformanceConfigForm(player) {
             "§7Higher = Spawners active from further away\n" +
             "§eDefault: 50 blocks§r",
             "Enter radius (10-128)", 
-            { defaultValue: `${currentActivationRadius}` }
+            `${currentActivationRadius}`
         )
         .textField(
             "§bMax Spawns Per Cycle:§r\n\n" +
@@ -241,14 +239,14 @@ function openPerformanceConfigForm(player) {
             "§7Higher = Faster spawning, potential lag spikes\n" +
             "§eDefault: 25 spawns/second§r",
             "Enter max spawns (5-100)", 
-            { defaultValue: `${currentMaxSpawns}` }
+            `${currentMaxSpawns}`
         )
         .toggle(
             "§bRandom Initial Spawn Delays:§r\n\n" +
             "§7Randomizes first spawn time (0-100% of interval).\n" +
             "§7Prevents all spawners from syncing up.\n" +
             "§aRecommended: Enabled§r",
-            { defaultValue: currentRandomDelay }
+            currentRandomDelay
         )
         .textField(
             "§bSpawn Check Interval (Advanced):§r\n\n" +
@@ -258,10 +256,10 @@ function openPerformanceConfigForm(player) {
             "§c⚠ Only change if you know what you're doing!\n" +
             "§eDefault: 20 ticks (1 second)§r",
             "Enter ticks (10-100)", 
-            { defaultValue: `${currentSpawnInterval}` }
+            `${currentSpawnInterval}`
         );
 
-    form.show(player).then((r) => {
+    form.show(player).then((r: any) => {
         if (r.canceled || !r.formValues) return;
         // Re-validate permission inside .then() to prevent session-tag-revocation bypass
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -270,10 +268,10 @@ function openPerformanceConfigForm(player) {
         }
 
         // Parse and validate inputs
-        const activationRadius = parseInt(r.formValues[0]);
-        const maxSpawns = parseInt(r.formValues[1]);
-        const randomDelay = r.formValues[2];
-        const spawnInterval = parseInt(r.formValues[3]);
+        const activationRadius = parseInt(r.formValues[0] as string);
+        const maxSpawns = parseInt(r.formValues[1] as string);
+        const randomDelay = r.formValues[2] as boolean;
+        const spawnInterval = parseInt(r.formValues[3] as string);
 
         let updated = false;
         let warnings = [];
@@ -333,7 +331,7 @@ function openPerformanceConfigForm(player) {
             player.sendMessage("§c§l» RESTART REQUIRED TO ACTIVATE «");
         }
 
-    }).catch((error) => {
+    }).catch((error: any) => {
         console.error(`Error in openPerformanceConfigForm: ${error}`);
         player.sendMessage("§cAn error occurred while updating performance settings.");
     }).finally(() => {
@@ -341,9 +339,8 @@ function openPerformanceConfigForm(player) {
     });
 }
 
-function openRadiusConfigForm(player) {
-    // Input validation
-    if (!player || !player.isValid) {
+function openRadiusConfigForm(player: Player): void {
+    if (!player || !player.isValid()) {
         console.error("Invalid player provided to openRadiusConfigForm");
         return;
     }
@@ -351,8 +348,8 @@ function openRadiusConfigForm(player) {
     const radius = configDatabase.read("stackRadius") || 50;
   new ModalFormData()
     .title("Configure Stack Radius")
-    .textField("Stacking Radius:", `Current: ${radius}`, { defaultValue: `${radius}` })
-            .show(player).then((r) => {
+    .textField("Stacking Radius:", `Current: ${radius}`, `${radius}`)
+            .show(player).then((r: any) => {
             if (r.canceled || !r.formValues) return;
 
             // Security validation
@@ -364,9 +361,7 @@ function openRadiusConfigForm(player) {
                 return;
             }
 
-            // Admin config access - no rate limiting for administrators
-
-            const newRadius = parseInt(r.formValues[0]);
+            const newRadius = parseInt(r.formValues[0] as string);
             if (!isNaN(newRadius) && newRadius > 0 && newRadius <= 100) {
                 configDatabase.write("stackRadius", newRadius);
                 player.sendMessage(`§aStacking radius updated to ${newRadius}!`);
@@ -382,17 +377,17 @@ function openRadiusConfigForm(player) {
                     attemptedValue: r.formValues[0]
                 });
             }
-        }).catch((error) => {
+        }).catch((error: any) => {
             console.error(`Error in openRadiusConfigForm: ${error}`);
             player.sendMessage("§cAn error occurred while updating the configuration.");
-            securityService.recordError('radius_config_error', error.message);
-        }).finally(() => { // <-- COOLDOWN FUNCTIONALITY RESTORED
+            performanceMonitor.recordError('radius_config_error', error instanceof Error ? error.message : String(error));
+        }).finally(() => {
             cooldowns.set(player.name, Date.now());
         });
 }
 
-function openLootTableConfigForm(player) {
-    if (!player || !player.isValid) return;
+function openLootTableConfigForm(player: Player): void {
+    if (!player || !player.isValid()) return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
         return;
@@ -406,20 +401,20 @@ function openLootTableConfigForm(player) {
         if (icon === "wither_skeleton") icon = "witherskeleton";
         form.button(`Spawner ${mob.displayName}`, `textures/blocks/icons/${icon}.png`);
     });
-    form.show(player).then(r => {
+    form.show(player).then((r: any) => {
         // Re-validate permission inside .then() to prevent session-tag-revocation bypass
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
-        if (!r.canceled) openEntityLootConfigForm(player, sortedMobs[r.selection].typeId);
-    }).finally(() => { // <-- COOLDOWN FUNCTIONALITY RESTORED
+        if (!r.canceled && r.selection !== undefined) openEntityLootConfigForm(player, sortedMobs[r.selection].typeId);
+    }).finally(() => {
         cooldowns.set(player.name, Date.now());
     });
 }
 
-function openEntityLootConfigForm(player, entityId) {
-    if (!player || !player.isValid) return;
+function openEntityLootConfigForm(player: Player, entityId: string): void {
+    if (!player || !player.isValid()) return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
         return;
@@ -430,8 +425,8 @@ function openEntityLootConfigForm(player, entityId) {
     Object.keys(table).forEach(itemId => form.button(`Edit ${itemId}`));
     form.button("Add New Item", "textures/ui/plus.png");
     form.button("XP Manager", "textures/items/experience_bottle.png");
-    form.show(player).then(r => {
-        if (r.canceled) return;
+    form.show(player).then((r: any) => {
+        if (r.canceled || r.selection === undefined) return;
         // Re-validate permission inside .then() to prevent session-tag-revocation bypass
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -441,13 +436,13 @@ function openEntityLootConfigForm(player, entityId) {
         if (r.selection < itemCount) openEditLootItemForm(player, entityId, Object.keys(table)[r.selection]);
         else if (r.selection === itemCount) openAddNewLootItemForm(player, entityId);
         else if (r.selection === itemCount + 1) openXPDropManagerForm(player, entityId);
-    }).finally(() => { // <-- COOLDOWN FUNCTIONALITY RESTORED
+    }).finally(() => {
         cooldowns.set(player.name, Date.now());
     });
 }
 
-function openXPDropManagerForm(player, entityId) {
-    if (!player || !player.isValid) return;
+function openXPDropManagerForm(player: Player, entityId: string): void {
+    if (!player || !player.isValid()) return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
         return;
@@ -455,29 +450,29 @@ function openXPDropManagerForm(player, entityId) {
     const config = xpDropDatabase.read(entityId) || {};
     new ModalFormData()
         .title(`XP Manager: ${entityId}`)
-        .textField("XP Amount:", "XP to drop on death", { defaultValue: `${config.amount ?? 1}` })
-        .slider("Drop Chance (%)", 1, 100, { defaultValue: config.chance ?? 100 })
-        .show(player).then(r => {
+        .textField("XP Amount:", "XP to drop on death", `${config.amount ?? 1}`)
+        .slider("Drop Chance (%)", 1, 100, 1, config.chance ?? 100)
+        .show(player).then((r: any) => {
             if (r.canceled || !r.formValues) return;
             // Re-validate permission inside .then() to prevent session-tag-revocation bypass
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
             }
-            const amount = parseInt(r.formValues[0]);
-            const chance = r.formValues[1];
+            const amount = parseInt(r.formValues[0] as string);
+            const chance = r.formValues[1] as number;
             if (!isNaN(amount) && amount >= 0) {
                 xpDropDatabase.write(entityId, { amount, chance });
                 player.sendMessage(`§aXP drop updated for ${entityId}.`);
             } else player.sendMessage("§cInvalid amount.");
             openEntityLootConfigForm(player, entityId);
-        }).finally(() => { // <-- COOLDOWN FUNCTIONALITY RESTORED
+        }).finally(() => {
             cooldowns.set(player.name, Date.now());
         });
 }
 
-function openAddNewLootItemForm(player, entityId) {
-    if (!player || !player.isValid) return;
+function openAddNewLootItemForm(player: Player, entityId: string): void {
+    if (!player || !player.isValid()) return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
         return;
@@ -486,21 +481,21 @@ function openAddNewLootItemForm(player, entityId) {
     const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
     new ModalFormData()
         .title(`Add Loot: ${entityId}`)
-        .textField("Item ID:", "e.g., minecraft:diamond", { defaultValue: "" })
-        .textField("Chance:", "[0.01-100]", { defaultValue: "100" })
-        .toggle("Enchantable?", { defaultValue: false })
-        .dropdown("Enchantment Category:", categories, { defaultValue: 0 })
-        .textField("Enchant Chance:", "[0-100]", { defaultValue: "50" })
-        .toggle("Stackable?", { defaultValue: true })
-        .toggle("Random Durability?", { defaultValue: false })
-        .show(player).then(r => {
+        .textField("Item ID:", "e.g., minecraft:diamond", "")
+        .textField("Chance:", "[0.01-100]", "100")
+        .toggle("Enchantable?", false)
+        .dropdown("Enchantment Category:", categories, 0)
+        .textField("Enchant Chance:", "[0-100]", "50")
+        .toggle("Stackable?", true)
+        .toggle("Random Durability?", false)
+        .show(player).then((r: any) => {
             if (r.canceled || !r.formValues) return;
             // Re-validate permission inside .then() to prevent session-tag-revocation bypass
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
             }
-            const [id, chance, ench, catIdx, enchChance, stack, dura] = r.formValues;
+            const [id, chance, ench, catIdx, enchChance, stack, dura] = r.formValues as [string, string, boolean, number, string, boolean, boolean];
             const pChance = parseFloat(chance);
             if (!id || isNaN(pChance)) { player.sendMessage("§cInvalid Item ID or Chance."); return; }
             if(!lootManager.entities[entityId]) lootManager.entities[entityId] = {};
@@ -513,13 +508,13 @@ function openAddNewLootItemForm(player, entityId) {
             lootManager.saveLootTable(entityId);
             player.sendMessage(`§aAdded ${id} to ${entityId}'s loot table.`);
             openEntityLootConfigForm(player, entityId);
-        }).finally(() => { // <-- COOLDOWN FUNCTIONALITY RESTORED
+        }).finally(() => {
             cooldowns.set(player.name, Date.now());
         });
 }
 
-function openEditLootItemForm(player, entityId, itemId) {
-    if (!player || !player.isValid) return;
+function openEditLootItemForm(player: Player, entityId: string, itemId: string): void {
+    if (!player || !player.isValid()) return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
         return;
@@ -530,41 +525,40 @@ function openEditLootItemForm(player, entityId, itemId) {
     const catIdx = config.enchantments ? categories.indexOf(config.enchantments.category) : 0;
     new ModalFormData()
         .title(`Editing: ${itemId}`)
-        .textField("Chance:", "[0.01-100]", { defaultValue: `${config.chance}` })
-        .toggle("Enchantable?", { defaultValue: !!config.enchantments })
-        .dropdown("Category:", categories, { defaultValue: Math.max(0, catIdx) })
-        .textField("Enchant Chance:", "[0-100]", { defaultValue: `${config.enchantments?.chance ?? 50}` })
-        .toggle("Stackable?", { defaultValue: config.stackable !== false })
-        .toggle("Random Durability?", { defaultValue: config.randomdurability === true })
-        .toggle("§cDELETE THIS ITEM?§r", { defaultValue: false })
-        .show(player).then(r => {
+        .textField("Chance:", "[0.01-100]", `${config.chance}`)
+        .toggle("Enchantable?", !!config.enchantments)
+        .dropdown("Category:", categories, Math.max(0, catIdx))
+        .textField("Enchant Chance:", "[0-100]", `${config.enchantments?.chance ?? 50}`)
+        .toggle("Stackable?", config.stackable !== false)
+        .toggle("Random Durability?", config.randomdurability === true)
+        .toggle("§cDELETE THIS ITEM?§r", false)
+        .show(player).then((r: any) => {
             if (r.canceled || !r.formValues) return;
             // Re-validate permission inside .then() to prevent session-tag-revocation bypass
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
             }
-            const [chance, ench, catIdx, enchChance, stack, dura, del] = r.formValues;
+            const [chance, ench, catIdxSelected, enchChance, stack, dura, del] = r.formValues as [string, boolean, number, string, boolean, boolean, boolean];
             if (del) delete lootManager.entities[entityId][itemId];
             else {
                 const pChance = parseFloat(chance);
                 if (isNaN(pChance)) { player.sendMessage("§cInvalid Chance."); return; }
                 config.chance = pChance;
-                config.enchantments = (ench && categories[catIdx] !== "None") ? { chance: parseFloat(enchChance), category: categories[catIdx] } : undefined;
+                config.enchantments = (ench && categories[catIdxSelected] !== "None") ? { chance: parseFloat(enchChance), category: categories[catIdxSelected] } : undefined;
                 config.stackable = stack;
                 config.randomdurability = dura;
             }
             lootManager.saveLootTable(entityId);
             player.sendMessage(`§aLoot table for ${entityId} updated.`);
             openEntityLootConfigForm(player, entityId);
-        }).finally(() => { // <-- COOLDOWN FUNCTIONALITY RESTORED
+        }).finally(() => {
             cooldowns.set(player.name, Date.now());
         });
 }
 
-function openAAConfigForm(player) {
-    // Security validation
-    if (!player || !player.isValid) {
+function openAAConfigForm(player: Player): void {
+    if (!player || !player.isValid()) {
         console.error(ERROR_MESSAGES.INVALID_PLAYER);
         return;
     }
@@ -575,77 +569,71 @@ function openAAConfigForm(player) {
         return;
     }
 
-    // Admin AA config access - no rate limiting for administrators
-
     const form = new ModalFormData().title("Spawner Settings");
-    const entries = [];
-    aaDatabase.forEach((key, val) => entries.push([key, val]));
+    const entries: [string, any][] = [];
+    aaDatabase.forEach((val, key) => entries.push([key, val]));
     
-    form.textField("Add New Range:", "e.g., 1-10 or 33-33", { defaultValue: "" });
-    form.textField("New Range - Quantity:", "e.g., 1", { defaultValue: "" });
-    form.textField("New Range - Speed (sec):", "e.g., 10", { defaultValue: "" });
-    form.textField("New Range - Max Stack:", "e.g., 100", { defaultValue: "" });
+    form.textField("Add New Range:", "e.g., 1-10 or 33-33", "");
+    form.textField("New Range - Quantity:", "e.g., 1", "");
+    form.textField("New Range - Speed (sec):", "e.g., 10", "");
+    form.textField("New Range - Max Stack:", "e.g., 100", "");
 
     entries.forEach(([range, {qty, speed, maxStack}]) => {
-        form.textField(`Qty for ${range}:`, `Update`, { defaultValue: `${qty}` });
-        form.textField(`Speed for ${range}:`, `Update`, { defaultValue: `${speed}` });
-        form.textField(`Max Stack for ${range}:`, `Update`, { defaultValue: `${maxStack}` });
-        form.toggle(`§cRemove Range ${range}?§r`, { defaultValue: false });
+        form.textField(`Qty for ${range}:`, `Update`, `${qty}`);
+        form.textField(`Speed for ${range}:`, `Update`, `${speed}`);
+        form.textField(`Max Stack for ${range}:`, `Update`, `${maxStack}`);
+        form.toggle(`§cRemove Range ${range}?§r`, false);
     });
 
-    form.show(player).then(r => {
+    form.show(player).then((r: any) => {
         if (r.canceled || !r.formValues) return;
         // Re-validate permission inside .then() to prevent session-tag-revocation bypass
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
-        const vals = r.formValues;
+        const vals = r.formValues as (string | boolean)[];
 
-        if (vals[0].trim()) {
+        if (typeof vals[0] === 'string' && vals[0].trim()) {
             let range = vals[0].trim();
             if (!range.includes("-")) range = `${range}-${range}`;
             aaDatabase.write(range, {
-                qty: Math.max(1, parseInt(vals[1]) || 1),
-                speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseInt(vals[2]) || 10)),
-                maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseInt(vals[3]) || 100)),
+                qty: Math.max(1, parseInt(vals[1] as string) || 1),
+                speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseInt(vals[2] as string) || 10)),
+                maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseInt(vals[3] as string) || 100)),
             });
         }
 
         let offset = 4;
         entries.forEach(([range]) => {
-            if (vals[offset + 3]) aaDatabase.delete(range);
+            if (vals[offset + 3] as boolean) aaDatabase.delete(range);
             else aaDatabase.write(range, {
-                qty: Math.max(1, parseInt(vals[offset]) || 1),
-                speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseInt(vals[offset + 1]) || 10)),
-                maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseInt(vals[offset + 2]) || 100)),
+                qty: Math.max(1, parseInt(vals[offset] as string) || 1),
+                speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseInt(vals[offset + 1] as string) || 10)),
+                maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseInt(vals[offset + 2] as string) || 100)),
             });
             offset += 4;
         });
 
         rebuildAALookup();
         player.sendMessage("§aSpawner settings updated!");
-    }).finally(() => { // <-- COOLDOWN FUNCTIONALITY RESTORED
+    }).finally(() => {
         cooldowns.set(player.name, Date.now());
     });
 }
 
-// Logging Toggle Function
-function toggleLogging(player) {
+function toggleLogging(player: Player): void {
     try {
-        // Input validation
-        if (!player || !player.isValid) {
+        if (!player || !player.isValid()) {
             console.error("Invalid player provided to toggleLogging");
             return;
         }
 
-        // Security validation
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
 
-        // Toggle logging state
         if (isLoggingEnabled()) {
             disableLogging();
             player.sendMessage("§cLogging has been disabled for all spawner activities.");
@@ -654,63 +642,50 @@ function toggleLogging(player) {
             player.sendMessage("§aLogging has been enabled for all spawner activities.");
         }
 
-        // Reopen admin menu to update button text
         system.run(() => openAdminMenu(player));
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Error in toggleLogging: ${error}`);
         player.sendMessage("§cAn error occurred while toggling logging.");
     }
 }
 
-// Spawner Statistics Form
-function openSpawnerStatisticsForm(player) {
+function openSpawnerStatisticsForm(player: Player): void {
     try {
-        // Input validation
-        if (!player || !player.isValid) {
+        if (!player || !player.isValid()) {
             console.error("Invalid player provided to openSpawnerStatisticsForm");
             return;
         }
 
-        // Security validation
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
 
-        // Always load database data to merge with local data for complete historical view
         debugLog("[MOBSTACKER] Loading database stats to merge with local data");
         loadSpawnerStatistics();
 
-        // Log what we have after loading
         debugLog(`Stats available: ${spawnerStatistics.entitiesKilled.size} entities, ${spawnerStatistics.playerStats.size} players`);
 
         calculateSpawnerTotals();
 
-        // Calculate basic stats (already filtered to spawner entities only)
-        const totalKills = Array.from(spawnerStatistics.entitiesKilled.values()).reduce((sum, kills) => sum + kills, 0);
+        const totalKills = Array.from(spawnerStatistics.entitiesKilled.values()).reduce((sum: number, kills: number) => sum + kills, 0);
         const activePlayers = spawnerStatistics.playerStats.size;
         const totalKillsFormatted = totalKills.toLocaleString();
 
-        // Format uptime in human-readable format
         const uptimeMinutes = Math.floor((Date.now() - (performanceMetrics.lastReset || Date.now())) / 1000 / 60);
         const uptimeHours = Math.floor(uptimeMinutes / 60);
         const uptimeDisplay = uptimeHours > 0 ?
             `${uptimeHours}h ${uptimeMinutes % 60}m` :
             `${uptimeMinutes}m`;
 
-        // Server Load: Based on entities per spawner (higher ratio = more active spawners)
-        // Formula: (entities/spawners) * 25 = load percentage
-        // Example: 4 entities per spawner = 4 * 25 = 100% load
         const serverLoad = spawnerStatistics.totalSpawners > 0 ?
             Math.min(100, Math.max(0, (spawnerStatistics.totalEntities / spawnerStatistics.totalSpawners) * 25)).toFixed(1) : '0';
 
-        // Calculate tick efficiency (Minecraft = 20 TPS = 50ms per tick)
-        const minecraftTickTime = 50; // ms per tick at 20 TPS
+        const minecraftTickTime = 50;
         const tickEfficiency = performanceMetrics.averageProcessingTime > 0 ?
             Math.min(100, (performanceMetrics.averageProcessingTime / minecraftTickTime) * 100).toFixed(1) : '0';
 
-        // Get memory usage estimate (primarily based on active chunks)
         const memoryUsage = getMemoryUsage();
         let memoryLevel;
         if (memoryUsage < 50) {
@@ -723,17 +698,14 @@ function openSpawnerStatisticsForm(player) {
             memoryLevel = "Very High";
         }
 
-        // Get top 10 most killed mobs (already filtered to spawner entities)
         const topMobs = Array.from(spawnerStatistics.entitiesKilled.entries())
-            .sort(([,a], [,b]) => b - a)
+            .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
             .slice(0, 10);
 
-        // Get top 10 players by kills
         const topPlayers = Array.from(spawnerStatistics.playerStats.entries())
-            .sort(([,a], [,b]) => (b.entitiesKilled || 0) - (a.entitiesKilled || 0))
+            .sort((a: [string, any], b: [string, any]) => (b[1].entitiesKilled || 0) - (a[1].entitiesKilled || 0))
             .slice(0, 10);
 
-        // Build the statistics body
         let bodyText = `§6§lSERVER STATISTICS§r\n\n`;
         bodyText += `§bSpawner Blocks Placed: §f${spawnerStatistics.totalSpawners.toLocaleString()}\n`;
         bodyText += `§bEntities Spawned (Total): §f${spawnerStatistics.totalEntities.toLocaleString()}\n`;
@@ -745,7 +717,6 @@ function openSpawnerStatisticsForm(player) {
         bodyText += `§bMemory Usage: §f${memoryLevel} (${memoryUsage.toLocaleString()} units)\n`;
         bodyText += `§bTick Usage: §f${tickEfficiency}% (${performanceMetrics.averageProcessingTime.toFixed(2)}ms)\n\n`;
 
-        // Top 10 Most Killed Mobs
         bodyText += `§6§lTOP 10 MOST KILLED MOBS§r\n`;
         if (topMobs.length > 0) {
             topMobs.forEach((mob, index) => {
@@ -758,17 +729,15 @@ function openSpawnerStatisticsForm(player) {
         }
         bodyText += `\n`;
 
-        // Top 10 Killers (Players)
         bodyText += `§6§lTOP 10 KILLERS§r\n`;
         if (topPlayers.length > 0) {
-            topPlayers.forEach((player, index) => {
+            topPlayers.forEach((playerEntry, index) => {
                 const rank = index + 1;
-                const totalKills = player[1].entitiesKilled?.toLocaleString() || 0;
-                bodyText += `§7${rank}. §f${player[0]} §7(${totalKills} total kills)\n`;
+                const totalKillsCount = playerEntry[1].entitiesKilled?.toLocaleString() || 0;
+                bodyText += `§7${rank}. §f${playerEntry[0]} §7(${totalKillsCount} total kills)\n`;
 
-                // Show top 3 entity types killed by this player
-                const playerTopKills = getPlayerTopKills(player[1], 3);
-                playerTopKills.forEach(killType => {
+                const playerTopKills = getPlayerTopKills(playerEntry[1], 3);
+                playerTopKills.forEach((killType: any) => {
                     bodyText += `   §8- §7${killType.displayName}: ${killType.count.toLocaleString()}\n`;
                 });
                 bodyText += `\n`;
@@ -784,83 +753,70 @@ function openSpawnerStatisticsForm(player) {
             .button("View Player Stats")
             .button("Reset All Statistics");
 
-        form.show(player).then((response) => {
-            // Re-validate permission inside .then() to prevent session-tag-revocation bypass
+        form.show(player).then((response: any) => {
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
             }
-            if (response.canceled || response.selection === 0) return; // Close button
+            if (response.canceled || response.selection === 0) return;
 
-            if (response.selection === 1) { // View Player Stats button
+            if (response.selection === 1) {
                 openPlayerStatsSelectionForm(player);
                 return;
             }
 
-            if (response.selection === 2) { // Reset Statistics button
-                // Show confirmation form
+            if (response.selection === 2) {
                 const confirmForm = new ModalFormData()
                     .title("Confirm Reset")
-                    .textField("Confirm", "Type 'RESET' to confirm", { defaultValue: "" })
+                    .textField("Confirm", "Type 'RESET' to confirm", "")
                     .submitButton("CONFIRM");
 
-                confirmForm.show(player).then((confirmResponse) => {
-                    // Re-validate permission inside .then() to prevent session-tag-revocation bypass
+                confirmForm.show(player).then((confirmResponse: any) => {
                     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                         return;
                     }
-                    if (!confirmResponse.canceled) {
-                        const confirmationText = confirmResponse.formValues[0]?.toUpperCase().trim();
-                        if (confirmationText === "RESET") {
-                            // Confirmed reset
-                            resetSpawnerStatistics();
-                            player.sendMessage("All statistics have been reset!");
-                            // Reopen the form to show empty stats
-                            system.run(() => openSpawnerStatisticsForm(player));
-                        } else if (confirmationText && confirmationText !== "") {
-                            player.sendMessage("Reset cancelled - confirmation text was incorrect.");
-                        }
+                    if (confirmResponse.canceled || !confirmResponse.formValues) return;
+
+                    const confirmationText = (confirmResponse.formValues as any[])[0]?.toUpperCase().trim();
+                    if (confirmationText === "RESET") {
+                        resetSpawnerStatistics();
+                        player.sendMessage("§a✓ All statistics have been reset successfully!");
+                    } else {
+                        player.sendMessage("§cReset cancelled - confirmation code was incorrect.");
                     }
-                }).catch((error) => {
-                    console.error(`Error in reset confirmation: ${error}`);
+                }).catch((error: any) => {
+                    console.error(`Error in spawner stats reset confirmation: ${error}`);
                 });
             }
-        }).catch((error) => {
+        }).catch((error: any) => {
             console.error(`Error in openSpawnerStatisticsForm: ${error}`);
-            player.sendMessage("§cAn error occurred while opening the statistics form.");
+            player.sendMessage("§cAn error occurred while showing statistics.");
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Critical error in openSpawnerStatisticsForm: ${error}`);
         player.sendMessage("§cA critical error occurred. Please try again.");
     }
 }
 
-// Spawner Teleportation System - Enhanced Navigation
-function openSpawnerTeleportForm(player) {
+function openSpawnerTeleportForm(player: Player): void {
     try {
-        // Input validation
-        if (!player || !player.isValid) {
+        if (!player || !player.isValid()) {
             console.error("Invalid player provided to openSpawnerTeleportForm");
             return;
         }
 
-        // Security validation
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
 
-        // Scan for any existing spawners not in database (for existing servers)
-        scanAndUpdateSpawnerDatabase();
+        const playerSpawners = new Map<string, any[]>();
+        const allSpawners: Record<string, any> = {};
 
-        // Get spawner locations from database by iterating through all keys
-        const playerSpawners = new Map();
-        const allSpawners = {}; // Object for location search
         const allSpawnerKeys = spawnerDatabase.keys();
 
-        // Group spawners by player and calculate statistics
         for (const key of allSpawnerKeys) {
             const spawnerData = spawnerDatabase.read(key);
             if (spawnerData && spawnerData.placedBy) {
@@ -868,101 +824,80 @@ function openSpawnerTeleportForm(player) {
                 if (!playerSpawners.has(playerName)) {
                     playerSpawners.set(playerName, []);
                 }
-                playerSpawners.get(playerName).push({
+                const details = {
                     location: key,
                     typeId: spawnerData.typeId,
-                    placedAt: spawnerData.placedAt,
-                    entitiesKilled: spawnerData.entitiesKilled || 0
-                });
-
-                // Also store in allSpawners object for location search
+                    placedAt: spawnerData.placedAt
+                };
+                playerSpawners.get(playerName)!.push(details);
                 allSpawners[key] = spawnerData;
             }
         }
 
-        // Calculate total spawners
-        const totalSpawners = Array.from(playerSpawners.values()).reduce((sum, spawners) => sum + spawners.length, 0);
+        if (playerSpawners.size === 0) {
+            player.sendMessage("§cNo active spawners found in the database.");
+            return;
+        }
 
-        // Sort players by spawner count (most active first)
+        const totalSpawners = Array.from(playerSpawners.values()).reduce((sum: number, spawners: any[]) => sum + spawners.length, 0);
+
         const sortedPlayers = Array.from(playerSpawners.entries())
-            .sort(([,a], [,b]) => b.length - a.length);
-
-        // Check current player
-        const currentPlayerName = player.name || player.nameTag || 'Unknown';
-        const hasOwnSpawners = playerSpawners.has(currentPlayerName);
-
-        // Debug logging
-        debugLog(`Found ${totalSpawners} total spawners`);
-        debugLog(`Players with spawners:`, Array.from(playerSpawners.keys()));
-        debugLog(`Current player: ${currentPlayerName}`);
-        debugLog(`Current player has spawners: ${hasOwnSpawners}`);
-
-        // Create enhanced player selection form
+            .sort((a: [string, any[]], b: [string, any[]]) => b[1].length - a[1].length);
 
         const form = new ActionFormData()
-            .title(`Teleport to Spawner (${totalSpawners} total)`)
-            .body(`Found ${playerSpawners.size} players with spawners${hasOwnSpawners ? ' (including you)' : ''}. Select a player:`);
+            .title("Spawner Teleport System")
+            .body(`Database size: ${totalSpawners} spawners across ${playerSpawners.size} players. Select a player to view their spawners:`);
 
-        // Add "Quick Actions" section
-        form.button(" Search by Location", "textures/ui/magnifyingGlass");
-        form.button(" Player List", "textures/items/book_normal");
+        form.button("🔍 Search by Location", "textures/ui/magnifying_glass");
 
-        // "View All Statistics" button removed - already available in admin panel
+        sortedPlayers.forEach(([playerName, spawners]) => {
+            form.button(`👤 ${playerName} (${spawners.length} spawners)`, "textures/ui/steve_head");
+        });
 
-        form.show(player).then((r) => {
-            // Re-validate permission inside .then() to prevent session-tag-revocation bypass
+        form.show(player).then((r: any) => {
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
             }
-            if (r.canceled) return;
+            if (r.canceled || r.selection === undefined) return;
 
-            // Handle special buttons (only 2 buttons now)
             if (r.selection === 0) {
-                // Search by location
                 openLocationSearchForm(player, allSpawners);
                 return;
-            } else if (r.selection === 1) {
-                // Player list view
-                openSimplePlayerListForm(player, sortedPlayers);
-                return;
             }
-        }).catch((error) => {
+
+            const selectedPlayerData = sortedPlayers[r.selection - 1];
+            if (selectedPlayerData) {
+                const [selectedPlayer, spawners] = selectedPlayerData;
+                openSpawnerSelectionForm(player, selectedPlayer, spawners);
+            }
+        }).catch((error: any) => {
             console.error(`Error in openSpawnerTeleportForm: ${error}`);
-            player.sendMessage("§cAn error occurred while opening the teleport form.");
+            player.sendMessage("§cAn error occurred while showing the spawner teleport form.");
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Critical error in openSpawnerTeleportForm: ${error}`);
         player.sendMessage("§cA critical error occurred. Please try again.");
     }
 }
 
-// Spawner Selection Form - Enhanced with detailed information and sorting
-function openSpawnerSelectionForm(player, playerName, spawners) {
+function openSpawnerSelectionForm(player: Player, playerName: string, spawners: any[]): void {
     try {
-        if (!player || !player.isValid) return;
+        if (!player || !player.isValid()) return;
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
-        // Debug: Check spawners array
-        debugLog(`openSpawnerSelectionForm called with ${spawners.length} spawners for ${playerName}`);
-        spawners.forEach((spawner, index) => {
-            debugLog(`Spawner ${index}:`, spawner);
-        });
 
-        // Filter out any undefined spawners and calculate enhanced statistics
-        const validSpawners = spawners.filter(spawner => spawner !== undefined && spawner !== null);
-        debugLog(`After filtering: ${validSpawners.length} valid spawners`);
+        const validSpawners = spawners.filter((spawner: any) => spawner !== undefined && spawner !== null);
 
-        const spawnerDetails = validSpawners.map(spawner => {
-            // Defensive parsing of location coordinates
+        const spawnerDetails = validSpawners.map((spawner: any) => {
             let x = 0, y = 0, z = 0;
             try {
                 if (spawner.location && typeof spawner.location === 'string') {
-                    const coords = spawner.location.split(',').map(coord => parseFloat(coord.trim()));
-                    if (coords.length >= 3 && coords.every(coord => !isNaN(coord))) {
+                    const coords = spawner.location.split(',').map((coord: string) => parseFloat(coord.trim()));
+                    if (coords.length >= 3 && coords.every((coord: number) => !isNaN(coord))) {
                         [x, y, z] = coords;
                     }
                 }
@@ -978,327 +913,227 @@ function openSpawnerSelectionForm(player, playerName, spawners) {
             const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || 'Unknown';
             const activeEntities = countEntitiesNearSpawner(x, y, z);
 
-            // Calculate distance from player
-            const playerLoc = player.location;
-            let distance = 0;
-            if (playerLoc) {
-                distance = Math.sqrt(
-                    Math.pow(x - playerLoc.x, 2) +
-                    Math.pow(y - playerLoc.y, 2) +
-                    Math.pow(z - playerLoc.z, 2)
-                );
-            }
-
-            // Calculate efficiency (entities per level)
-            const efficiency = level > 0 ? (activeEntities / level * 100).toFixed(0) : '0';
-
             return {
                 ...spawner,
                 displayName,
                 level,
                 activeEntities,
-                distance: Math.floor(distance),
-                efficiency: parseInt(efficiency),
                 x, y, z
             };
         });
 
-        // Sort by distance (closest first)
-        spawnerDetails.sort((a, b) => a.distance - b.distance);
-
-        const totalEntities = spawnerDetails.reduce((sum, s) => sum + (s.activeEntities || 0), 0);
+        const totalEntities = spawnerDetails.reduce((sum: number, s: any) => sum + (s.activeEntities || 0), 0);
         const avgLevel = spawnerDetails.length > 0 ?
-            spawnerDetails.reduce((sum, s) => sum + (s.level || 1), 0) / spawnerDetails.length : 0;
+            spawnerDetails.reduce((sum: number, s: any) => sum + (s.level || 1), 0) / spawnerDetails.length : 0;
 
         const form = new ActionFormData()
-            .title(`Spawners Placed by ${playerName} (${spawners.length} total)`)
-            .body(`${playerName} has placed ${spawners.length} spawner(s).\nTotal Entities: ${totalEntities} • Average Level: ${avgLevel.toFixed(1)}\n\nSelect a spawner to teleport:`);
+            .title(`${playerName}'s Spawners`)
+            .body(`Total: ${spawnerDetails.length} spawners | Active Mobs: ${totalEntities} | Avg Level: ${avgLevel.toFixed(1)}`);
 
-        for (const detail of spawnerDetails) {
-            try {
-                const status = (detail.activeEntities || 0) > 0 ? '[ACTIVE]' : '[IDLE]';
-                const placedTime = detail.hasOwnProperty('placedAt') && detail.placedAt ?
-                    new Date(detail.placedAt).toLocaleDateString() : 'Unknown';
+        spawnerDetails.forEach((spawner: any) => {
+            const status = spawner.activeEntities > 0 ? `§a[Active: ${spawner.activeEntities}]` : '§8[Idle]';
+            form.button(`${status} §7Lvl ${spawner.level} §f${spawner.displayName}\n§8Coord: ${spawner.x}, ${spawner.y}, ${spawner.z}`);
+        });
 
-                const buttonText = `${status} ${detail.displayName || 'Unknown'} L${detail.level || 1} (${detail.efficiency || 0}% efficient)\nLocation: ${detail.x || 0},${detail.y || 0},${detail.z || 0} • ${detail.distance || 0} blocks • ${detail.activeEntities || 0} entities\nPlaced: ${placedTime}`;
+        form.button("§6📊 View Player Statistics", "textures/ui/book_normal");
 
-                form.button(buttonText, "textures/blocks/mob_spawner");
-            } catch (buttonError) {
-                console.error(`Error creating button for spawner at ${detail?.x},${detail?.y},${detail?.z}:`, buttonError);
-                // Create a fallback button
-                form.button(`Spawner at ${detail?.x || 0},${detail?.y || 0},${detail?.z || 0}`, "textures/blocks/mob_spawner");
-            }
-        }
-
-        // Add info button at the end
-        form.button("Spawner Information", "textures/ui/infobulb");
-
-        form.show(player).then((r) => {
-            // Re-validate permission inside .then() to prevent session-tag-revocation bypass
+        form.show(player).then((r: any) => {
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
             }
-            if (r.canceled) return;
+            if (r.canceled || r.selection === undefined) return;
 
-            // Check if info button was clicked
             if (r.selection === spawnerDetails.length) {
-                // Show general info about this player's spawners
                 openSpawnerInfoForm(player, playerName, spawnerDetails);
                 return;
             }
 
             const selectedDetail = spawnerDetails[r.selection];
-            if (selectedDetail && typeof selectedDetail.x === 'number' && typeof selectedDetail.y === 'number' && typeof selectedDetail.z === 'number') {
+            if (selectedDetail) {
                 teleportToSpawner(player, selectedDetail.x, selectedDetail.y, selectedDetail.z);
-            } else {
-                debugLog(`Invalid spawner detail selected:`, selectedDetail);
-                player.sendMessage("§cInvalid spawner data - cannot teleport.");
             }
-        }).catch((error) => {
+        }).catch((error: any) => {
             console.error(`Error in openSpawnerSelectionForm: ${error}`);
-            player.sendMessage("§cAn error occurred while selecting spawner.");
+            player.sendMessage("§cAn error occurred while opening selection form.");
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Critical error in openSpawnerSelectionForm: ${error}`);
         player.sendMessage("§cA critical error occurred. Please try again.");
     }
 }
 
-// Teleport player to spawner location +1 Y for safety, centered on block
-function teleportToSpawner(player, x, y, z) {
+function teleportToSpawner(player: Player, x: number, y: number, z: number): void {
     try {
-        if (!player || !player.isValid) return;
-        if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
-            player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
-            return;
-        }
-        // Validate coordinates
-        if (typeof x !== 'number' || typeof y !== 'number' || typeof z !== 'number' ||
-            isNaN(x) || isNaN(y) || isNaN(z)) {
-            console.error(`Invalid coordinates provided to teleportToSpawner: x=${x}, y=${y}, z=${z}`);
-            player.sendMessage("§cInvalid spawner location - cannot teleport.");
-            return;
-        }
+        if (!player || !player.isValid()) return;
 
-        // Teleport to spawner location +1 Y to avoid spawning inside the block
-        // Add 0.5 to X and Z to center on the block instead of edge
-        const teleportLocation = { x: x + 0.5, y: y + 1, z: z + 0.5 };
+        player.sendMessage(`§aTeleporting to spawner at ${x}, ${y}, ${z}...`);
 
-        // Use system.run for proper privilege handling
         system.run(() => {
             try {
-                player.teleport(teleportLocation);
-                player.sendMessage(`§aTeleported to spawner at ${x}, ${y + 1}, ${z}`);
+                const dimension = player.dimension;
+                player.teleport({ x: x + 0.5, y: y + 1.5, z: z + 0.5 }, { dimension: dimension });
             } catch (teleportError) {
-                console.error(`Teleport error: ${teleportError}`);
-                player.sendMessage("§cFailed to teleport to spawner location.");
+                console.error(`Teleport logic failed: ${teleportError}`);
+                player.sendMessage(`§cTeleport failed. Check if coordinate is in a loaded area or try again.`);
             }
         });
-    } catch (error) {
-        console.error(`Critical error in teleportToSpawner: ${error}`);
-        player.sendMessage("§cA critical error occurred during teleport.");
+
+    } catch (error: any) {
+        console.error(`Error in teleportToSpawner: ${error}`);
+        player.sendMessage("§cA critical error occurred during teleportation.");
     }
 }
 
-// Helper function to count entities near a spawner
-function countEntitiesNearSpawner(x, y, z) {
+function countEntitiesNearSpawner(x: number, y: number, z: number): number {
     try {
-        const overworld = world.getDimension('overworld');
+        const overworld = world.getDimension("overworld");
+        const location: Vector3 = { x, y, z };
+        
         const nearbyEntities = overworld.getEntities({
-            location: { x, y, z },
-            maxDistance: 10 // Check within 10 blocks of spawner
+            location: location,
+            maxDistance: 10
         });
 
-        // Count only stacked entities (those with our naming convention)
-        return nearbyEntities.filter(entity => {
+        return nearbyEntities.filter((entity: Entity) => {
             return entity?.nameTag && entity.nameTag.includes('x') && entity.typeId.startsWith('mrleefy:');
         }).length;
+
     } catch (error) {
-        console.error(`Error counting entities near spawner: ${error}`);
         return 0;
     }
 }
 
-// Location Search Form - Find spawners by coordinates
-function openLocationSearchForm(player, allSpawners) {
+function openLocationSearchForm(player: Player, allSpawners: Record<string, any>): void {
     try {
-        if (!player || !player.isValid) return;
+        if (!player || !player.isValid()) return;
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
-        const playerX = Math.floor(player.location.x);
-        const playerZ = Math.floor(player.location.z);
+
+        const playerLocation = player.location;
+        const playerX = Math.round(playerLocation.x);
+        const playerZ = Math.round(playerLocation.z);
 
         const form = new ModalFormData()
             .title("Search Spawners by Location")
-            .toggle("Use current location", { defaultValue: true })
-            .textField("X Coordinate", "Enter X coordinate", { defaultValue: playerX.toString() })
-            .textField("Z Coordinate", "Enter Z coordinate", { defaultValue: playerZ.toString() })
-            .slider("Search Radius", 10, 500, { defaultValue: 50 })
-            .toggle("Include inactive spawners", { defaultValue: true });
+            .toggle("Use current location", true)
+            .textField("X Coordinate", "Enter X coordinate", playerX.toString())
+            .textField("Z Coordinate", "Enter Z coordinate", playerZ.toString())
+            .slider("Search Radius", 10, 500, 10, 50)
+            .toggle("Include inactive spawners", true);
 
-        form.show(player).then((r) => {
-            // Re-validate permission inside .then() to prevent session-tag-revocation bypass
+        form.show(player).then((r: any) => {
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
             }
             if (r.canceled || !r.formValues) return;
 
-            const useCurrentLocation = r.formValues[0];
-            const enteredX = r.formValues[1];
-            const enteredZ = r.formValues[2];
-            const radius = r.formValues[3];
-            const includeInactive = r.formValues[4];
+            const useCurrentLocation = r.formValues[0] as boolean;
+            const enteredX = r.formValues[1] as string;
+            const enteredZ = r.formValues[2] as string;
+            const radius = r.formValues[3] as number;
+            const includeInactive = r.formValues[4] as boolean;
 
-            // Use current location or entered coordinates
             const searchX = useCurrentLocation ? playerX : parseInt(enteredX);
             const searchZ = useCurrentLocation ? playerZ : parseInt(enteredZ);
 
-            // Debug logging
-            debugLog(`Location search: useCurrent=${useCurrentLocation}, enteredX=${enteredX}, enteredZ=${enteredZ}, searchX=${searchX}, searchZ=${searchZ}, radius=${radius}`);
-
             if (isNaN(searchX) || isNaN(searchZ)) {
-                player.sendMessage("§cInvalid coordinates provided.");
+                player.sendMessage("§cInvalid coordinates entered.");
                 return;
             }
 
-            // Find spawners within radius
-            const nearbySpawners = [];
-            debugLog(`Searching for spawners - allSpawners keys: ${Object.keys(allSpawners).length}`);
-
-            for (const [location, data] of Object.entries(allSpawners)) {
+            const results: any[] = [];
+            Object.entries(allSpawners).forEach(([coordinates, data]) => {
                 try {
-                    const [x, y, z] = location.split(',').map(Number);
+                    const [x, y, z] = coordinates.split(',').map((coord: string) => parseFloat(coord.trim()));
                     const distance = Math.sqrt(Math.pow(x - searchX, 2) + Math.pow(z - searchZ, 2));
 
                     if (distance <= radius) {
-                        const entityCount = countEntitiesNearSpawner(x, y, z);
-                        if (includeInactive || entityCount > 0) {
-                            nearbySpawners.push({
-                                location,
+                        const activeCount = countEntitiesNearSpawner(x, y, z);
+                        if (activeCount > 0 || includeInactive) {
+                            results.push({
+                                coordinates,
                                 data,
-                                distance: Math.floor(distance),
-                                entityCount
+                                distance,
+                                activeCount,
+                                x, y, z
                             });
                         }
                     }
-                } catch (error) {
-                    console.error(`Error processing spawner at ${location}: ${error}`);
+                } catch (e) {
+                    console.error("Error matching distance search coords:", e);
                 }
-            }
+            });
 
-            // Sort by distance
-            nearbySpawners.sort((a, b) => a.distance - b.distance);
+            results.sort((a, b) => a.distance - b.distance);
+            openLocationResultsForm(player, results, searchX, searchZ, radius);
 
-            if (nearbySpawners.length === 0) {
-                player.sendMessage(`§cNo spawners found within ${radius} blocks of ${searchX}, ${searchZ}.`);
-                return;
-            }
-
-            // Show results
-            openLocationResultsForm(player, nearbySpawners, searchX, searchZ, radius);
-
-        }).catch((error) => {
+        }).catch((error: any) => {
             console.error(`Error in openLocationSearchForm: ${error}`);
-            player.sendMessage("§cAn error occurred while searching.");
+            player.sendMessage("§cAn error occurred during search.");
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Critical error in openLocationSearchForm: ${error}`);
         player.sendMessage("§cA critical error occurred. Please try again.");
     }
 }
 
-// Location Results Form - Show search results
-function openLocationResultsForm(player, spawners, searchX, searchZ, radius) {
+function openLocationResultsForm(player: Player, spawners: any[], searchX: number, searchZ: number, radius: number): void {
     try {
-        if (!player || !player.isValid) return;
+        if (!player || !player.isValid()) return;
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
-        // Filter out spawners with invalid data and create valid spawners array
-        const validSpawners = [];
 
-        for (const spawner of spawners) {
-            try {
-                const [x, y, z] = spawner.location.split(',').map(Number);
-                const typeId = spawner.data?.typeId || spawner.typeId;
+        const validSpawners: any[] = [];
 
-                if (!typeId) {
-                    debugLog(`Skipping spawner at ${spawner.location} - missing typeId`);
-                    continue;
-                }
-
-                const levelMatch = typeId.match(/spawner(\d+)/);
-                const level = levelMatch ? levelMatch[1] : '1';
-
-                const mobType = typeId.replace('mrleefy:', '').replace(/spawner\d+/, '').replace(/_/g, '');
-                const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || 'Unknown';
-
-                const status = spawner.entityCount > 0 ? '[ACTIVE]' : '[IDLE]';
-                const placedBy = spawner.data?.placedBy || spawner.placedBy || 'Unknown';
-
-                validSpawners.push({
-                    ...spawner,
-                    x, y, z,
-                    typeId,
-                    level,
-                    displayName,
-                    status,
-                    placedBy
-                });
-
-            } catch (error) {
-                debugLog(`Error processing spawner ${spawner.location}: ${error}`);
-                // Skip this spawner and continue with others
-            }
-        }
-
-        if (validSpawners.length === 0) {
-            player.sendMessage(`§cNo valid spawners found within ${radius} blocks of ${searchX}, ${searchZ}.`);
-            return;
-        }
-
-        // Create form with valid spawners only
         const form = new ActionFormData()
-            .title(`Spawners near ${searchX}, ${searchZ} (Radius: ${radius})`)
-            .body(`Found ${validSpawners.length} valid spawner(s):`);
+            .title("Search Results")
+            .body(`Found ${spawners.length} spawners within ${radius} blocks of ${searchX}, ${searchZ}:`);
 
-        for (const validSpawner of validSpawners) {
-            const buttonText = `${validSpawner.status} ${validSpawner.displayName} Level ${validSpawner.level} (${validSpawner.x},${validSpawner.z}) - ${validSpawner.distance} blocks away`;
-            form.button(buttonText, "textures/blocks/mob_spawner");
-        }
+        spawners.forEach((result) => {
+            const spawner = result.data;
+            const status = result.activeCount > 0 ? `§a[Active: ${result.activeCount}]` : '§8[Idle]';
+            const typeId = spawner.typeId || 'unknown';
+            const levelMatch = typeId.match(/spawner(\d+)/);
+            const level = levelMatch ? levelMatch[1] : '1';
 
-        form.show(player).then((r) => {
-            // Re-validate permission inside .then() to prevent session-tag-revocation bypass
+            const mobType = typeId.replace('mrleefy:', '').replace(/spawner\d+/, '').replace(/_/g, '');
+            const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || 'Unknown';
+
+            form.button(`${status} §7Lvl ${level} §f${displayName}\n§7Player: ${spawner.placedBy || 'Unknown'} (${Math.round(result.distance)}m away)`);
+            validSpawners.push(result);
+        });
+
+        form.show(player).then((r: any) => {
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
             }
-            if (r.canceled) return;
+            if (r.canceled || r.selection === undefined) return;
 
             const selectedSpawner = validSpawners[r.selection];
             if (selectedSpawner) {
                 teleportToSpawner(player, selectedSpawner.x, selectedSpawner.y, selectedSpawner.z);
             }
-        }).catch((error) => {
+        }).catch((error: any) => {
             console.error(`Error in openLocationResultsForm: ${error}`);
-            player.sendMessage("§cAn error occurred while showing results.");
+            player.sendMessage("§cAn error occurred while selecting spawner from search results.");
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Critical error in openLocationResultsForm: ${error}`);
         player.sendMessage("§cA critical error occurred. Please try again.");
     }
 }
 
-// Helper function to get mob display name
-function getMobDisplayName(entityTypeId) {
+function getMobDisplayName(entityTypeId: string): string {
     const nameMap = {
         'mrleefy:blazestill': 'Blaze',
         'mrleefy:cowstill': 'Cow',
@@ -1307,200 +1142,141 @@ function getMobDisplayName(entityTypeId) {
         'mrleefy:chickenstill': 'Chicken',
         'mrleefy:emeraldgolemstill': 'Emerald Golem',
         'mrleefy:netheritegolemstill': 'Netherite Golem',
-        'mrleefy:irongolemstill': 'Iron Golem',
         'mrleefy:diamondgolemstill': 'Diamond Golem',
         'mrleefy:goldgolemstill': 'Gold Golem',
-        'mrleefy:endermanstill': 'Enderman',
+        'mrleefy:irongolemstill': 'Iron Golem',
         'mrleefy:creeperstill': 'Creeper',
-        'mrleefy:magmacubestill': 'Magma Cube',
-        'mrleefy:guardianstill': 'Guardian',
-        'mrleefy:witherskeletonstill': 'Wither Skeleton',
-        'mrleefy:zombiestill': 'Zombie',
-        'mrleefy:witherstill': 'Wither',
-        'mrleefy:spiderstill': 'Spider',
-        'mrleefy:slimestill': 'Slime',
-        'mrleefy:vindicatorstill': 'Vindicator',
         'mrleefy:skeletonstill': 'Skeleton',
-        'mrleefy:shulkerstill': 'Shulker',
-        'mrleefy:breezestill': 'Breeze',
-        'mrleefy:piglinbrutestill': 'Piglin Brute',
-        'mrleefy:wardenstill': 'Warden',
+        'mrleefy:zombiestill': 'Zombie',
+        'mrleefy:spiderstill': 'Spider',
+        'mrleefy:witchstill': 'Witch',
+        'mrleefy:slimeskill': 'Slime',
+        'mrleefy:magmacubestill': 'Magma Cube',
+        'mrleefy:ghaststill': 'Ghast',
+        'mrleefy:endermanstill': 'Enderman',
+        'mrleefy:cavespiderstill': 'Cave Spider',
+        'mrleefy:guardianstill': 'Guardian',
+        'mrleefy:elderguardianstill': 'Elder Guardian',
+        'mrleefy:witherstill': 'Wither',
+        'mrleefy:witherskeletonstill': 'Wither Skeleton',
         'mrleefy:ravagerstill': 'Ravager'
     };
 
-    return nameMap[entityTypeId] || 'Unknown';
+    return (nameMap as Record<string, string>)[entityTypeId] || 'Unknown';
 }
 
-// Scan world for existing spawners and update database
-function scanAndUpdateSpawnerDatabase() {
+function scanAndUpdateSpawnerDatabase(): void {
     try {
-        const overworld = world.getDimension('overworld');
-        const spawnruleEntities = overworld.getEntities({ type: ENTITIES.SPAWNRULE_ENTITY_TYPE });
+        const overworld = world.getDimension("overworld");
+        const allSpawnerKeys = spawnerDatabase.keys();
+        const entities = overworld.getEntities();
 
-        let addedCount = 0;
-        let updatedCount = 0;
+        for (const entity of entities) {
+            if (!entity?.isValid()) continue;
+            if (entity.typeId.startsWith('mrleefy:') && entity.nameTag && entity.nameTag.includes('x')) {
+                const location = entity.location;
+                const roundedLocation = `${Math.floor(location.x)},${Math.floor(location.y)},${Math.floor(location.z)}`;
 
-        for (const entity of spawnruleEntities) {
-            if (!entity?.isValid) continue;
-
-            // Get spawner location from entity position
-            const x = Math.floor(entity.location.x);
-            const y = Math.floor(entity.location.y);
-            const z = Math.floor(entity.location.z);
-            const coordinates = `${x},${y},${z}`;
-
-            // Check if this spawner is already in database
-            const existingData = spawnerDatabase.read(coordinates);
-
-            if (!existingData) {
-                // Add missing spawner to database with default metadata
-                const spawnerData = {
-                    typeId: 'unknown_spawner', // Will be updated when interacted with
-                    placedBy: 'Existing', // Indicates this was found during scan
-                    placedAt: Date.now(),
-                    entitiesKilled: 0,
-                    lastAccessed: Date.now(),
-                    scannedAt: Date.now() // Mark when it was discovered
-                };
-                spawnerDatabase.write(coordinates, spawnerData);
-                addedCount++;
-            } else if (!existingData.scannedAt) {
-                // Update existing entry to mark it as scanned
-                existingData.scannedAt = Date.now();
-                existingData.lastAccessed = Date.now();
-                spawnerDatabase.write(coordinates, existingData);
-                updatedCount++;
+                if (!spawnerDatabase.read(roundedLocation)) {
+                    spawnerDatabase.write(roundedLocation, {
+                        typeId: entity.typeId.replace('still', ''),
+                        placedBy: 'System Scan',
+                        placedAt: Date.now()
+                    });
+                    debugLog(`[MOBSTACKER] Registered untracked spawner at ${roundedLocation} via system scan`);
+                }
             }
         }
 
-        if (addedCount > 0 || updatedCount > 0) {
-            debugLog(`Spawner database updated: ${addedCount} added, ${updatedCount} updated`);
+        for (const key of allSpawnerKeys) {
+            try {
+                const [x, y, z] = key.split(',').map((coord: string) => parseFloat(coord.trim()));
+                const block = overworld.getBlock({ x, y, z });
+                
+                if (block && block.typeId !== "mrleefy:spawner") {
+                    spawnerDatabase.delete(key);
+                    debugLog(`[MOBSTACKER] Removed stale database entry for missing spawner block at ${key}`);
+                }
+            } catch (blockError) {
+                // If block is unloaded, keep the entry
+            }
         }
 
     } catch (error) {
-        console.error(`Error scanning spawner database: ${error}`);
+        console.error(`[MOBSTACKER] Error in system scan: ${error}`);
     }
 }
 
-// Verify and clean spawner database - removes stale entries (handles unloaded chunks)
-function verifyAndCleanSpawnerDatabase(player) {
+function verifyAndCleanSpawnerDatabase(player: Player): void {
     try {
-        // Input validation
-        if (!player || !player.isValid) {
+        if (!player || !player.isValid()) {
             console.error("Invalid player provided to verifyAndCleanSpawnerDatabase");
             return;
         }
 
-        // Security validation
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
 
-        player.sendMessage("§e🔍 Verifying spawner database...");
-        player.sendMessage("§7This may take a moment for spawners in unloaded chunks...");
-        
-        const overworld = world.getDimension('overworld');
+        player.sendMessage("§aStarting database verification and cleanup...");
+        player.sendMessage("§7This process runs in batches to prevent lag.");
+
+        const overworld = world.getDimension("overworld");
         const allSpawnerKeys = spawnerDatabase.keys();
+        const totalCount = allSpawnerKeys.length;
         
+        let currentIndex = 0;
+        let verifiedSpawners = 0;
         let removedBlocks = 0;
         let removedEntities = 0;
-        let verifiedSpawners = 0;
         let processedCount = 0;
-        const totalCount = allSpawnerKeys.length;
 
-        // Process spawners in batches to avoid overwhelming the system
-        let currentIndex = 0;
-        
+        const BATCH_SIZE = 5;
+
         const processBatch = () => {
-            const BATCH_SIZE = 5; // Process 5 spawners at a time
-            const endIndex = Math.min(currentIndex + BATCH_SIZE, totalCount);
+            const batchLimit = Math.min(currentIndex + BATCH_SIZE, totalCount);
             
-            for (let i = currentIndex; i < endIndex; i++) {
+            for (let i = currentIndex; i < batchLimit; i++) {
                 const coordinates = allSpawnerKeys[i];
-                const [x, y, z] = coordinates.split(',').map(Number);
-                
-                if (isNaN(x) || isNaN(y) || isNaN(z)) {
-                    debugLog(`Invalid coordinates in database: ${coordinates}`);
-                    processedCount++;
-                    continue;
-                }
-
                 try {
-                    // Create a unique ticking area name for this check
-                    const tickingAreaName = `verify_${x}_${y}_${z}`;
+                    const [x, y, z] = coordinates.split(',').map((coord: string) => parseFloat(coord.trim()));
                     
-                    // Add ticking area to load the chunk (3x3x3 area centered on spawner)
-                    try {
-                        player.runCommand(`tickingarea add ${x-1} ${y-1} ${z-1} ${x+1} ${y+1} ${z+1} ${tickingAreaName}`);
-                    } catch (tickError) {
-                        // Ticking area might already exist or hit limit, try to continue
-                        debugLog(`Could not add ticking area at ${coordinates}: ${tickError}`);
-                    }
+                    const tickingAreaName = `db_verify_${x}_${y}_${z}`;
+                    player.runCommand(`tickingarea add ${x-2} ${y-2} ${z-2} ${x+2} ${y+2} ${z+2} ${tickingAreaName} true`);
                     
-                    // Small delay to ensure chunk loads (schedule check for next tick)
                     system.runTimeout(() => {
                         try {
-                            // Now check if the spawner block actually exists
                             const block = overworld.getBlock({ x, y, z });
                             
-                            // Check if it's a spawner block
-                            const isSpawnerBlock = block && block.typeId && 
-                                block.typeId.startsWith('mrleefy:') && 
-                                block.typeId.includes('spawner');
-
-                            if (!isSpawnerBlock) {
-                                // Block doesn't exist or isn't a spawner - remove from database
+                            if (!block || block.typeId !== "mrleefy:spawner") {
                                 spawnerDatabase.delete(coordinates);
                                 removedBlocks++;
-                                
-                                // Also remove any spawnrule entities at this location
-                                const spawnruleEntities = overworld.getEntities({
-                                    type: ENTITIES.SPAWNRULE_ENTITY_TYPE,
+                                debugLog(`[CLEANUP] Deleted stale spawner coordinates from DB: ${coordinates}`);
+
+                                const nearbyEntities = overworld.getEntities({
                                     location: { x, y, z },
-                                    maxDistance: 1
+                                    maxDistance: 8
                                 });
-                                
-                                for (const entity of spawnruleEntities) {
-                                    if (entity?.isValid) {
-                                        try {
-                                            entity.remove();
-                                            removedEntities++;
-                                        } catch (removeError) {
-                                            console.error(`Failed to remove spawnrule entity at ${coordinates}:`, removeError);
-                                        }
+
+                                nearbyEntities.forEach((entity: Entity) => {
+                                    if (entity?.isValid() && entity.typeId.startsWith('mrleefy:') && entity.typeId.endsWith('still')) {
+                                        entity.remove();
+                                        removedEntities++;
+                                        debugLog(`[CLEANUP] Removed orphaned spawnrule entity: ${entity.typeId} at ${coordinates}`);
                                     }
-                                }
-                                
-                                debugLog(`Removed stale spawner entry: ${coordinates}`);
+                                });
                             } else {
                                 verifiedSpawners++;
-                                
-                                // Update database with correct typeId if needed
-                                const spawnerData = spawnerDatabase.read(coordinates);
-                                if (spawnerData && spawnerData.typeId !== block.typeId) {
-                                    spawnerData.typeId = block.typeId;
-                                    spawnerData.lastVerified = Date.now();
-                                    spawnerDatabase.write(coordinates, spawnerData);
-                                    debugLog(`Updated spawner typeId at ${coordinates} to ${block.typeId}`);
-                                } else if (spawnerData) {
-                                    spawnerData.lastVerified = Date.now();
-                                    spawnerDatabase.write(coordinates, spawnerData);
-                                }
                             }
                             
-                            // Remove ticking area after verification
                             try {
                                 player.runCommand(`tickingarea remove ${tickingAreaName}`);
-                            } catch (removeTickError) {
-                                // Ticking area might not exist, that's okay
-                                debugLog(`Could not remove ticking area ${tickingAreaName}: ${removeTickError}`);
-                            }
-                            
-                        } catch (blockError) {
+                            } catch (e) { /* ignore */ }
+
+                        } catch (blockError: any) {
                             console.error(`Error checking block at ${coordinates}:`, blockError);
                             
-                            // Still try to remove ticking area
                             try {
                                 player.runCommand(`tickingarea remove ${tickingAreaName}`);
                             } catch (e) { /* ignore */ }
@@ -1508,23 +1284,19 @@ function verifyAndCleanSpawnerDatabase(player) {
                         
                         processedCount++;
                         
-                        // Show progress every 10 spawners
                         if (processedCount % 10 === 0 || processedCount === totalCount) {
                             player.sendMessage(`§7Progress: ${processedCount}/${totalCount} spawners checked...`);
                         }
                         
-                        // Continue processing if there are more spawners
                         if (currentIndex + BATCH_SIZE < totalCount) {
                             currentIndex += BATCH_SIZE;
-                            // Process next batch after a short delay
                             system.runTimeout(() => {
                                 processBatch();
-                            }, 20); // 1 second delay between batches
+                            }, 20);
                         } else if (processedCount === totalCount) {
-                            // All done - report results
                             reportVerificationResults(player, verifiedSpawners, removedBlocks, removedEntities);
                         }
-                    }, 2); // Wait 2 ticks for chunk to load
+                    }, 2);
                     
                 } catch (error) {
                     console.error(`Error processing spawner at ${coordinates}:`, error);
@@ -1533,7 +1305,6 @@ function verifyAndCleanSpawnerDatabase(player) {
             }
         };
         
-        // Start processing
         if (totalCount > 0) {
             processBatch();
         } else {
@@ -1546,8 +1317,7 @@ function verifyAndCleanSpawnerDatabase(player) {
     }
 }
 
-// Report verification results to player
-function reportVerificationResults(player, verifiedSpawners, removedBlocks, removedEntities) {
+function reportVerificationResults(player: Player, verifiedSpawners: number, removedBlocks: number, removedEntities: number): void {
     try {
         player.sendMessage(`§a✓ Database verification complete!`);
         player.sendMessage(`§7Verified: §a${verifiedSpawners} §7spawners`);
@@ -1566,16 +1336,14 @@ function reportVerificationResults(player, verifiedSpawners, removedBlocks, remo
     }
 }
 
-// Simple Player List Form - Alphabetical list of spawner owners
-function openSimplePlayerListForm(player, sortedPlayers) {
+function openSimplePlayerListForm(player: Player, sortedPlayers: [string, any[]][]): void {
     try {
-        if (!player || !player.isValid) return;
+        if (!player || !player.isValid()) return;
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
-        // Sort alphabetically for the simple list
-        const alphaPlayers = Array.from(sortedPlayers).sort(([a], [b]) => a.localeCompare(b));
+        const alphaPlayers = Array.from(sortedPlayers).sort((a: [string, any[]], b: [string, any[]]) => a[0].localeCompare(b[0]));
 
         const form = new ActionFormData()
             .title(`Spawner Owners (${alphaPlayers.length} players)`)
@@ -1585,19 +1353,19 @@ function openSimplePlayerListForm(player, sortedPlayers) {
             form.button(`👤 ${playerName} (${spawners.length} spawners)`, "textures/ui/steve_head");
         }
 
-        form.show(player).then((r) => {
-            // Re-validate permission inside .then() to prevent session-tag-revocation bypass
+        form.show(player).then((r: any) => {
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
             }
-            if (r.canceled) return;
+            if (r.canceled || r.selection === undefined) return;
 
-            const [selectedPlayer, spawners] = alphaPlayers[r.selection];
-            if (selectedPlayer) {
+            const selectedData = alphaPlayers[r.selection];
+            if (selectedData) {
+                const [selectedPlayer, spawners] = selectedData;
                 openSpawnerSelectionForm(player, selectedPlayer, spawners);
             }
-        }).catch((error) => {
+        }).catch((error: any) => {
             console.error(`Error in openSimplePlayerListForm: ${error}`);
             player.sendMessage("§cAn error occurred while showing the player list.");
         });
@@ -1608,20 +1376,16 @@ function openSimplePlayerListForm(player, sortedPlayers) {
     }
 }
 
-// Player Stats Selection Form - Choose a player to view their detailed spawner stats
-function openPlayerStatsSelectionForm(player) {
+function openPlayerStatsSelectionForm(player: Player): void {
     try {
-        // Security validation
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
 
-        // Get spawner locations from database by iterating through all keys
-        const playerSpawners = new Map();
+        const playerSpawners = new Map<string, any[]>();
         const allSpawnerKeys = spawnerDatabase.keys();
 
-        // Group spawners by player and calculate statistics
         for (const key of allSpawnerKeys) {
             const spawnerData = spawnerDatabase.read(key);
             if (spawnerData && spawnerData.placedBy) {
@@ -1629,7 +1393,7 @@ function openPlayerStatsSelectionForm(player) {
                 if (!playerSpawners.has(playerName)) {
                     playerSpawners.set(playerName, []);
                 }
-                playerSpawners.get(playerName).push({
+                playerSpawners.get(playerName)!.push({
                     location: key,
                     typeId: spawnerData.typeId,
                     placedAt: spawnerData.placedAt,
@@ -1643,22 +1407,20 @@ function openPlayerStatsSelectionForm(player) {
             return;
         }
 
-        // Sort players by spawner count (most active first)
         const sortedPlayers = Array.from(playerSpawners.entries())
-            .sort(([,a], [,b]) => b.length - a.length);
+            .sort((a: [string, any[]], b: [string, any[]]) => b[1].length - a[1].length);
 
         const form = new ActionFormData()
             .title("Select Player for Detailed Stats")
             .body(`Found ${playerSpawners.size} players with spawners. Select a player to view their detailed spawner information:`);
 
         for (const [playerName, spawners] of sortedPlayers) {
-            // Calculate some basic stats for the button text
-            const totalEntities = spawners.reduce((sum, spawner) => {
+            const totalEntities = spawners.reduce((sum: number, spawner: any) => {
                 const [x, y, z] = spawner.location.split(',').map(Number);
                 return sum + countEntitiesNearSpawner(x, y, z);
             }, 0);
 
-            const avgLevel = spawners.reduce((sum, spawner) => {
+            const avgLevel = spawners.reduce((sum: number, spawner: any) => {
                 const levelMatch = spawner.typeId.match(/spawner(\d+)/);
                 return sum + (levelMatch ? parseInt(levelMatch[1]) : 1);
             }, 0) / spawners.length;
@@ -1666,9 +1428,8 @@ function openPlayerStatsSelectionForm(player) {
             form.button(`§e${playerName}\n§7${spawners.length} spawners • ${totalEntities} entities • Avg Level ${avgLevel.toFixed(1)}`, "textures/ui/steve_head");
         }
 
-        form.show(player).then((r) => {
-            if (r.canceled) return;
-            // Re-validate permission inside .then() to prevent session-tag-revocation bypass
+        form.show(player).then((r: any) => {
+            if (r.canceled || r.selection === undefined) return;
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
                 player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
                 return;
@@ -1678,14 +1439,12 @@ function openPlayerStatsSelectionForm(player) {
             if (selectedPlayerData) {
                 const [selectedPlayer, spawners] = selectedPlayerData;
 
-                // Convert spawners to spawnerDetails format for openSpawnerInfoForm
-                const spawnerDetails = spawners.map(spawner => {
-                    // Defensive parsing of location coordinates
+                const spawnerDetails = spawners.map((spawner: any) => {
                     let x = 0, y = 0, z = 0;
                     try {
                         if (spawner.location && typeof spawner.location === 'string') {
-                            const coords = spawner.location.split(',').map(coord => parseFloat(coord.trim()));
-                            if (coords.length >= 3 && coords.every(coord => !isNaN(coord))) {
+                            const coords = spawner.location.split(',').map((coord: string) => parseFloat(coord.trim()));
+                            if (coords.length >= 3 && coords.every((coord: number) => !isNaN(coord))) {
                                 [x, y, z] = coords;
                             }
                         }
@@ -1712,7 +1471,7 @@ function openPlayerStatsSelectionForm(player) {
 
                 openSpawnerInfoForm(player, selectedPlayer, spawnerDetails);
             }
-        }).catch((error) => {
+        }).catch((error: any) => {
             console.error(`Error in openPlayerStatsSelectionForm: ${error}`);
             player.sendMessage("§cAn error occurred while showing player selection.");
         });
@@ -1723,32 +1482,28 @@ function openPlayerStatsSelectionForm(player) {
     }
 }
 
-// Spawner Information Form - Detailed stats for a player's spawners
-function openSpawnerInfoForm(player, playerName, spawnerDetails) {
+function openSpawnerInfoForm(player: Player, playerName: string, spawnerDetails: any[]): void {
     try {
-        if (!player || !player.isValid) return;
+        if (!player || !player.isValid()) return;
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
-        // Calculate comprehensive statistics
         const totalSpawners = spawnerDetails.length;
-        const totalEntities = spawnerDetails.reduce((sum, s) => sum + s.activeEntities, 0);
-        const avgLevel = totalSpawners > 0 ? spawnerDetails.reduce((sum, s) => sum + s.level, 0) / totalSpawners : 0;
-        const activeSpawners = spawnerDetails.filter(s => s.activeEntities > 0).length;
-        const totalKills = spawnerDetails.reduce((sum, s) => sum + (s.entitiesKilled || 0), 0);
+        const totalEntities = spawnerDetails.reduce((sum: number, s: any) => sum + s.activeEntities, 0);
+        const avgLevel = totalSpawners > 0 ? spawnerDetails.reduce((sum: number, s: any) => sum + s.level, 0) / totalSpawners : 0;
+        const activeSpawners = spawnerDetails.filter((s: any) => s.activeEntities > 0).length;
+        const totalKills = spawnerDetails.reduce((sum: number, s: any) => sum + (s.entitiesKilled || 0), 0);
 
-        // Calculate spawner types distribution
-        const typeDistribution = {};
-        spawnerDetails.forEach(spawner => {
+        const typeDistribution: Record<string, number> = {};
+        spawnerDetails.forEach((spawner: any) => {
             const type = spawner.displayName;
             typeDistribution[type] = (typeDistribution[type] || 0) + 1;
         });
 
         const topType = Object.entries(typeDistribution)
-            .sort(([,a], [,b]) => b - a)[0];
+            .sort((a: [string, number], b: [string, number]) => b[1] - a[1])[0];
 
-        // Build detailed information string
         let infoText = `**${playerName}'s Spawner Overview**\n\n`;
         infoText += `**Summary:**\n`;
         infoText += `• Total Spawners: ${totalSpawners}\n`;
@@ -1759,7 +1514,7 @@ function openSpawnerInfoForm(player, playerName, spawnerDetails) {
 
         infoText += `**Spawner Types:**\n`;
         Object.entries(typeDistribution)
-            .sort(([,a], [,b]) => b - a)
+            .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
             .forEach(([type, count]) => {
                 infoText += `• ${type}: ${count}\n`;
             });
@@ -1768,9 +1523,9 @@ function openSpawnerInfoForm(player, playerName, spawnerDetails) {
 
         infoText += `Individual Spawner Details:\n`;
         spawnerDetails
-            .sort((a, b) => b.activeEntities - a.activeEntities) // Sort by activity
-            .slice(0, 5) // Show top 5
-            .forEach((spawner, index) => {
+            .sort((a: any, b: any) => b.activeEntities - a.activeEntities)
+            .slice(0, 5)
+            .forEach((spawner: any, index: number) => {
                 const status = spawner.activeEntities > 0 ? '[ACTIVE]' : '[IDLE]';
 
                 const placedTime = spawner.hasOwnProperty('placedAt') && spawner.placedAt ?
@@ -1784,9 +1539,9 @@ function openSpawnerInfoForm(player, playerName, spawnerDetails) {
             .body(infoText)
             .button("§cClose");
 
-        form.show(player).then((response) => {
-            // Just close the form - no action needed
-        }).catch((error) => {
+        form.show(player).then((response: any) => {
+            // Just close the form
+        }).catch((error: any) => {
             console.error(`Error in openSpawnerInfoForm: ${error}`);
             player.sendMessage("§cAn error occurred while showing spawner information.");
         });

@@ -4,9 +4,7 @@
     "module": "es2022",
     "moduleResolution": "node",
     "lib": ["es2022", "dom"],
-    "strict": false,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
+    "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
