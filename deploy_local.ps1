@@ -4,7 +4,7 @@ $BehaviorDest = Join-Path $MinecraftPath "development_behavior_packs\JUN06LeefyS
 $ResourceDest = Join-Path $MinecraftPath "development_resource_packs\JUN06LeefySpawners RES"
 
 # Run TypeScript build
-Write-Host "🔨 Compiling TypeScript..." -ForegroundColor Cyan
+Write-Host "Compiling TypeScript..."
 npm run build
 
 # Ensure developer directories exist
@@ -19,4 +19,4 @@ Remove-Item -Path $ResourceDest -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item -Path ".\JUN06LeefySpawners BEH" -Destination (Split-Path $BehaviorDest) -Recurse -Force
 Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ResourceDest) -Recurse -Force
 
-Write-Host "✅ Addon packs deployed successfully to local Minecraft developer folders!" -ForegroundColor Green
+Write-Host "Addon packs deployed successfully to local Minecraft developer folders!"
