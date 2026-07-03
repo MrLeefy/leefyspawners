@@ -675,6 +675,7 @@ export const validMobs = [
     { typeId: 'mrleefy:zombiestill', displayName: 'Zombie' },
     { typeId: 'mrleefy:villagerstill', displayName: 'Villager' },
     { typeId: 'mrleefy:witherstill', displayName: 'Wither' },
+    { typeId: 'mrleefy:enderdragonstill', displayName: 'Ender Dragon' },
     { typeId: 'mrleefy:spiderstill', displayName: 'Spider' },
     { typeId: 'mrleefy:slimestill', displayName: 'Slime' },
     { typeId: 'mrleefy:vindicatorstill', displayName: 'Vindicator' },

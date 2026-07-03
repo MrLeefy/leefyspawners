@@ -1,0 +1,29 @@
+{
+    "format_version": "1.8.0",
+    "minecraft:client_entity": {
+        "description": {
+            "identifier": "mrleefy:enderdragonstill_display",
+            "min_engine_version": "1.8.0",
+            "materials": {
+                "default": "dragon"
+            },
+            "textures": {
+                "default": "textures/entity/dragon/dragon"
+            },
+            "geometry": {
+                "default": "geometry.dragon"
+            },
+            "scripts": {
+                "pre_animation": [
+                    "variable.base_scale = 0.25;"
+                ],
+                "scalex": "variable.base_scale",
+                "scaley": "variable.base_scale",
+                "scalez": "variable.base_scale"
+            },
+            "render_controllers": [
+                "controller.render.dragon"
+            ]
+        }
+    }
+}
