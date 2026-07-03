@@ -430,7 +430,7 @@ function spawnDisplayEntity(player: Player, entityId: string, blockLocation: Vec
         };
 
         // Spawn the entity
-        const entity = dimension.spawnEntity(entityId, spawnLocation);
+        const entity = dimension.spawnEntity(entityId as any, spawnLocation);
 
         if (entity) {
             player.sendMessage(`§a✓ Successfully spawned ${mobName} Display Entity!`);

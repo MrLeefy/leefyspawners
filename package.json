@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && esbuild src/import.ts --bundle --minify --format=esm --external:@minecraft/server --external:@minecraft/server-ui --outfile=\"JUN06LeefySpawners BEH/scripts/module/import.js\"",
-    "dev": "esbuild src/import.ts --bundle --minify --format=esm --external:@minecraft/server --external:@minecraft/server-ui --outfile=\"JUN06LeefySpawners BEH/scripts/module/import.js\" --watch",
+    "build": "tsc --noEmit && esbuild src/import.ts --bundle --target=es2020 --format=esm --external:@minecraft/server --external:@minecraft/server-ui --outfile=\"JUN06LeefySpawners BEH/scripts/module/import.js\"",
+    "dev": "esbuild src/import.ts --bundle --target=es2020 --format=esm --external:@minecraft/server --external:@minecraft/server-ui --outfile=\"JUN06LeefySpawners BEH/scripts/module/import.js\" --watch",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

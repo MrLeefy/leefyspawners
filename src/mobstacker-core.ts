@@ -1176,7 +1176,7 @@ function spawnNewStackedEntity(dimension: Dimension, entityTypeId: string, locat
             y: location.y + 0.5,
             z: location.z
         };
-        const newEntity = dimension.spawnEntity(entityTypeId, spawnLocation);
+        const newEntity = dimension.spawnEntity(entityTypeId as any, spawnLocation);
         if (newEntity?.isValid) {
             newEntity.nameTag = nameTagConfig.replace('#', qty.toString()).replace('@', displayName);
             const spawnerKey = `${Math.floor(location.x)},${Math.floor(location.y)},${Math.floor(location.z)}`;
@@ -1294,7 +1294,7 @@ if (!(globalThis as any).__stackDieSubscribed) {
                         return;
                     }
 
-                    const newEntity = hurtEntity.dimension.spawnEntity(entityTypeId, oldLocation);
+                    const newEntity = hurtEntity.dimension.spawnEntity(entityTypeId as any, oldLocation);
 
                     if (newEntity && newEntity.isValid) {
                         newEntity.nameTag = nameTagConfig.replace('#', (currentAmount - 1).toString()).replace('@', displayName);
