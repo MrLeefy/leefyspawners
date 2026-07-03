@@ -35,5 +35,9 @@ node_modules/
 deploy_no_restart.ps1
 bump-version-only.js
 obfuscate.js
+obfuscate_release.js
+set-beta-names.js
+release_beta.ps1
+release_production.ps1
 
 
