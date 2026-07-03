@@ -1,0 +1,39 @@
+# Windows system files
+[Dd]esktop.ini
+Thumbs.db
+ehthumbs.db
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / Editor folders
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary / Build files
+*.log
+*.tmp
+*.bak
+*.temp
+node_modules/
+.agent/
+
+# Fallow analysis cache
+.fallow/
+
+# Packaged addon releases (large binaries, use GitHub Releases instead)
+*.mcaddon
+
+# Dev and deployment scripts
+deploy_no_restart.ps1
+bump-version-only.js
+obfuscate.js
+
+

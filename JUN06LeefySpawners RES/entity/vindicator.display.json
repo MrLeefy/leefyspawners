@@ -1,0 +1,15 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "mrleefy:vindicatorstill_display",
+      "min_engine_version": "1.8.0",
+      "materials": { "default": "vindicator" },
+      "textures": { "default": "textures/entity/vindicator" },
+      "geometry": { "default": "geometry.vindicatorstill_display" },
+      "render_controllers": ["controller.render.vindicatorstill"],
+      "enable_attachables": true,
+      "hide_armor": true
+    }
+  }
+}

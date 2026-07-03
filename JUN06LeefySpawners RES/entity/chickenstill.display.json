@@ -1,0 +1,21 @@
+//bridge-file-version: #0
+{
+	"format_version": "1.10.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "mrleefy:chickenstill_display",
+			"min_engine_version": "1.10.0",
+			"materials": {
+				"default": "chicken",
+				"legs": "chicken_legs"
+			},
+			"textures": {
+				"default": "textures/entity/chickenstill"
+			},
+			"geometry": {
+				"default": "geometry.chickenstill_display"
+			},
+			"render_controllers": ["controller.render.chicken"]
+		}
+	}
+}

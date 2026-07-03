@@ -1,0 +1,68 @@
+{
+	"format_version": "1.8.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "mrleefy:shulkerstill",
+			"min_engine_version": "1.8.0",
+			"materials": {
+				"default": "shulker"
+			},
+			"textures": {
+				"undyed": "textures/entity/shulkerstill/undyed",
+				"white": "textures/entity/shulkerstill/white",
+				"orange": "textures/entity/shulkerstill/orange",
+				"magenta": "textures/entity/shulkerstill/magenta",
+				"light_blue": "textures/entity/shulkerstill/light_blue",
+				"yellow": "textures/entity/shulkerstill/yellow",
+				"lime": "textures/entity/shulkerstill/lime",
+				"pink": "textures/entity/shulkerstill/pink",
+				"gray": "textures/entity/shulkerstill/gray",
+				"silver": "textures/entity/shulkerstill/silver",
+				"cyan": "textures/entity/shulkerstill/cyan",
+				"purple": "textures/entity/shulkerstill/purple",
+				"blue": "textures/entity/shulkerstill/blue",
+				"brown": "textures/entity/shulkerstill/brown",
+				"green": "textures/entity/shulkerstill/green",
+				"red": "textures/entity/shulkerstill/red",
+				"black": "textures/entity/shulkerstill/black"
+			},
+			"geometry": {
+				"default": "geometry.shulkerstill"
+			},
+		"scripts": {
+			"pre_animation": [
+				"variable.Shulker.FacingDirection = 0;",
+				"variable.Shulker.UpFacing = 0;",
+				"variable.Shulker.NorthFacing = 0;",
+				"variable.Shulker.SouthFacing = 0;",
+				"variable.Shulker.WestFacing = 0;",
+				"variable.Shulker.EastFacing = 0;",
+				"variable.Shulker.XPreRotation = 0;",
+				"variable.Shulker.ZPreRotation = 0;",
+				"variable.Shulker.XOffset = 0;",
+				"variable.Shulker.YOffset = 0;",
+				"variable.Shulker.ZOffset = 0;",
+				"variable.Shulker.PeekAmount = (query.target_x_rotation != 0.0 || query.target_y_rotation != 0.0) ? 1.0 : 0.0;",
+				"variable.Shulker.LidPositionFactor = 180 * (0.5 + variable.Shulker.PeekAmount);",
+				"variable.Shulker.LidRotationFactor = -1 + Math.sin(180 * (0.5 + variable.Shulker.PeekAmount));"
+			]
+		},
+			"animations": {
+				"facing": "animation.shulkerstill.facing",
+				"move": "animation.shulkerstill.move",
+				"look_at_target": "animation.common.look_at_target"
+			},
+		"animation_controllers": [
+			{
+				"facing": "controller.animation.shulker.facing"
+			},
+			{
+				"move": "controller.animation.shulker.move"
+			}
+		],
+			"render_controllers": [
+				"controller.render.shulker"
+			]
+		}
+	}
+}

@@ -1,0 +1,33 @@
+{
+	"format_version": "1.8.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "mrleefy:blazestill_display",
+			"min_engine_version": "1.8.0",
+			"materials": {
+				"default": "blaze_body",
+				"body": "blaze_body",
+				"head": "blaze_head"
+			},
+			"textures": {
+				"default": "textures/entity/blazestill"
+			},
+			"geometry": {
+				"default": "geometry.blazestill_display"
+			},
+			"animations": {
+				"look_at_target": "animation.common.look_at_target",
+				"move": "animation.blaze.move"
+			},
+			"animation_controllers": [
+				{
+					"move": "controller.animation.blaze.move"
+				},
+				{
+					"flame": "controller.animation.blaze.flame"
+				}
+			],
+			"render_controllers": ["controller.render.blaze"]
+		}
+	}
+}

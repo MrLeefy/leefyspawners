@@ -1,0 +1,17 @@
+{
+    "format_version": "1.10.0",
+    "animations": {
+        "animation.crawlerstill.move": {
+            "loop": true,
+            "bones": {
+                "body": {
+                    "rotation": [
+                        "math.sin(query.modified_distance_moved * 30) * 5",
+                        0,
+                        0
+                    ]
+                }
+            }
+        }
+    }
+}

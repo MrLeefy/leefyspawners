@@ -1,0 +1,31 @@
+{
+    "format_version": "1.8.0",
+    "minecraft:client_entity": {
+        "description": {
+            "identifier": "mrleefy:lapiscrawlerstill_display",
+            "min_engine_version": "1.8.0",
+            "materials": {
+                "default": "silverfish_layers",
+                "body_layer": "silverfish_layers"
+            },
+            "textures": {
+                "default": "textures/entity/cave/crawler_lapis"
+            },
+            "geometry": {
+                "default": "geometry.cave_crawler"
+            },
+            "animations": {
+                "move": "animation.cave_crawler.move",
+                "idle": "animation.cave_crawler.idle"
+            },
+            "animation_controllers": [
+                {
+                    "controller": "controller.animation.cave_crawler"
+                }
+            ],
+            "render_controllers": [
+                "controller.render.silverfish"
+            ]
+        }
+    }
+}

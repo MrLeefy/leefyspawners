@@ -1,0 +1,37 @@
+//bridge-file-version: #3
+{
+	"format_version": "1.8.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "mrleefy:shulkerstill_display",
+			"min_engine_version": "1.8.0",
+			"materials": {
+				"default": "shulker"
+			},
+		"textures": {
+			"default": "textures/entity/shulkerstill/undyed",
+			"undyed": "textures/entity/shulkerstill/undyed",
+			"white": "textures/entity/shulkerstill/white",
+				"orange": "textures/entity/shulkerstill/orange",
+				"magenta": "textures/entity/shulkerstill/magenta",
+				"light_blue": "textures/entity/shulkerstill/light_blue",
+				"yellow": "textures/entity/shulkerstill/yellow",
+				"lime": "textures/entity/shulkerstill/lime",
+				"pink": "textures/entity/shulkerstill/pink",
+				"gray": "textures/entity/shulkerstill/gray",
+				"silver": "textures/entity/shulkerstill/silver",
+				"cyan": "textures/entity/shulkerstill/cyan",
+				"purple": "textures/entity/shulkerstill/purple",
+				"blue": "textures/entity/shulkerstill/blue",
+				"brown": "textures/entity/shulkerstill/brown",
+				"green": "textures/entity/shulkerstill/green",
+				"red": "textures/entity/shulkerstill/red",
+				"black": "textures/entity/shulkerstill/black"
+			},
+			"geometry": {
+				"default": "geometry.shulkerstill_display"
+			},
+			"render_controllers": ["controller.render.shulker"]
+		}
+	}
+}

@@ -1,0 +1,30 @@
+{
+    "format_version": "1.10.0",
+    "animation_controllers": {
+        "controller.animation.cave_crawler": {
+            "initial_state": "idle",
+            "states": {
+                "idle": {
+                    "animations": [
+                        "idle"
+                    ],
+                    "transitions": [
+                        {
+                            "moving": "query.modified_move_speed > 0.1"
+                        }
+                    ]
+                },
+                "moving": {
+                    "animations": [
+                        "move"
+                    ],
+                    "transitions": [
+                        {
+                            "idle": "query.modified_move_speed <= 0.1"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,19 @@
+{
+	"format_version": "1.10.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "mrleefy:sheepstill_display",
+			"min_engine_version": "1.8.0",
+			"materials": {
+				"default": "sheep"
+			},
+			"textures": {
+				"default": "textures/entity/sheepstill"
+			},
+			"geometry": {
+				"default": "geometry.sheepstill_display"
+			},
+			"render_controllers": ["controller.render.default"]
+		}
+	}
+}

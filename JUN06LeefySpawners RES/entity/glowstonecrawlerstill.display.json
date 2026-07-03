@@ -1,0 +1,30 @@
+{
+    "format_version": "1.8.0",
+    "minecraft:client_entity": {
+        "description": {
+            "identifier": "mrleefy:glowstonecrawlerstill_display",
+            "min_engine_version": "1.8.0",
+            "materials": {
+                "default": "silverfish_layers",
+                "body_layer": "silverfish_layers"
+            },
+            "textures": {
+                "default": "textures/entity/cave/crawler_glowstone"
+            },
+            "geometry": {
+                "default": "geometry.cave_crawler"
+            },
+            "animations": {
+                "move": "animation.cave_crawler.move"
+            },
+            "animation_controllers": [
+                {
+                    "move": "controller.animation.silverfish.move"
+                }
+            ],
+            "render_controllers": [
+                "controller.render.silverfish"
+            ]
+        }
+    }
+}
