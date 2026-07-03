@@ -2,10 +2,7 @@
     "format_version": "1.20.60",
     "minecraft:block": {
         "description": {
-            "identifier": "mrleefy:villagerspawner22",
-            "menu_category": {
-                "category": "items"
-            }
+            "identifier": "mrleefy:villagerspawner22"
         },
         "components": {
             "minecraft:material_instances": {

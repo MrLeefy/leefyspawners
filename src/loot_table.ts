@@ -100,7 +100,7 @@ class LootManager {
                 'minecraft:book': { chance: 45, quantity: 1, stackable: true },
                 'minecraft:enchanted_book': { chance: 4, stackable: false },
                 'minecraft:experience_bottle': { chance: 30, quantity: 1, stackable: true },
-                'minecraft:map': { chance: 15, quantity: 1, stackable: true },
+                'minecraft:empty_map': { chance: 15, quantity: 1, stackable: true },
                 'minecraft:compass': { chance: 8, quantity: 1, stackable: true },
                 'minecraft:clock': { chance: 8, quantity: 1, stackable: true },
                 'minecraft:bread': { chance: 40, quantity: 1, stackable: true },

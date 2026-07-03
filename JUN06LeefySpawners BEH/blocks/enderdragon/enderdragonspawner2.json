@@ -2,10 +2,7 @@
     "format_version": "1.20.60",
     "minecraft:block": {
         "description": {
-            "identifier": "mrleefy:enderdragonspawner2",
-            "menu_category": {
-                "category": "items"
-            }
+            "identifier": "mrleefy:enderdragonspawner2"
         },
         "components": {
             "minecraft:material_instances": {

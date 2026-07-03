@@ -22,7 +22,7 @@
                 "scalez": "variable.base_scale"
             },
             "render_controllers": [
-                "controller.render.dragon"
+                "controller.render.default"
             ]
         }
     }
