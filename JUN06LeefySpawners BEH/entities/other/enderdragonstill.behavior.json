@@ -47,6 +47,13 @@
                 "height": 1.5
             },
             "minecraft:fire_immune": true,
+            "minecraft:behavior.look_at_player": {
+                "priority": 2,
+                "look_distance": 8.0
+            },
+            "minecraft:behavior.random_look_around": {
+                "priority": 5
+            },
             "minecraft:type_family": {
                 "family": [
                     "dragon",
