@@ -95,6 +95,7 @@ class LootManager {
             'mrleefy:guardianstill': { 'minecraft:prismarine_shard': { chance: 100, quantity: 1, stackable: true }, 'minecraft:prismarine_crystals': { chance: 50, quantity: 1, stackable: true } },
             'mrleefy:witherskeletonstill': { 'minecraft:coal': { chance: 25, quantity: 1, stackable: true }, 'minecraft:bone': { chance: 100, quantity: 1, stackable: true }, 'minecraft:wither_skeleton_skull': { chance: 1, stackable: false } },
             'mrleefy:zombiestill': { 'minecraft:rotten_flesh': { chance: 100, quantity: 1, stackable: true }, 'minecraft:iron_ingot': { chance: 2, quantity: 1, stackable: true }, 'minecraft:carrot': { chance: 2, quantity: 1, stackable: true }, 'minecraft:potato': { chance: 2, quantity: 1, stackable: true } },
+            'mrleefy:villagerstill': { 'minecraft:emerald': { chance: 100, quantity: 1, stackable: true }, 'minecraft:book': { chance: 50, quantity: 1, stackable: true }, 'minecraft:map': { chance: 15, quantity: 1, stackable: true }, 'minecraft:bread': { chance: 60, quantity: 1, stackable: true }, 'minecraft:enchanted_book': { chance: 3, stackable: false } },
             'mrleefy:witherstill': { 'minecraft:nether_star': { chance: 100, quantity: 1, stackable: false } },
             'mrleefy:spiderstill': { 'minecraft:string': { chance: 100, quantity: 1, stackable: true }, 'minecraft:spider_eye': { chance: 10, quantity: 1, stackable: true } },
             'mrleefy:slimestill': { 'minecraft:slime_ball': { chance: 100, quantity: 1, stackable: true } },
@@ -350,6 +351,26 @@ class LootManager {
                     });
                 } catch (e) {
                     console.warn(`[LootManager] Failed to apply enchantment to ${itemId}: ${e}`);
+                }
+            }
+        } else if (itemId === 'minecraft:enchanted_book') {
+            // Apply random enchantment from valid categories
+            const enchComp: any = itemStack.getComponent('enchantable');
+            if (enchComp) {
+                try {
+                    const categories = Object.keys(this.enchantmentCategories);
+                    const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+                    const enchantsList = this.enchantmentCategories[randomCategory];
+                    if (enchantsList && enchantsList.length > 0) {
+                        const randomEnchant = enchantsList[Math.floor(Math.random() * enchantsList.length)];
+                        const level = Math.floor(Math.random() * (randomEnchant.maxLevel - randomEnchant.minLevel + 1)) + randomEnchant.minLevel;
+                        enchComp.addEnchantment({
+                            type: { id: randomEnchant.type },
+                            level: level
+                        });
+                    }
+                } catch (e) {
+                    console.warn(`[LootManager] Failed to apply random enchantment to enchanted_book: ${e}`);
                 }
             }
         }

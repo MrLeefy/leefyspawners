@@ -673,6 +673,7 @@ export const validMobs = [
     { typeId: 'mrleefy:guardianstill', displayName: 'Guardian' },
     { typeId: 'mrleefy:witherskeletonstill', displayName: 'Wither Skeleton' },
     { typeId: 'mrleefy:zombiestill', displayName: 'Zombie' },
+    { typeId: 'mrleefy:villagerstill', displayName: 'Villager' },
     { typeId: 'mrleefy:witherstill', displayName: 'Wither' },
     { typeId: 'mrleefy:spiderstill', displayName: 'Spider' },
     { typeId: 'mrleefy:slimestill', displayName: 'Slime' },
