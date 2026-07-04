@@ -1635,7 +1635,8 @@ world2.afterEvents.entityDie.subscribe((event) => {
 import {
   world as world3,
   system as system2,
-  MolangVariableMap
+  MolangVariableMap,
+  ItemStack as ItemStack2
 } from "@minecraft/server";
 import {
   ActionFormData,
@@ -1802,6 +1803,23 @@ var Vector32 = class _Vector3 {
 };
 
 // src/levelsystem.ts
+function giveItemNatively(player, itemTypeId, amount) {
+  try {
+    const inventory = player.getComponent("inventory");
+    const container = inventory?.container;
+    if (container) {
+      const itemStack = new ItemStack2(itemTypeId, amount);
+      const remaining = container.addItem(itemStack);
+      if (remaining && remaining.amount > 0) {
+        player.dimension.spawnItem(remaining, player.location);
+      }
+    } else {
+      player.dimension.spawnItem(new ItemStack2(itemTypeId, amount), player.location);
+    }
+  } catch (e) {
+    console.error(`[Spawner System] Error giving item natively: ${e}`);
+  }
+}
 var cooldowns = /* @__PURE__ */ new Map();
 var spawnerDatabase = new Database("SpawnerLocations");
 var activeForms = /* @__PURE__ */ new Map();
@@ -1909,9 +1927,10 @@ world3.afterEvents.playerPlaceBlock.subscribe((data) => {
     };
     spawnerDatabase.write(coordinates, spawnerData);
     try {
-      player.dimension.runCommand(`summon mrleefy:spawnrule "${typeId}" ${block.x} ${block.y} ${block.z}`);
+      const ent = player.dimension.spawnEntity("mrleefy:spawnrule", { x: block.x + 0.5, y: block.y + 0.5, z: block.z + 0.5 });
+      ent.nameTag = typeId;
     } catch (error) {
-      console.error("Error executing command:", error);
+      console.error("Error spawning entity natively:", error);
     }
   }
 });
@@ -2023,14 +2042,18 @@ function ensureSpawnruleEntity(player, x, y, z, typeId) {
     return;
   }
   try {
-    player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add existing`);
-  } catch (cmdError) {
-    console.error(`Error tagging existing spawnrule: ${cmdError}`);
-  }
-  try {
-    player.dimension.runCommand(`execute unless entity @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1,tag=existing] run summon mrleefy:spawnrule "${typeId}" ${x} ${y} ${z}`);
-  } catch (cmdError) {
-    console.error(`Error summoning spawnrule: ${cmdError}`);
+    const dimension = player.dimension;
+    const entities = dimension.getEntities({
+      location: { x: x + 0.5, y: y + 0.5, z: z + 0.5 },
+      maxDistance: 0.8,
+      type: "mrleefy:spawnrule"
+    });
+    if (entities.length === 0) {
+      const ent = dimension.spawnEntity("mrleefy:spawnrule", { x: x + 0.5, y: y + 0.5, z: z + 0.5 });
+      ent.nameTag = typeId;
+    }
+  } catch (error) {
+    console.error(`Error ensuring spawnrule entity natively: ${error}`);
   }
 }
 function createSpawnerForm(player, level, upgradee, downgradee, spawnerType, block, typeId, percentrefund, refu, x, y, z, coordinates) {
@@ -2255,11 +2278,22 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
           clearMaxedSpawnerCache(x, y, z);
           const newTypeId = newBlockType;
           try {
-            player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
-            player.dimension.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
-            player.dimension.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
+            const dimension = player.dimension;
+            const entities = dimension.getEntities({
+              location: { x: x + 0.5, y: y + 0.5, z: z + 0.5 },
+              maxDistance: 0.8,
+              type: "mrleefy:spawnrule"
+            });
+            for (const ent of entities) {
+              try {
+                ent.remove();
+              } catch (e) {
+              }
+            }
+            const newEnt = dimension.spawnEntity("mrleefy:spawnrule", { x: x + 0.5, y: y + 0.5, z: z + 0.5 });
+            newEnt.nameTag = newTypeId;
           } catch (error) {
-            console.error("Error executing command:", error);
+            console.error("Error updating spawnrule in slider natively:", error);
           }
         }
       }
@@ -2350,15 +2384,26 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
   }
   clearMaxedSpawnerCache(x, y, z);
   try {
-    player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
-    player.dimension.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
-    player.dimension.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
+    const dimension = player.dimension;
+    const entities = dimension.getEntities({
+      location: { x: x + 0.5, y: y + 0.5, z: z + 0.5 },
+      maxDistance: 0.8,
+      type: "mrleefy:spawnrule"
+    });
+    for (const ent of entities) {
+      try {
+        ent.remove();
+      } catch (e) {
+      }
+    }
+    const newEnt = dimension.spawnEntity("mrleefy:spawnrule", { x: x + 0.5, y: y + 0.5, z: z + 0.5 });
+    newEnt.nameTag = newTypeId;
   } catch (error) {
-    console.error("Error executing spawnrule commands:", error);
+    console.error("Error executing spawnrule updates natively:", error);
   }
   player.sendMessage(`\xA77Successfully Upgraded to level \xA72\xA7l${newLevel}`);
   try {
-    player.dimension.runCommand(`playsound random.levelup "${player.name}"`);
+    player.playSound("random.levelup");
   } catch (error) {
   }
   try {
@@ -2370,11 +2415,7 @@ function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
   } catch (e) {
   }
   if (refundAmount > 0) {
-    try {
-      player.dimension.runCommand(`give "${player.name}" ${spawnerItemPrefix}1 ${refundAmount}`);
-    } catch (error) {
-      console.error("Error executing remainder command:", error);
-    }
+    giveItemNatively(player, `${spawnerItemPrefix}1`, refundAmount);
     player.sendMessage(`\xA77Refunded \xA72\xA7l${refundAmount} level 1 spawners\xA77.`);
   }
 }
@@ -2436,7 +2477,7 @@ function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
     }
   }
   for (const refund of refundQueue) {
-    player.dimension.runCommand(`give "${player.name}" ${spawnerItemPrefix}1 ${refund.amount}`);
+    giveItemNatively(player, `${spawnerItemPrefix}1`, refund.amount);
   }
   block.setType(`${spawnerItemPrefix}${newLevel}`);
   player.sendMessage(`\xA77Successfully upgraded to level \xA72\xA7l${newLevel}`);
@@ -2449,11 +2490,22 @@ function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
   }
   clearMaxedSpawnerCache(x, y, z);
   try {
-    player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
-    player.dimension.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
-    player.dimension.runCommand(`summon mrleefy:spawnrule "mrleefy:${spawnerType}spawner${newLevel}" ${x} ${y} ${z}`);
+    const dimension = player.dimension;
+    const entities = dimension.getEntities({
+      location: { x: x + 0.5, y: y + 0.5, z: z + 0.5 },
+      maxDistance: 0.8,
+      type: "mrleefy:spawnrule"
+    });
+    for (const ent of entities) {
+      try {
+        ent.remove();
+      } catch (e) {
+      }
+    }
+    const newEnt = dimension.spawnEntity("mrleefy:spawnrule", { x: x + 0.5, y: y + 0.5, z: z + 0.5 });
+    newEnt.nameTag = `mrleefy:${spawnerType}spawner${newLevel}`;
   } catch (error) {
-    console.error("Error executing command:", error);
+    console.error("Error executing command natively:", error);
   }
 }
 function downgrade(player, block, level, spawnerType, percentrefund, refu, x, y, z) {
@@ -2503,20 +2555,27 @@ function downgrade(player, block, level, spawnerType, percentrefund, refu, x, y,
     spawnerDatabase.write(coordinates, existingData);
   }
   try {
-    player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${block.x},y=${block.y},z=${block.z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
-    player.dimension.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
-    player.dimension.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
+    const dimension2 = player.dimension;
+    const entities = dimension2.getEntities({
+      location: { x: block.x + 0.5, y: block.y + 0.5, z: block.z + 0.5 },
+      maxDistance: 0.8,
+      type: "mrleefy:spawnrule"
+    });
+    for (const ent of entities) {
+      try {
+        ent.remove();
+      } catch (e) {
+      }
+    }
+    const newEnt = dimension2.spawnEntity("mrleefy:spawnrule", { x: x + 0.5, y: y + 0.5, z: z + 0.5 });
+    newEnt.nameTag = newTypeId;
   } catch (error) {
-    console.error("Error updating spawnrule in downgrade:", error);
+    console.error("Error updating spawnrule in downgrade natively:", error);
   }
-  try {
-    player.dimension.runCommand(`give "${player.name}" mrleefy:${spawnerType}spawner1 1`);
-  } catch (error) {
-    console.error("Error giving downgraded spawner:", error);
-  }
+  giveItemNatively(player, `mrleefy:${spawnerType}spawner1`, 1);
   player.sendMessage(`\xA77Successfully downgraded to level \xA72\xA7l${newLevel}`);
   try {
-    player.dimension.runCommand(`playsound mob.irongolem.crack "${player.name}"`);
+    player.playSound("mob.irongolem.crack");
   } catch (error) {
   }
   try {
@@ -4162,7 +4221,7 @@ function verifyAndCleanSpawnerDatabase(player) {
           try {
             const [x, y, z] = coordinates.split(",").map((coord) => parseFloat(coord.trim()));
             const tickingAreaName = `db_verify_${x}_${y}_${z}`;
-            player.dimension.runCommand(`tickingarea add ${x - 2} ${y - 2} ${z - 2} ${x + 2} ${y + 2} ${z + 2} ${tickingAreaName} true`);
+            player.runCommand(`tickingarea add ${x - 2} ${y - 2} ${z - 2} ${x + 2} ${y + 2} ${z + 2} ${tickingAreaName} true`);
             system3.runTimeout(() => {
               try {
                 const block = overworld.getBlock({ x, y, z });
@@ -4185,13 +4244,13 @@ function verifyAndCleanSpawnerDatabase(player) {
                   verifiedSpawners++;
                 }
                 try {
-                  player.dimension.runCommand(`tickingarea remove ${tickingAreaName}`);
+                  player.runCommand(`tickingarea remove ${tickingAreaName}`);
                 } catch (e) {
                 }
               } catch (blockError) {
                 console.error(`Error checking block at ${coordinates}:`, blockError);
                 try {
-                  player.dimension.runCommand(`tickingarea remove ${tickingAreaName}`);
+                  player.runCommand(`tickingarea remove ${tickingAreaName}`);
                 } catch (e) {
                 }
               }
@@ -5737,8 +5796,25 @@ world6.afterEvents.entityHitEntity.subscribe((evd) => {
 });
 
 // src/display-spawner-handler.ts
-import { world as world7, system as system7 } from "@minecraft/server";
+import { world as world7, system as system7, ItemStack as ItemStack3 } from "@minecraft/server";
 import { ActionFormData as ActionFormData3, ModalFormData as ModalFormData3 } from "@minecraft/server-ui";
+function giveItemNatively2(player, itemTypeId, amount) {
+  try {
+    const inventory = player.getComponent("inventory");
+    const container = inventory?.container;
+    if (container) {
+      const itemStack = new ItemStack3(itemTypeId, amount);
+      const remaining = container.addItem(itemStack);
+      if (remaining && remaining.amount > 0) {
+        player.dimension.spawnItem(remaining, player.location);
+      }
+    } else {
+      player.dimension.spawnItem(new ItemStack3(itemTypeId, amount), player.location);
+    }
+  } catch (e) {
+    console.error(`[Display Spawner] Error giving item natively: ${e}`);
+  }
+}
 var priceDatabase = new Database("DisplaySpawnerPrices");
 var configDatabase3 = new Database("DisplaySpawnerConfig");
 var formCooldowns = /* @__PURE__ */ new Map();
@@ -6051,18 +6127,8 @@ async function showShopForm(player, blockId) {
       return;
     }
     if (removePlayerMoney(player, totalCost)) {
-      try {
-        player.dimension.runCommand(`give "${player.name}" ${actualSpawnerItem} ${quantity}`);
-        player.sendMessage(`\xA7a\u2713 Purchased \xA7e${quantity}x ${mobName} Spawner (Lvl 1) \xA7afor \xA7e$${totalCost.toLocaleString()}\xA7a!`);
-      } catch (error) {
-        player.sendMessage(`\xA7c\u2717 Error giving items. Refunding money...`);
-        const moneyObjectiveName = getMoneyObjective();
-        const moneyObjective = world7.scoreboard.getObjective(moneyObjectiveName);
-        if (moneyObjective) {
-          const score = moneyObjective.getScore(player) ?? 0;
-          moneyObjective.setScore(player, score + totalCost);
-        }
-      }
+      giveItemNatively2(player, actualSpawnerItem, quantity);
+      player.sendMessage(`\xA7a\u2713 Purchased \xA7e${quantity}x ${mobName} Spawner (Lvl 1) \xA7afor \xA7e$${totalCost.toLocaleString()}\xA7a!`);
     } else {
       player.sendMessage(`\xA7c\u2717 Transaction failed!`);
     }
