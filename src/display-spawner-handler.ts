@@ -276,7 +276,7 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
     const mobName = getFriendlyName(blockId);
     const currentPrice = getPrice(blockId);
 
-    const form = new ModalFormData()
+    const form = (new ModalFormData() as any)
         .title("§l§6Change Spawner Price")
         .textField(
             `§7Set price for §e${mobName} Spawner\n§7Current: §a$${currentPrice.toLocaleString()}\n\n§7Enter new price:`,
@@ -316,7 +316,7 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
 async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blockLocation: Vector3): Promise<void> {
     const currentObjective = getMoneyObjective();
 
-    const form = new ModalFormData()
+    const form = (new ModalFormData() as any)
         .title("§l§6Change Money Objective")
         .textField(
             `§7Enter the scoreboard objective name for money\n§7Current: §e${currentObjective}\n\n§7Common examples:\n§7- money\n§7- balance\n§7- coins\n§7- cash\n\n§7Objective Name:`,

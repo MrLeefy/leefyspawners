@@ -927,16 +927,13 @@ import { ActionFormData as ActionFormData3, ModalFormData as ModalFormData3, Mes
 // src/ui-utils.ts
 import { system as system2 } from "@minecraft/server";
 import { FormCancelationReason } from "@minecraft/server-ui";
-function waitOneTick() {
-  return new Promise((resolve) => system2.run(resolve));
-}
 async function forceShowForm(player, form) {
   let attempts = 0;
   while (attempts < 40) {
     const response = await form.show(player);
     if (response.canceled && response.cancelationReason === FormCancelationReason.UserBusy) {
       attempts++;
-      await waitOneTick();
+      await system2.waitTicks(1);
       continue;
     }
     return response;
@@ -6104,7 +6101,7 @@ async function showChangePriceForm(player, blockId, blockLocation) {
 
 \xA77Enter new price:`,
     "e.g., 50000",
-    { defaultValue: currentPrice.toString() }
+    currentPrice.toString()
   );
   try {
     const response = await forceShowForm(player, form);
@@ -6138,7 +6135,7 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
 
 \xA77Objective Name:`,
     "e.g., money",
-    { defaultValue: currentObjective }
+    currentObjective
   );
   try {
     const response = await forceShowForm(player, form);
