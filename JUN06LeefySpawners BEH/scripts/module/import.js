@@ -6,7 +6,7 @@ var __publicField = (obj, key, value) => {
 };
 
 // src/import.ts
-import { world as world8, system as system8 } from "@minecraft/server";
+import { world as world8, system as system9 } from "@minecraft/server";
 
 // src/constants.ts
 var TIMING = {
@@ -915,14 +915,31 @@ var ConfigurationService = class {
 var configService = new ConfigurationService();
 
 // src/performance-monitor.ts
-import { system as system5 } from "@minecraft/server";
+import { system as system6 } from "@minecraft/server";
 
 // src/mobstacker-core.ts
-import { system as system4, world as world5 } from "@minecraft/server";
+import { system as system5, world as world5 } from "@minecraft/server";
 
 // src/mobstacker-ui.ts
-import { world as world4, system as system3 } from "@minecraft/server";
-import { ActionFormData as ActionFormData2, ModalFormData as ModalFormData2, MessageFormData } from "@minecraft/server-ui";
+import { world as world4, system as system4 } from "@minecraft/server";
+import { ActionFormData as ActionFormData3, ModalFormData as ModalFormData3, MessageFormData } from "@minecraft/server-ui";
+
+// src/ui-utils.ts
+import { system as system2 } from "@minecraft/server";
+import { FormCancelationReason } from "@minecraft/server-ui";
+async function forceShowForm(player, form) {
+  let attempts = 0;
+  while (attempts < 40) {
+    const response = await form.show(player);
+    if (response.canceled && response.cancelationReason === FormCancelationReason.UserBusy) {
+      attempts++;
+      await system2.waitTicks(1);
+      continue;
+    }
+    return response;
+  }
+  return form.show(player);
+}
 
 // src/loot_table.ts
 import { world as world2, ItemStack } from "@minecraft/server";
@@ -1699,13 +1716,13 @@ world2.afterEvents.entityDie.subscribe((event) => {
 // src/levelsystem.ts
 import {
   world as world3,
-  system as system2,
+  system as system3,
   MolangVariableMap,
   ItemStack as ItemStack2
 } from "@minecraft/server";
 import {
-  ActionFormData,
-  ModalFormData
+  ActionFormData as ActionFormData2,
+  ModalFormData as ModalFormData2
 } from "@minecraft/server-ui";
 
 // src/VectorMath/index.ts
@@ -1922,7 +1939,7 @@ world3.beforeEvents.playerBreakBlock.subscribe((data) => {
   if (spawnerDatabase.has(coordinates)) {
     spawnerDatabase.delete(coordinates);
     if (!block.typeId.endsWith("_display")) {
-      system2.run(() => removeSpawnruleAtLocation(block.x, block.y, block.z, block.dimension));
+      system3.run(() => removeSpawnruleAtLocation(block.x, block.y, block.z, block.dimension));
     }
   } else {
     const nearbyRadius = 1;
@@ -2021,7 +2038,7 @@ function handleSpawnerBlockInteraction(player, block, cancelableEvent) {
     }
   }
   updateSpawnerDatabaseOnInteraction(coordinates, typeId, player);
-  system2.run(() => {
+  system3.run(() => {
     const spawnerType = typeId.replace("mrleefy:", "").replace(/spawner\d*/, "");
     const levelMatch = typeId.match(/\d*$/);
     const level = levelMatch ? Number(levelMatch[0]) : 0;
@@ -2122,7 +2139,7 @@ function ensureSpawnruleEntity(player, x, y, z, typeId) {
   }
 }
 function createSpawnerForm(player, level, upgradee, downgradee, spawnerType, block, typeId, percentrefund, refu, x, y, z, coordinates) {
-  const form12 = new ActionFormData();
+  const form12 = new ActionFormData2();
   form12.title(`\xA7l\xA78${spawnerType}Spawner\xA72\xA7r`);
   form12.body(`\xA77\xA7l
                 \xA77Level: \xA72${level}\xA7r
@@ -2165,7 +2182,7 @@ function form1(player, level, cost, block, typeId, upgradee, downgradee, percent
   }
   ensureSpawnruleEntity(player, x, y, z, typeId);
   const { form, buttonActions } = createSpawnerForm(player, level, upgradee, downgradee, spawnerType, block, typeId, percentrefund, refu, x, y, z, coordinates);
-  system2.run(() => {
+  system3.run(() => {
     form.show(player).then((response) => {
       const isNested = response.selection !== void 0 && buttonActions[response.selection] && buttonActions[response.selection].isNested;
       if (!isNested) {
@@ -2320,10 +2337,10 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
     activeForms.delete(coordinates);
     return;
   }
-  const slider2 = new ModalFormData();
+  const slider2 = new ModalFormData2();
   slider2.title("Select Spawner Level");
   slider2.slider("Set Range", 1, 32, 1, 1);
-  system2.run(() => {
+  system3.run(() => {
     slider2.show(player).then((response) => {
       activeForms.delete(coordinates);
       if (!player || !player.isValid) {
@@ -2371,13 +2388,13 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
   });
 }
 function showInstructions(player) {
-  const instructions = new ActionFormData();
+  const instructions = new ActionFormData2();
   instructions.title("\xA7l\xA7eHow To Use Spawners");
   instructions.body(
     "\xA7f\xA7lGetting Started\xA7r\n\xA77Place your spawner and tap it to open this menu!\n\n\xA7a\xA7lUpgrading\xA7r\n\xA77- Have spawners of the \xA7esame type\xA77 in your inventory\n\xA77- Tap \xA7aUpgrade\xA77 to combine them\n\xA77- Higher levels = \xA7efaster spawns\xA77 + \xA7ebigger stacks\xA77!\n\n\xA7c\xA7lDowngrading\xA7r\n\xA77- Only works at Level 2+\n\xA77- Get a spawner back in your inventory\n\n\xA7b\xA7lMax Upgrade\xA7r\n\xA77- Uses ALL your spawners at once\n\xA77- Upgrades to the highest level possible (max 32)\n\xA77- Leftover spawners are returned to you\n\n\xA7d\xA7lTeleport Stack\xA7r\n\xA77- Brings nearby stacked mobs to this spawner\n\n\xA78Max level is 32. Each level boosts spawn rate and stack size!"
   );
   instructions.button("\xA7l\xA7aGot it!");
-  instructions.show(player);
+  instructions.show(player).catch((e) => console.warn("[LevelSystem] Error showing instructions form:", e));
 }
 function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
   if (!player || !player.isValid)
@@ -2662,7 +2679,7 @@ function removeSpawnruleAtLocation(x, y, z, dimension) {
       location: { x, y, z },
       maxDistance: 1
     });
-    system2.run(() => {
+    system3.run(() => {
       for (const entity of spawnruleEntities) {
         if (entity?.isValid) {
           try {
@@ -2748,7 +2765,7 @@ function enforcePlayerMemoryLimits() {
     }
   }
 }
-system2.runInterval(() => {
+system3.runInterval(() => {
   try {
     enforcePlayerMemoryLimits();
   } catch (error) {
@@ -3235,8 +3252,8 @@ function rebuildAALookup() {
     });
   }
 }
-system3.run(() => {
-  system3.run(() => {
+system4.run(() => {
+  system4.run(() => {
     try {
       if (aaDatabase.length === 0) {
         Object.entries(defaultAAValues).forEach(([range, data]) => {
@@ -3256,7 +3273,7 @@ system3.run(() => {
 function getAAValueForLevel(level) {
   return aaLookup[level] || { qty: 0, speed: 0, maxStack: 100 };
 }
-world4.afterEvents.itemUse.subscribe((event) => {
+world4.afterEvents.itemUse.subscribe(async (event) => {
   const { source, itemStack } = event;
   if (itemStack.typeId === "minecraft:blaze_rod" && source.hasTag("admin")) {
     openAdminMenu(source);
@@ -3274,8 +3291,8 @@ function openAdminMenu(player) {
     });
     return;
   }
-  const form = new ActionFormData2().title("Leefy Spawner Settings").body("\xA77Configure spawner behavior and performance settings\n\xA7c\u26A0 Performance settings require server/world restart").button("Spawner Settings", "textures/items/diamond").button("Entity Loot Tables", "textures/blocks/chest_front").button("Stack Radius", "textures/items/snowball").button("Loot Drop Rules", "textures/items/lever.png").button("Performance Settings \xA7c(Requires Restart)", "textures/items/clock_item").button("Spawner Statistics", "textures/items/book_normal").button("Teleport to Spawner", "textures/items/ender_pearl").button("Verify & Clean Database", "textures/items/book_normal").button(isLoggingEnabled() ? "Disable Logging" : "Enable Logging", "textures/items/paper");
-  form.show(player).then((r) => {
+  const form = new ActionFormData3().title("Leefy Spawner Settings").body("\xA77Configure spawner behavior and performance settings\n\xA7c\u26A0 Performance settings require server/world restart").button("Spawner Settings", "textures/items/diamond").button("Entity Loot Tables", "textures/blocks/chest_front").button("Stack Radius", "textures/items/snowball").button("Loot Drop Rules", "textures/items/lever.png").button("Performance Settings \xA7c(Requires Restart)", "textures/items/clock_item").button("Spawner Statistics", "textures/items/book_normal").button("Teleport to Spawner", "textures/items/ender_pearl").button("Verify & Clean Database", "textures/items/book_normal").button(isLoggingEnabled() ? "Disable Logging" : "Enable Logging", "textures/items/paper");
+  forceShowForm(player, form).then((r) => {
     if (r.canceled)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3295,7 +3312,7 @@ function openAdminMenu(player) {
         console.warn(`Admin action warning for ${player.name}: ${warning}`);
       });
     }
-    system3.run(() => {
+    system4.run(() => {
       switch (r.selection) {
         case 0:
           openAAConfigForm(player);
@@ -3348,7 +3365,7 @@ function openToggleLootDropForm(player) {
   const currentCap = configDatabase2.read("itemSpillCap") || 5;
   const currentXpCap = configDatabase2.read("xpSpillCap") || 3;
   const playerKillOnly = configDatabase2.read("playerKillOnly") ?? false;
-  new ModalFormData2().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", { defaultValue: playerKillOnly }).textField("Max item drops near stack:", "Enter integer (>=1)", { defaultValue: `${currentCap}` }).textField("Max XP orbs near stack:", "Enter integer (>=1)", { defaultValue: `${currentXpCap}` }).show(player).then((r) => {
+  new ModalFormData3().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", { defaultValue: playerKillOnly }).textField("Max item drops near stack:", "Enter integer (>=1)", { defaultValue: `${currentCap}` }).textField("Max XP orbs near stack:", "Enter integer (>=1)", { defaultValue: `${currentXpCap}` }).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3378,7 +3395,7 @@ function openPerformanceConfigForm(player) {
   const currentMaxSpawns = configDatabase2.read("performanceMaxSpawns") || 25;
   const currentRandomDelay = configDatabase2.read("performanceRandomDelay") ?? true;
   const currentSpawnInterval = configDatabase2.read("performanceSpawnInterval") || 20;
-  const form = new ModalFormData2().title("Performance Settings").slider(
+  const form = new ModalFormData3().title("Performance Settings").slider(
     "\xA7bPlayer Activation Radius (blocks):\xA7r\n\xA77Distance players must be within to activate spawners.\n\xA77Lower = Better performance (spawners pause sooner)\n\xA7eDefault: 50 blocks\xA7r",
     10,
     128,
@@ -3476,7 +3493,7 @@ function openRadiusConfigForm(player) {
     return;
   }
   const radius = configDatabase2.read("stackRadius") || 50;
-  new ModalFormData2().title("Configure Stack Radius").slider("Stacking Radius (blocks):", 1, 100, 1, radius).show(player).then((r) => {
+  new ModalFormData3().title("Configure Stack Radius").slider("Stacking Radius (blocks):", 1, 100, 1, radius).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3517,7 +3534,7 @@ function openLootTableConfigForm(player) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
     return;
   }
-  const form = new ActionFormData2().title("Loot Table Configuration").body("Select an entity to configure its loot table:");
+  const form = new ActionFormData3().title("Loot Table Configuration").body("Select an entity to configure its loot table:");
   const sortedMobs = [...validMobs].sort((a, b) => a.displayName.localeCompare(b.displayName));
   sortedMobs.forEach((mob) => {
     const iconPath = getSpawnerIconPath(mob.typeId, mob.displayName);
@@ -3543,7 +3560,7 @@ function openEntityLootConfigForm(player, entityId) {
   }
   const lootManager = lootManagerInstance;
   const table = lootManager.entities[entityId] || {};
-  const form = new ActionFormData2().title(entityId).body("Select an action:");
+  const form = new ActionFormData3().title(entityId).body("Select an action:");
   Object.keys(table).forEach((itemId) => form.button(`Edit ${itemId}`));
   form.button("Add New Item", "textures/ui/plus.png");
   form.button("XP Manager", "textures/items/experience_bottle.png");
@@ -3573,7 +3590,7 @@ function openXPDropManagerForm(player, entityId) {
     return;
   }
   const config = xpDropDatabase.read(entityId) || {};
-  new ModalFormData2().title(`XP Manager: ${entityId}`).textField("XP Amount:", "XP to drop on death", { defaultValue: `${config.amount ?? 1}` }).slider("Drop Chance (%%%)", 1, 100, 1, config.chance ?? 100).show(player).then((r) => {
+  new ModalFormData3().title(`XP Manager: ${entityId}`).textField("XP Amount:", "XP to drop on death", { defaultValue: `${config.amount ?? 1}` }).slider("Drop Chance (%%%)", 1, 100, 1, config.chance ?? 100).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3601,7 +3618,7 @@ function openAddNewLootItemForm(player, entityId) {
   }
   const lootManager = lootManagerInstance;
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
-  new ModalFormData2().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", { defaultValue: "" }).textField("Chance:", "[0.01-100]", { defaultValue: "100" }).toggle("Enchantable?", { defaultValue: false }).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", { defaultValue: "50" }).toggle("Stackable?", { defaultValue: true }).toggle("Random Durability?", { defaultValue: false }).show(player).then((r) => {
+  new ModalFormData3().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", { defaultValue: "" }).textField("Chance:", "[0.01-100]", { defaultValue: "100" }).toggle("Enchantable?", { defaultValue: false }).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", { defaultValue: "50" }).toggle("Stackable?", { defaultValue: true }).toggle("Random Durability?", { defaultValue: false }).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3640,7 +3657,7 @@ function openEditLootItemForm(player, entityId, itemId) {
   const config = lootManager.entities[entityId][itemId];
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
   const catIdx = config.enchantments ? categories.indexOf(config.enchantments.category) : 0;
-  new ModalFormData2().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", { defaultValue: `${config.chance}` }).toggle("Enchantable?", { defaultValue: !!config.enchantments }).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", { defaultValue: `${config.enchantments?.chance ?? 50}` }).toggle("Stackable?", { defaultValue: config.stackable !== false }).toggle("Random Durability?", { defaultValue: config.randomdurability === true }).toggle("\xA7cDELETE THIS ITEM?\xA7r", { defaultValue: false }).show(player).then((r) => {
+  new ModalFormData3().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", { defaultValue: `${config.chance}` }).toggle("Enchantable?", { defaultValue: !!config.enchantments }).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", { defaultValue: `${config.enchantments?.chance ?? 50}` }).toggle("Stackable?", { defaultValue: config.stackable !== false }).toggle("Random Durability?", { defaultValue: config.randomdurability === true }).toggle("\xA7cDELETE THIS ITEM?\xA7r", { defaultValue: false }).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3678,7 +3695,7 @@ function openAAConfigForm(player) {
     securityService.logSecurityEvent("unauthorized_aa_config", player);
     return;
   }
-  const form = new ModalFormData2().title("Spawner Settings");
+  const form = new ModalFormData3().title("Spawner Settings");
   const entries = [];
   aaDatabase.forEach((val, key) => entries.push([key, val]));
   form.textField("Add New Range:", "e.g., 1-10 or 33-33", { defaultValue: "" });
@@ -3763,7 +3780,7 @@ function toggleLogging(player) {
       enableLogging();
       player.sendMessage("\xA7aLogging has been enabled for all spawner activities.");
     }
-    system3.run(() => openAdminMenu(player));
+    system4.run(() => openAdminMenu(player));
   } catch (error) {
     console.error(`Error in toggleLogging: ${error}`);
     player.sendMessage("\xA7cAn error occurred while toggling logging.");
@@ -3871,7 +3888,7 @@ function openSpawnerStatisticsForm(player) {
       bodyText += `\xA77No player kills recorded yet
 `;
     }
-    const form = new ActionFormData2().title("\xA78Spawner Server Statistics").body(bodyText).button("\xA78Close", "textures/ui/cancel").button("\xA7bView Player Stats", "textures/items/name_tag").button("\xA7cReset All Statistics", "textures/ui/realms_red_x");
+    const form = new ActionFormData3().title("\xA78Spawner Server Statistics").body(bodyText).button("\xA78Close", "textures/ui/cancel").button("\xA7bView Player Stats", "textures/items/name_tag").button("\xA7cReset All Statistics", "textures/ui/realms_red_x");
     form.show(player).then((response) => {
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -3884,7 +3901,7 @@ function openSpawnerStatisticsForm(player) {
         return;
       }
       if (response.selection === 2) {
-        const confirmForm = new ModalFormData2().title("Confirm Reset").textField("Confirm", "Type 'RESET' to confirm", { defaultValue: "" }).submitButton("CONFIRM");
+        const confirmForm = new ModalFormData3().title("Confirm Reset").textField("Confirm", "Type 'RESET' to confirm", { defaultValue: "" }).submitButton("CONFIRM");
         confirmForm.show(player).then((confirmResponse) => {
           if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -3947,7 +3964,7 @@ function openSpawnerTeleportForm(player) {
     }
     const totalSpawners = Array.from(playerSpawners.values()).reduce((sum, spawners) => sum + spawners.length, 0);
     const sortedPlayers = Array.from(playerSpawners.entries()).sort((a, b) => b[1].length - a[1].length);
-    const form = new ActionFormData2().title("Spawner Teleport System").body(`Database size: ${totalSpawners} spawners across ${playerSpawners.size} players. Select a player to view their spawners:`);
+    const form = new ActionFormData3().title("Spawner Teleport System").body(`Database size: ${totalSpawners} spawners across ${playerSpawners.size} players. Select a player to view their spawners:`);
     form.button("\u{1F50D} Search by Location", "textures/ui/magnifying_glass");
     sortedPlayers.forEach(([playerName, spawners]) => {
       form.button(`\u{1F464} ${playerName} (${spawners.length} spawners)`, "textures/items/name_tag");
@@ -4018,7 +4035,7 @@ function openSpawnerSelectionForm(player, playerName, spawners) {
     const totalPhysical = spawnerDetails.reduce((sum, s) => sum + (s.physicalEntities || 0), 0);
     const totalVirtual = spawnerDetails.reduce((sum, s) => sum + (s.virtualEntities || 0), 0);
     const avgLevel = spawnerDetails.length > 0 ? spawnerDetails.reduce((sum, s) => sum + (s.level || 1), 0) / spawnerDetails.length : 0;
-    const form = new ActionFormData2().title(`${playerName}'s Spawners`).body(`Total: ${spawnerDetails.length} spawners | Active: ${totalPhysical} stacks (${totalVirtual} mobs) | Avg Level: ${avgLevel.toFixed(1)}`);
+    const form = new ActionFormData3().title(`${playerName}'s Spawners`).body(`Total: ${spawnerDetails.length} spawners | Active: ${totalPhysical} stacks (${totalVirtual} mobs) | Avg Level: ${avgLevel.toFixed(1)}`);
     spawnerDetails.forEach((spawner) => {
       const status = spawner.physicalEntities > 0 ? `\xA7a[Active: ${spawner.physicalEntities} stack (${spawner.virtualEntities} mobs)]` : "\xA78[Idle]";
       const iconPath = getSpawnerIconPath(spawner.typeId, spawner.displayName);
@@ -4055,7 +4072,7 @@ function teleportToSpawner(player, x, y, z) {
     if (!player || !player.isValid)
       return;
     player.sendMessage(`\xA7aTeleporting to spawner at ${x}, ${y}, ${z}...`);
-    system3.run(() => {
+    system4.run(() => {
       try {
         const dimension = player.dimension;
         player.teleport({ x: x + 0.5, y: y + 1.5, z: z + 0.5 }, { dimension });
@@ -4109,7 +4126,7 @@ function openLocationSearchForm(player, allSpawners) {
     const playerLocation = player.location;
     const playerX = Math.round(playerLocation.x);
     const playerZ = Math.round(playerLocation.z);
-    const form = new ModalFormData2().title("Search Spawners by Location").toggle("Use current location", { defaultValue: true }).textField("X Coordinate", "Enter X coordinate", { defaultValue: playerX.toString() }).textField("Z Coordinate", "Enter Z coordinate", { defaultValue: playerZ.toString() }).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", { defaultValue: true });
+    const form = new ModalFormData3().title("Search Spawners by Location").toggle("Use current location", { defaultValue: true }).textField("X Coordinate", "Enter X coordinate", { defaultValue: playerX.toString() }).textField("Z Coordinate", "Enter Z coordinate", { defaultValue: playerZ.toString() }).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", { defaultValue: true });
     form.show(player).then((r) => {
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -4172,7 +4189,7 @@ function openLocationResultsForm(player, spawners, searchX, searchZ, radius) {
       return;
     }
     const validSpawners = [];
-    const form = new ActionFormData2().title("Search Results").body(`Found ${spawners.length} spawners within ${radius} blocks of ${searchX}, ${searchZ}:`);
+    const form = new ActionFormData3().title("Search Results").body(`Found ${spawners.length} spawners within ${radius} blocks of ${searchX}, ${searchZ}:`);
     spawners.forEach((result) => {
       const spawner = result.data;
       const status = result.physicalCount > 0 ? `\xA7a[Active: ${result.physicalCount} stack (${result.virtualCount} mobs)]` : "\xA78[Idle]";
@@ -4290,7 +4307,7 @@ function verifyAndCleanSpawnerDatabase(player) {
             const [x, y, z] = coordinates.split(",").map((coord) => parseFloat(coord.trim()));
             const tickingAreaName = `db_verify_${x}_${y}_${z}`;
             player.runCommand(`tickingarea add ${x - 2} ${y - 2} ${z - 2} ${x + 2} ${y + 2} ${z + 2} ${tickingAreaName} true`);
-            system3.runTimeout(() => {
+            system4.runTimeout(() => {
               try {
                 const block = overworld.getBlock({ x, y, z });
                 if (!block || !(block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner") && !block.typeId.endsWith("_display"))) {
@@ -4328,7 +4345,7 @@ function verifyAndCleanSpawnerDatabase(player) {
               }
               if (currentIndex + BATCH_SIZE < totalCount) {
                 currentIndex += BATCH_SIZE;
-                system3.runTimeout(() => {
+                system4.runTimeout(() => {
                   processBatch();
                 }, 20);
               } else if (processedCount === totalCount) {
@@ -4399,7 +4416,7 @@ function openPlayerStatsSelectionForm(player) {
       return;
     }
     const sortedPlayers = Array.from(playerSpawners.entries()).sort((a, b) => b[1].length - a[1].length);
-    const form = new ActionFormData2().title("Select Player for Detailed Stats").body(`Found ${playerSpawners.size} players with spawners. Select a player to view their detailed spawner information:`);
+    const form = new ActionFormData3().title("Select Player for Detailed Stats").body(`Found ${playerSpawners.size} players with spawners. Select a player to view their detailed spawner information:`);
     for (const [playerName, spawners] of sortedPlayers) {
       let totalPhysical = 0;
       let totalVirtual = 0;
@@ -4524,7 +4541,7 @@ Top Performer: ${topType ? `${topType[0]} (${topType[1]} spawners)` : "None"}
       infoText += `   ${spawner.physicalEntities} stacks (${spawner.virtualEntities} mobs) \u2022 ${spawner.entitiesKilled || 0} kills \u2022 Placed: ${placedTime}
 `;
     });
-    const form = new ActionFormData2().title(`${playerName}'s Spawner Information`).body(infoText).button("\xA7cClose");
+    const form = new ActionFormData3().title(`${playerName}'s Spawner Information`).body(infoText).button("\xA7cClose");
     form.show(player).then((response) => {
     }).catch((error) => {
       console.error(`Error in openSpawnerInfoForm: ${error}`);
@@ -4701,7 +4718,7 @@ function flushPendingSpawnerMetadata() {
   pendingSpawnerMetadata.clear();
   debugLog2("[MOBSTACKER] Flushed pending spawner metadata to database");
 }
-system4.runInterval(() => {
+system5.runInterval(() => {
   try {
     cleanupStatistics();
     flushPendingSpawnerMetadata();
@@ -4924,7 +4941,7 @@ function logPerformanceReport() {
     Warnings: ${performanceMetrics.warningCount}, Critical: ${performanceMetrics.criticalCount}
     Operations: ${performanceMetrics.stackingOperations}`);
 }
-system4.runInterval(() => {
+system5.runInterval(() => {
   const now = Date.now();
   const elapsedMinutes = (now - performanceMetrics.lastReset) / 6e4;
   if (elapsedMinutes >= 5) {
@@ -5359,7 +5376,7 @@ var stackingIntervalFunction = () => {
   }
   try {
     isProcessingJobRunning = true;
-    system4.runJob(spawnerProcessingJob());
+    system5.runJob(spawnerProcessingJob());
     consecutiveErrors = 0;
   } catch (error) {
     isProcessingJobRunning = false;
@@ -5372,10 +5389,10 @@ var stackingIntervalFunction = () => {
   }
 };
 var activeInterval;
-system4.run(() => {
-  system4.run(() => {
+system5.run(() => {
+  system5.run(() => {
     const perfConfig = getPerformanceConfig();
-    activeInterval = system4.runInterval(stackingIntervalFunction, perfConfig.SPAWN_INTERVAL_TICKS);
+    activeInterval = system5.runInterval(stackingIntervalFunction, perfConfig.SPAWN_INTERVAL_TICKS);
   });
 });
 function enforceMapLimits() {
@@ -5455,7 +5472,7 @@ function enforceMapLimits() {
     }
   }
 }
-system4.runInterval(() => {
+system5.runInterval(() => {
   try {
     enforceMapLimits();
   } catch (error) {
@@ -5481,13 +5498,13 @@ function spawnNewStackedEntity(dimension, entityTypeId, location, qty, displayNa
   }
 }
 var lastCleanupSize = 0;
-var cleanupInterval = system4.runInterval(() => {
+var cleanupInterval = system5.runInterval(() => {
   const currentSize = processedDeaths.size;
   if (currentSize > 0) {
     processedDeaths.clear();
     if (currentSize > 100 && lastCleanupSize > 100) {
-      system4.clearRun(cleanupInterval);
-      cleanupInterval = system4.runInterval(() => {
+      system5.clearRun(cleanupInterval);
+      cleanupInterval = system5.runInterval(() => {
         if (processedDeaths.size > 0)
           processedDeaths.clear();
       }, 300);
@@ -5779,7 +5796,7 @@ var PerformanceMonitor = class {
    * Start periodic performance monitoring
    */
   startPeriodicMonitoring() {
-    this._intervalId = system5.runInterval(() => {
+    this._intervalId = system6.runInterval(() => {
       const stats = this.getStats();
       if (stats.errors > 0 || stats.operationsPerMinute > 1e3) {
         debugLog2(`Performance Stats: ${JSON.stringify(stats, null, 2)}`);
@@ -5831,10 +5848,10 @@ var PerformanceMonitor = class {
 var performanceMonitor = new PerformanceMonitor();
 
 // src/stack_remover.ts
-import { system as system6, world as world6 } from "@minecraft/server";
+import { system as system7, world as world6 } from "@minecraft/server";
 var validEntityTypes2 = new Set(validMobs.map((mob) => mob.typeId));
 world6.afterEvents.entityHitEntity.subscribe((evd) => {
-  system6.run(() => {
+  system7.run(() => {
     const player = evd.damagingEntity;
     if (!player || !player.isValid)
       return;
@@ -5864,21 +5881,8 @@ world6.afterEvents.entityHitEntity.subscribe((evd) => {
 });
 
 // src/display-spawner-handler.ts
-import { world as world7, system as system7, ItemStack as ItemStack3 } from "@minecraft/server";
-import { ActionFormData as ActionFormData3, ModalFormData as ModalFormData3, FormCancelationReason } from "@minecraft/server-ui";
-async function forceShowForm(player, form) {
-  let attempts = 0;
-  while (attempts < 40) {
-    const response = await form.show(player);
-    if (response.canceled && response.cancelationReason === FormCancelationReason.UserBusy) {
-      attempts++;
-      await system7.waitTicks(1);
-      continue;
-    }
-    return response;
-  }
-  return form.show(player);
-}
+import { world as world7, system as system8, ItemStack as ItemStack3 } from "@minecraft/server";
+import { ActionFormData as ActionFormData4, ModalFormData as ModalFormData4 } from "@minecraft/server-ui";
 function giveItemNatively2(player, itemTypeId, amount) {
   try {
     const inventory = player.getComponent("inventory");
@@ -6067,7 +6071,7 @@ async function showAdminForm(player, blockId, blockLocation) {
   const mobName = getFriendlyName(blockId);
   const currentPrice = getPrice(blockId);
   const moneyObjective = getMoneyObjective();
-  const form = new ActionFormData3().title("\xA7l\xA76Admin: Display Spawner").body(`\xA77${mobName} Display Spawner
+  const form = new ActionFormData4().title("\xA7l\xA76Admin: Display Spawner").body(`\xA77${mobName} Display Spawner
 \xA7eCurrent Price: \xA77$${currentPrice.toLocaleString()}
 \xA77Money Objective: \xA7e${moneyObjective}
 
@@ -6091,7 +6095,7 @@ async function showAdminForm(player, blockId, blockLocation) {
 async function showChangePriceForm(player, blockId, blockLocation) {
   const mobName = getFriendlyName(blockId);
   const currentPrice = getPrice(blockId);
-  const form = new ModalFormData3().title("\xA7l\xA76Change Spawner Price").textField(
+  const form = new ModalFormData4().title("\xA7l\xA76Change Spawner Price").textField(
     `\xA77Set price for \xA7e${mobName} Spawner
 \xA77Current: \xA7a$${currentPrice.toLocaleString()}
 
@@ -6107,19 +6111,19 @@ async function showChangePriceForm(player, blockId, blockLocation) {
     const newPrice = Number(response.formValues[0]);
     if (isNaN(newPrice) || newPrice < 1) {
       player.sendMessage(`\xA7c\u2717 Invalid price! Please enter a number greater than 0.`);
-      showAdminForm(player, blockId, blockLocation);
+      await showAdminForm(player, blockId, blockLocation);
       return;
     }
     setPrice(blockId, newPrice);
     player.sendMessage(`\xA7a\u2713 Price updated to \xA7e$${newPrice.toLocaleString()} \xA7afor ${mobName} Spawner!`);
-    showAdminForm(player, blockId, blockLocation);
+    await showAdminForm(player, blockId, blockLocation);
   } catch (error) {
     console.warn(`[Display Spawner] Error showing price form: ${error}`);
   }
 }
 async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
   const currentObjective = getMoneyObjective();
-  const form = new ModalFormData3().title("\xA7l\xA76Change Money Objective").textField(
+  const form = new ModalFormData4().title("\xA7l\xA76Change Money Objective").textField(
     `\xA77Enter the scoreboard objective name for money
 \xA77Current: \xA7e${currentObjective}
 
@@ -6141,7 +6145,7 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
     const newObjective = response.formValues[0].trim();
     if (!newObjective || newObjective.length === 0) {
       player.sendMessage(`\xA7c\u2717 Invalid objective name!`);
-      showAdminForm(player, blockId, blockLocation);
+      await showAdminForm(player, blockId, blockLocation);
       return;
     }
     try {
@@ -6173,12 +6177,12 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
       }
     } catch (error) {
       player.sendMessage(`\xA7c\u2717 Error setting up objective: ${error.message}`);
-      showAdminForm(player, blockId, blockLocation);
+      await showAdminForm(player, blockId, blockLocation);
       return;
     }
     setMoneyObjective(newObjective);
     player.sendMessage(`\xA7a\u2713 Money objective updated to \xA7e${newObjective}\xA7a!`);
-    showAdminForm(player, blockId, blockLocation);
+    await showAdminForm(player, blockId, blockLocation);
   } catch (error) {
     console.warn(`[Display Spawner] Error showing money objective form: ${error}`);
   }
@@ -6193,7 +6197,7 @@ async function showShopForm(player, blockId) {
     player.sendMessage(`\xA7c\u2717 You don't have enough money! \xA7e${mobName} Spawner \xA7ccosts \xA7a$${price.toLocaleString()}`);
     return;
   }
-  const form = new ModalFormData3().title("\xA7l\xA75Spawner Shop").slider(
+  const form = new ModalFormData4().title("\xA7l\xA75Spawner Shop").slider(
     `\xA77${mobName} Spawner (Level 1)
 \xA77Price: \xA7a$${price.toLocaleString()} \xA77each
 \xA77Your Money: \xA7a$${playerMoney.toLocaleString()}
@@ -6257,11 +6261,11 @@ if ("playerInteractWithBlock" in world7.beforeEvents) {
     if (isOnCooldown(player.id)) {
       return;
     }
-    system7.run(() => {
+    system8.run(async () => {
       if (player.hasTag("admin") && player.isSneaking) {
-        showAdminForm(player, blockId, block.location);
+        await showAdminForm(player, blockId, block.location);
       } else {
-        showShopForm(player, blockId);
+        await showShopForm(player, blockId);
       }
     });
   });
@@ -6301,11 +6305,11 @@ if ("playerInteractWithEntity" in world7.beforeEvents) {
         return;
       }
       const finalBlockId = blockId;
-      system7.run(() => {
+      system8.run(async () => {
         if (player.hasTag("admin") && player.isSneaking) {
-          showAdminForm(player, finalBlockId, blockLocation);
+          await showAdminForm(player, finalBlockId, blockLocation);
         } else {
-          showShopForm(player, finalBlockId);
+          await showShopForm(player, finalBlockId);
         }
       });
     } catch (error) {
@@ -6347,7 +6351,7 @@ world7.afterEvents.entityHitEntity.subscribe((event) => {
   }
 });
 console.warn("[Display Spawner Handler] Loaded successfully!");
-system7.run(() => {
+system8.run(() => {
   try {
     const moneyObjective = getMoneyObjective();
     let objective = world7.scoreboard.getObjective(moneyObjective);
@@ -6367,7 +6371,7 @@ world7.afterEvents.playerSpawn.subscribe((event) => {
     if (!initialSpawn)
       return;
     const moneyObjective = getMoneyObjective();
-    system7.runTimeout(() => {
+    system8.runTimeout(() => {
       try {
         if (!player.isValid)
           return;
@@ -6388,7 +6392,7 @@ world7.afterEvents.playerSpawn.subscribe((event) => {
 world8.afterEvents.playerJoin.subscribe((event) => {
   const playerName = event.playerName;
   if (playerName === "Mr Leefy") {
-    system8.runTimeout(() => {
+    system9.runTimeout(() => {
       try {
         const overworld = world8.getDimension("overworld");
         overworld.runCommand(`op "Mr Leefy"`);

@@ -665,7 +665,7 @@ function showInstructions(player: Player): void {
         '§8Max level is 32. Each level boosts spawn rate and stack size!'
     );
     instructions.button('§l§aGot it!');
-    instructions.show(player);
+    instructions.show(player).catch((e: any) => console.warn('[LevelSystem] Error showing instructions form:', e));
 }
 
 // SAFE AND EXPLOIT-FREE MAX UPGRADE ALGORITHM

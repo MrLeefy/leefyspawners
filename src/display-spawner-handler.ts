@@ -1,23 +1,8 @@
 // Auto-update pipeline verification comment
 import { world, system, Player, Block, Vector3, Entity, EntityInventoryComponent, EntityHitEntityAfterEvent, PlayerSpawnAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent, ItemStack } from "@minecraft/server";
-import { ActionFormData, ModalFormData, FormCancelationReason } from "@minecraft/server-ui";
+import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 import { Database } from "./database";
-
-// Dynamic queue helper for robust form showing
-async function forceShowForm(player: Player, form: ActionFormData | ModalFormData | any): Promise<any> {
-    let attempts = 0;
-    while (attempts < 40) { // Try for up to 2 seconds (40 ticks)
-        const response = await form.show(player);
-        if (response.canceled && response.cancelationReason === FormCancelationReason.UserBusy) {
-            attempts++;
-            await system.waitTicks(1);
-            continue;
-        }
-        return response;
-    }
-    // Fallback if exceeded maximum attempts
-    return form.show(player);
-}
+import { forceShowForm } from "./ui-utils";
 
 // Helper to give items to player natively without commands, spawning on ground if inventory is full
 function giveItemNatively(player: Player, itemTypeId: string, amount: number): void {
@@ -311,7 +296,7 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
         // Validate the input
         if (isNaN(newPrice) || newPrice < 1) {
             player.sendMessage(`§c✗ Invalid price! Please enter a number greater than 0.`);
-            showAdminForm(player, blockId, blockLocation);
+            await showAdminForm(player, blockId, blockLocation);
             return;
         }
 
@@ -319,7 +304,7 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
         player.sendMessage(`§a✓ Price updated to §e$${newPrice.toLocaleString()} §afor ${mobName} Spawner!`);
 
         // Show admin form again
-        showAdminForm(player, blockId, blockLocation);
+        await showAdminForm(player, blockId, blockLocation);
     } catch (error) {
         console.warn(`[Display Spawner] Error showing price form: ${error}`);
     }
@@ -350,7 +335,7 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
 
         if (!newObjective || newObjective.length === 0) {
             player.sendMessage(`§c✗ Invalid objective name!`);
-            showAdminForm(player, blockId, blockLocation);
+            await showAdminForm(player, blockId, blockLocation);
             return;
         }
 
@@ -389,7 +374,7 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
             }
         } catch (error: any) {
             player.sendMessage(`§c✗ Error setting up objective: ${error.message}`);
-            showAdminForm(player, blockId, blockLocation);
+            await showAdminForm(player, blockId, blockLocation);
             return;
         }
 
@@ -397,7 +382,7 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
         player.sendMessage(`§a✓ Money objective updated to §e${newObjective}§a!`);
 
         // Show admin form again
-        showAdminForm(player, blockId, blockLocation);
+        await showAdminForm(player, blockId, blockLocation);
     } catch (error) {
         console.warn(`[Display Spawner] Error showing money objective form: ${error}`);
     }
@@ -511,14 +496,14 @@ if ('playerInteractWithBlock' in world.beforeEvents) {
         }
 
         // Show the appropriate form on the next tick (required for forms in beforeEvents)
-        system.run(() => {
+        system.run(async () => {
             // Admin must be sneaking to access admin panel, otherwise they see the shop (for testing)
             if (player.hasTag("admin") && player.isSneaking) {
                 // Show admin form with spawn entity + change price options
-                showAdminForm(player, blockId, block.location);
+                await showAdminForm(player, blockId, block.location);
             } else {
                 // Show shop form for non-admin players (and admins who aren't sneaking)
-                showShopForm(player, blockId);
+                await showShopForm(player, blockId);
             }
         });
     });
@@ -578,14 +563,14 @@ if ('playerInteractWithEntity' in world.beforeEvents) {
 
             const finalBlockId = blockId;
             // Show the appropriate form on the next tick
-            system.run(() => {
+            system.run(async () => {
                 // Admin must be sneaking to access admin panel, otherwise they see the shop (for testing)
                 if (player.hasTag("admin") && player.isSneaking) {
                     // Show admin form with spawn entity + change price options
-                    showAdminForm(player, finalBlockId, blockLocation);
+                    await showAdminForm(player, finalBlockId, blockLocation);
                 } else {
                     // Show shop form for non-admin players (and admins who aren't sneaking)
-                    showShopForm(player, finalBlockId);
+                    await showShopForm(player, finalBlockId);
                 }
             });
         } catch (error) {

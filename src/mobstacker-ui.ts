@@ -2,6 +2,7 @@
 
 import { world, system, Player, Block, Entity, Vector3, Dimension } from "@minecraft/server";
 import { ActionFormData, ModalFormData, MessageFormData } from "@minecraft/server-ui";
+import { forceShowForm } from "./ui-utils";
 import { Database } from "./database";
 import { LootManager } from './loot_table';
 import { cooldowns, spawnerDatabase } from "./levelsystem";
@@ -90,7 +91,7 @@ export function getAAValueForLevel(level: number): AALookupValue {
 
 // --- ADMIN UI & EVENT LISTENERS ---
 
-world.afterEvents.itemUse.subscribe(event => {
+world.afterEvents.itemUse.subscribe(async event => {
   const { source, itemStack } = event;
   if (itemStack.typeId === "minecraft:blaze_rod" && source.hasTag("admin")) {
     openAdminMenu(source as Player);
@@ -126,7 +127,7 @@ function openAdminMenu(player: Player): void {
       .button("Verify & Clean Database", "textures/items/book_normal")
       .button(isLoggingEnabled() ? "Disable Logging" : "Enable Logging", "textures/items/paper");
 
-    form.show(player).then((r: any) => {
+    forceShowForm(player, form).then((r: any) => {
       if (r.canceled) return;
 
       // Validate admin permission again before executing actions
