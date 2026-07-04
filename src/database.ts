@@ -7,7 +7,7 @@ const { FakePlayer } = ScoreboardIdentityType;
 const databases = new Map<string, ScoreboardDatabaseManager>();
 const split = DATABASE.SPLIT_DELIMITER;
 
-// Defer database migration to tick 1 to prevent early execution errors
+// Clear old legacy/corrupted database objectives on tick 1 to start fresh
 system.run(() => {
     const oldDbNames = [
         "ConfigValues",
@@ -20,41 +20,14 @@ system.run(() => {
     ];
 
     for (const name of oldDbNames) {
-        const oldName = name;
-        const newName = `ls_db:${name}`;
-
         try {
-            const oldObj = world.scoreboard.getObjective(oldName);
+            const oldObj = world.scoreboard.getObjective(name);
             if (oldObj) {
-                console.warn(`[Database Migration] Found old database objective: ${oldName}. Migrating to ${newName}...`);
-                
-                // Get or create new objective
-                const newObj = world.scoreboard.getObjective(newName) ?? world.scoreboard.addObjective(newName, newName);
-                
-                // If new objective is brand new / has no participants, copy data from old
-                const newParticipants = newObj.getParticipants();
-                if (newParticipants.length === 0) {
-                    const oldParticipants = oldObj.getParticipants();
-                    let migrateCount = 0;
-                    for (const participant of oldParticipants) {
-                        try {
-                            newObj.setScore(participant, oldObj.getScore(participant) ?? 0);
-                            migrateCount++;
-                        } catch (err) {
-                            console.error(`[Database Migration] Failed to migrate participant in ${oldName}:`, err);
-                        }
-                    }
-                    console.warn(`[Database Migration] Successfully migrated ${migrateCount} records for ${oldName} -> ${newName}`);
-                } else {
-                    console.warn(`[Database Migration] New objective ${newName} already contains data. Skipping copy step.`);
-                }
-
-                // Remove old objective
-                world.scoreboard.removeObjective(oldName);
-                console.warn(`[Database Migration] Successfully removed old database objective: ${oldName}`);
+                console.warn(`[Database Clean] Removing legacy/corrupted objective: ${name}`);
+                world.scoreboard.removeObjective(name);
             }
         } catch (error) {
-            console.error(`[Database Migration] Error migrating database ${oldName}:`, error);
+            console.error(`[Database Clean] Error removing objective ${name}:`, error);
         }
     }
 });
