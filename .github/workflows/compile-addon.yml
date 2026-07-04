@@ -30,7 +30,9 @@ jobs:
         run: npm ci
 
       - name: Build TypeScript
-        run: npm run build
+        run: |
+          npm run build
+          node obfuscate_release.js
 
       - name: Create .mcaddon File
         run: |
@@ -39,6 +41,7 @@ jobs:
           cd "JUN06LeefySpawners BEH" && zip -r ../LeefySpawnersBEH_$VERSION.mcpack * && cd ..
           cd "JUN06LeefySpawners RES" && zip -r ../LeefySpawnersRES_$VERSION.mcpack * && cd ..
           zip -j LeefySpawners_$VERSION.mcaddon LeefySpawnersBEH_$VERSION.mcpack LeefySpawnersRES_$VERSION.mcpack
+          cp LeefySpawners_$VERSION.mcaddon LeefySpawners.mcaddon
           rm LeefySpawnersBEH_$VERSION.mcpack LeefySpawnersRES_$VERSION.mcpack
           
           mkdir -p docs
@@ -66,7 +69,9 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           # Clean up older mcaddon files from Git tracking
           git rm --cached "LeefySpawners_*.mcaddon" || true
+          git rm --cached "LeefySpawners.mcaddon" || true
           git add -f LeefySpawners_*.mcaddon
+          git add -f LeefySpawners.mcaddon
           git add -f docs/index.html
           git add "JUN06LeefySpawners BEH/manifest.json" "JUN06LeefySpawners RES/manifest.json" package.json
           if ! git diff --cached --quiet; then
