@@ -257,11 +257,15 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
             // Spawn entity
             spawnDisplayEntity(player, entityId, blockLocation, mobName);
         } else if (response.selection === 1) {
-            // Change price
-            showChangePriceForm(player, blockId, blockLocation);
+            // Change price — must defer by one tick to show consecutively
+            system.run(() => {
+                showChangePriceForm(player, blockId, blockLocation);
+            });
         } else if (response.selection === 2) {
-            // Change money objective
-            showChangeMoneyObjectiveForm(player, blockId, blockLocation);
+            // Change money objective — must defer by one tick to show consecutively
+            system.run(() => {
+                showChangeMoneyObjectiveForm(player, blockId, blockLocation);
+            });
         }
     } catch (error) {
         console.warn(`[Display Spawner] Error showing admin form: ${error}`);

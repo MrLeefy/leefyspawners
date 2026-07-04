@@ -2,7 +2,7 @@
 	"format_version": 2,
 	"header": {
 		"name": "LeefySpawners v8.2.59 BEH - Jul 04",
-		"description": "LeefySpawners Behavior Pack v8.2.59 - Fixed spawner block geometry + form API + code audit fixes - Jul 2026",
+		"description": "LeefySpawners Behavior Pack v8.2.59 - Fixed spawner block geometry + consecutive forms + form API + code audit fixes - Jul 2026",
 		"uuid": "12d228fb-5d7f-4127-95c8-3f10671e53b0",
 		"version": [
 			8,
