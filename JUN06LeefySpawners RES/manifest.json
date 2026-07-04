@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.71 RES - Jul 04",
-		"description": "LeefySpawners Resource Pack v8.2.71 - Added Snowman Display Block & Names - Jul 2026",
-		"uuid": "4588633e-0a33-4ddf-b491-86d332f653db",
+		"name": "LeefySpawners v8.2.72 RES - Jul 04",
+		"description": "LeefySpawners Resource Pack v8.2.72 - Added Snowman Display Block & Names - Jul 2026",
+		"uuid": "3bab91ef-8ae1-47ce-bc1b-0cd2164194c4",
 		"version": [
 			8,
 			2,
-			71
+			72
 		],
 		"min_engine_version": [
 			1,
@@ -18,21 +18,21 @@
 	"modules": [
 		{
 			"type": "resources",
-			"uuid": "916f4d80-da8b-422a-a3f7-fa932e8abfa1",
+			"uuid": "cc689c58-89fa-46cc-a75f-9d885b9057e5",
 			"version": [
 				8,
 				2,
-				71
+				72
 			]
 		}
 	],
 	"dependencies": [
 		{
-			"uuid": "408e9d12-faa4-489f-b34f-96951ad2c11e",
+			"uuid": "de63cc2f-fcc4-4e37-9ba7-7551ef13afcd",
 			"version": [
 				8,
 				2,
-				71
+				72
 			]
 		}
 	]
