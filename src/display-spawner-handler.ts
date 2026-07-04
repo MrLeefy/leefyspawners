@@ -1,7 +1,23 @@
 // Auto-update pipeline verification comment
 import { world, system, Player, Block, Vector3, Entity, EntityInventoryComponent, EntityHitEntityAfterEvent, PlayerSpawnAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent, ItemStack } from "@minecraft/server";
-import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
+import { ActionFormData, ModalFormData, FormCancelationReason } from "@minecraft/server-ui";
 import { Database } from "./database";
+
+// Dynamic queue helper for robust form showing
+async function forceShowForm(player: Player, form: ActionFormData | ModalFormData | any): Promise<any> {
+    let attempts = 0;
+    while (attempts < 40) { // Try for up to 2 seconds (40 ticks)
+        const response = await form.show(player);
+        if (response.canceled && response.cancelationReason === FormCancelationReason.UserBusy) {
+            attempts++;
+            await system.waitTicks(1);
+            continue;
+        }
+        return response;
+    }
+    // Fallback if exceeded maximum attempts
+    return form.show(player);
+}
 
 // Helper to give items to player natively without commands, spawning on ground if inventory is full
 function giveItemNatively(player: Player, itemTypeId: string, amount: number): void {
@@ -247,7 +263,7 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
         .button("§cClose", "textures/ui/cancel");
 
     try {
-        const response = await form.show(player);
+        const response = await forceShowForm(player, form);
 
         if (response.canceled) {
             return;
@@ -257,15 +273,11 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
             // Spawn entity
             spawnDisplayEntity(player, entityId, blockLocation, mobName);
         } else if (response.selection === 1) {
-            // Change price — must defer by a few ticks to allow form close animation to complete on client
-            system.runTimeout(() => {
-                showChangePriceForm(player, blockId, blockLocation);
-            }, 5);
+            // Change price 
+            showChangePriceForm(player, blockId, blockLocation);
         } else if (response.selection === 2) {
-            // Change money objective — must defer by a few ticks to allow form close animation to complete on client
-            system.runTimeout(() => {
-                showChangeMoneyObjectiveForm(player, blockId, blockLocation);
-            }, 5);
+            // Change money objective 
+            showChangeMoneyObjectiveForm(player, blockId, blockLocation);
         }
     } catch (error) {
         console.warn(`[Display Spawner] Error showing admin form: ${error}`);
@@ -288,19 +300,18 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
         );
 
     try {
-        const response = await form.show(player);
+        const response = await forceShowForm(player, form);
 
         if (response.canceled || !response.formValues) {
             return;
         }
 
-        const newPriceText = (response.formValues[0] as string).trim();
-        const newPrice = parseInt(newPriceText);
+        const newPrice = Number(response.formValues[0]);
 
         // Validate the input
         if (isNaN(newPrice) || newPrice < 1) {
             player.sendMessage(`§c✗ Invalid price! Please enter a number greater than 0.`);
-            system.runTimeout(() => { showAdminForm(player, blockId, blockLocation); }, 5);
+            showAdminForm(player, blockId, blockLocation);
             return;
         }
 
@@ -308,7 +319,7 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
         player.sendMessage(`§a✓ Price updated to §e$${newPrice.toLocaleString()} §afor ${mobName} Spawner!`);
 
         // Show admin form again
-        system.runTimeout(() => { showAdminForm(player, blockId, blockLocation); }, 5);
+        showAdminForm(player, blockId, blockLocation);
     } catch (error) {
         console.warn(`[Display Spawner] Error showing price form: ${error}`);
     }
@@ -329,7 +340,7 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
         );
 
     try {
-        const response = await form.show(player);
+        const response = await forceShowForm(player, form);
 
         if (response.canceled || !response.formValues) {
             return;
@@ -339,7 +350,7 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
 
         if (!newObjective || newObjective.length === 0) {
             player.sendMessage(`§c✗ Invalid objective name!`);
-            system.runTimeout(() => { showAdminForm(player, blockId, blockLocation); }, 5);
+            showAdminForm(player, blockId, blockLocation);
             return;
         }
 
@@ -378,7 +389,7 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
             }
         } catch (error: any) {
             player.sendMessage(`§c✗ Error setting up objective: ${error.message}`);
-            system.runTimeout(() => { showAdminForm(player, blockId, blockLocation); }, 5);
+            showAdminForm(player, blockId, blockLocation);
             return;
         }
 
@@ -386,7 +397,7 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
         player.sendMessage(`§a✓ Money objective updated to §e${newObjective}§a!`);
 
         // Show admin form again
-        system.runTimeout(() => { showAdminForm(player, blockId, blockLocation); }, 5);
+        showAdminForm(player, blockId, blockLocation);
     } catch (error) {
         console.warn(`[Display Spawner] Error showing money objective form: ${error}`);
     }
@@ -422,7 +433,7 @@ async function showShopForm(player: Player, blockId: string): Promise<void> {
         );
 
     try {
-        const response = await form.show(player);
+        const response = await forceShowForm(player, form);
 
         if (response.canceled || !response.formValues) {
             return;
