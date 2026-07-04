@@ -1364,7 +1364,7 @@ function verifyAndCleanSpawnerDatabase(player: Player): void {
                         const [x, y, z] = coordinates.split(',').map((coord: string) => parseFloat(coord.trim()));
                         
                         const tickingAreaName = `db_verify_${x}_${y}_${z}`;
-                        player.runCommand(`tickingarea add ${x-2} ${y-2} ${z-2} ${x+2} ${y+2} ${z+2} ${tickingAreaName} true`);
+                        player.dimension.runCommand(`tickingarea add ${x-2} ${y-2} ${z-2} ${x+2} ${y+2} ${z+2} ${tickingAreaName} true`);
                         
                         system.runTimeout(() => {
                             try {
@@ -1392,14 +1392,14 @@ function verifyAndCleanSpawnerDatabase(player: Player): void {
                                 }
                                 
                                 try {
-                                    player.runCommand(`tickingarea remove ${tickingAreaName}`);
+                                    player.dimension.runCommand(`tickingarea remove ${tickingAreaName}`);
                                 } catch (e) { /* ignore */ }
 
                             } catch (blockError: any) {
                                 console.error(`Error checking block at ${coordinates}:`, blockError);
                                 
                                 try {
-                                    player.runCommand(`tickingarea remove ${tickingAreaName}`);
+                                    player.dimension.runCommand(`tickingarea remove ${tickingAreaName}`);
                                 } catch (e) { /* ignore */ }
                             }
                             

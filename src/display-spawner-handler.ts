@@ -158,11 +158,8 @@ function getPlayerMoney(player: Player): number {
                 // If getScore fails, the player's identity is not yet resolved or has no score set.
                 // Fallback to running a command to initialize them to 0 safely.
                 try {
-                    player.runCommand(`scoreboard players add @s ${objectiveName} 0`);
-                    const score = moneyObjective.getScore(player);
-                    if (score !== undefined && score !== null) {
-                        return score;
-                    }
+                    moneyObjective.setScore(player, 0);
+                    return 0;
                 } catch (cmdError) { /* ignore */ }
             }
         }
@@ -176,20 +173,17 @@ function getPlayerMoney(player: Player): number {
 function removePlayerMoney(player: Player, amount: number): boolean {
     try {
         const objectiveName = getMoneyObjective();
-        player.runCommand(`scoreboard players remove @s ${objectiveName} ${amount}`);
-        return true;
+        const moneyObjective = world.scoreboard.getObjective(objectiveName);
+        if (moneyObjective) {
+            const score = moneyObjective.getScore(player) ?? 0;
+            if (score >= amount) {
+                moneyObjective.setScore(player, score - amount);
+                return true;
+            }
+        }
+        return false;
     } catch (error) {
         console.warn(`[Display Spawner] Error removing player money: ${error}`);
-        // Try to add player to scoreboard with 0 if they weren't on it
-        try {
-            const objective = world.scoreboard.getObjective(getMoneyObjective());
-            if (objective) {
-                objective.setScore(player, 0);
-                console.warn(`[Display Spawner] Added ${player.name} to scoreboard with 0`);
-            }
-        } catch (e) {
-            console.warn(`[Display Spawner] Could not add player to scoreboard: ${e}`);
-        }
         return false;
     }
 }
@@ -402,12 +396,16 @@ async function showShopForm(player: Player, blockId: string): Promise<void> {
         // Process purchase - give actual functional spawners (level 1)
         if (removePlayerMoney(player, totalCost)) {
             try {
-                player.runCommand(`give @s ${actualSpawnerItem} ${quantity}`);
+                player.dimension.runCommand(`give "${player.name}" ${actualSpawnerItem} ${quantity}`);
                 player.sendMessage(`§a✓ Purchased §e${quantity}x ${mobName} Spawner (Lvl 1) §afor §e$${totalCost.toLocaleString()}§a!`);
             } catch (error) {
                 player.sendMessage(`§c✗ Error giving items. Refunding money...`);
-                const moneyObjective = getMoneyObjective();
-                player.runCommand(`scoreboard players add @s ${moneyObjective} ${totalCost}`);
+                const moneyObjectiveName = getMoneyObjective();
+                const moneyObjective = world.scoreboard.getObjective(moneyObjectiveName);
+                if (moneyObjective) {
+                    const score = moneyObjective.getScore(player) ?? 0;
+                    moneyObjective.setScore(player, score + totalCost);
+                }
             }
         } else {
             player.sendMessage(`§c✗ Transaction failed!`);
@@ -635,8 +633,11 @@ world.afterEvents.playerSpawn.subscribe((event: PlayerSpawnAfterEvent) => {
         system.runTimeout(() => {
             try {
                 if (!player.isValid) return;
-                player.runCommand(`scoreboard players add @s ${moneyObjective} 0`);
-                console.warn(`[Display Spawner] Initialized ${player.name} on scoreboard ${moneyObjective}`);
+                const objective = world.scoreboard.getObjective(moneyObjective);
+                if (objective) {
+                    objective.setScore(player, objective.getScore(player) ?? 0);
+                    console.warn(`[Display Spawner] Initialized ${player.name} on scoreboard ${moneyObjective}`);
+                }
             } catch (error) {
                 // If fails (already exists or still unresolved), ignore
             }

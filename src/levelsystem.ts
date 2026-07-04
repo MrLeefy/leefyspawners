@@ -181,7 +181,7 @@ world.afterEvents.playerPlaceBlock.subscribe((data: PlayerPlaceBlockAfterEvent) 
         spawnerDatabase.write(coordinates, spawnerData);
 
         try {
-            player.runCommand(`summon mrleefy:spawnrule "${typeId}" ${block.x} ${block.y} ${block.z}`);
+            player.dimension.runCommand(`summon mrleefy:spawnrule "${typeId}" ${block.x} ${block.y} ${block.z}`);
         } catch (error) {
             console.error("Error executing command:", error);
         }
@@ -318,13 +318,13 @@ function ensureSpawnruleEntity(player: Player, x: number, y: number, z: number, 
     }
 
     try {
-        player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add existing`);
+        player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add existing`);
     } catch (cmdError) {
         console.error(`Error tagging existing spawnrule: ${cmdError}`);
     }
 
     try {
-        player.runCommand(`execute unless entity @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1,tag=existing] run summon mrleefy:spawnrule "${typeId}" ${x} ${y} ${z}`);
+        player.dimension.runCommand(`execute unless entity @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1,tag=existing] run summon mrleefy:spawnrule "${typeId}" ${x} ${y} ${z}`);
     } catch (cmdError) {
         console.error(`Error summoning spawnrule: ${cmdError}`);
     }
@@ -594,9 +594,9 @@ function slider(player: Player, spawnerType: string, block: Block, level: number
 
                     const newTypeId = newBlockType;
                     try {
-                        player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
-                        player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
-                        player.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
+                        player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
+                        player.dimension.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
+                        player.dimension.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
                     } catch (error) {
                         console.error("Error executing command:", error);
                     }
@@ -723,16 +723,16 @@ function maxUpgradeSpawner(player: Player, block: Block, level: number, spawnerT
 
     // 5. Summon spawnrules
     try {
-        player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
-        player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
-        player.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
+        player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
+        player.dimension.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
+        player.dimension.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
     } catch (error) {
         console.error("Error executing spawnrule commands:", error);
     }
 
     player.sendMessage(`§7Successfully Upgraded to level §2§l${newLevel}`);
     try {
-        player.runCommand('playsound random.levelup @s');
+        player.dimension.runCommand(`playsound random.levelup "${player.name}"`);
     } catch (error) {}
 
     try {
@@ -744,9 +744,8 @@ function maxUpgradeSpawner(player: Player, block: Block, level: number, spawnerT
     } catch (e) {}
 
     // 6. Give the refund for over-consumption
-    if (refundAmount > 0) {
         try {
-            player.runCommand(`give @s ${spawnerItemPrefix}1 ${refundAmount}`);
+            player.dimension.runCommand(`give "${player.name}" ${spawnerItemPrefix}1 ${refundAmount}`);
         } catch (error) {
             console.error("Error executing remainder command:", error);
         }
@@ -819,7 +818,7 @@ function upgradeSpawner(player: Player, block: Block, level: number, spawnerType
     }
 
     for (const refund of refundQueue) {
-        player.runCommand(`give @s ${spawnerItemPrefix}1 ${refund.amount}`);
+        player.dimension.runCommand(`give "${player.name}" ${spawnerItemPrefix}1 ${refund.amount}`);
     }
 
     block.setType(`${spawnerItemPrefix}${newLevel}`);
@@ -836,9 +835,9 @@ function upgradeSpawner(player: Player, block: Block, level: number, spawnerType
     clearMaxedSpawnerCache(x, y, z);
 
     try {
-        player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
-        player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
-        player.runCommand(`summon mrleefy:spawnrule "mrleefy:${spawnerType}spawner${newLevel}" ${x} ${y} ${z}`);
+        player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
+        player.dimension.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
+        player.dimension.runCommand(`summon mrleefy:spawnrule "mrleefy:${spawnerType}spawner${newLevel}" ${x} ${y} ${z}`);
     } catch (error) {
         console.error("Error executing command:", error);
     }
@@ -900,23 +899,23 @@ function downgrade(player: Player, block: Block, level: number, spawnerType: str
 
     // Recreate spawnrule
     try {
-        player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${block.x},y=${block.y},z=${block.z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
-        player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
-        player.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
+        player.dimension.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${block.x},y=${block.y},z=${block.z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
+        player.dimension.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
+        player.dimension.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
     } catch (error) {
         console.error("Error updating spawnrule in downgrade:", error);
     }
 
     // Refund EXACTLY 1 level 1 spawner to the player without wiping inventory
     try {
-        player.runCommand(`give @s mrleefy:${spawnerType}spawner1 1`);
+        player.dimension.runCommand(`give "${player.name}" mrleefy:${spawnerType}spawner1 1`);
     } catch (error) {
         console.error("Error giving downgraded spawner:", error);
     }
 
     player.sendMessage(`§7Successfully downgraded to level §2§l${newLevel}`);
     try {
-        player.runCommand('playsound mob.irongolem.crack @s');
+        player.dimension.runCommand(`playsound mob.irongolem.crack "${player.name}"`);
     } catch (error) {}
 
     try {
