@@ -744,6 +744,7 @@ function maxUpgradeSpawner(player: Player, block: Block, level: number, spawnerT
     } catch (e) {}
 
     // 6. Give the refund for over-consumption
+    if (refundAmount > 0) {
         try {
             player.dimension.runCommand(`give "${player.name}" ${spawnerItemPrefix}1 ${refundAmount}`);
         } catch (error) {
