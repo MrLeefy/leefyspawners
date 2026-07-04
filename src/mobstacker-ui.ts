@@ -193,7 +193,7 @@ function openToggleLootDropForm(player: Player): void {
   
   (new ModalFormData() as any)
     .title("Loot Drop Rules")
-    .toggle("Player Kills Only (Lag Protection)", { defaultValue: playerKillOnly })
+    .toggle("Player Kills Only (Lag Protection)", playerKillOnly)
     .textField("Max item drops near stack:", "Enter integer (>=1)", { defaultValue: `${currentCap}` })
     .textField("Max XP orbs near stack:", "Enter integer (>=1)", { defaultValue: `${currentXpCap}` })
     .show(player).then((r: any) => {
@@ -491,11 +491,11 @@ function openAddNewLootItemForm(player: Player, entityId: string): void {
         .title(`Add Loot: ${entityId}`)
         .textField("Item ID:", "e.g., minecraft:diamond", { defaultValue: "" })
         .textField("Chance:", "[0.01-100]", { defaultValue: "100" })
-        .toggle("Enchantable?", { defaultValue: false })
+        .toggle("Enchantable?", false)
         .dropdown("Enchantment Category:", categories, 0)
         .textField("Enchant Chance:", "[0-100]", { defaultValue: "50" })
-        .toggle("Stackable?", { defaultValue: true })
-        .toggle("Random Durability?", { defaultValue: false })
+        .toggle("Stackable?", true)
+        .toggle("Random Durability?", false)
         .show(player).then((r: any) => {
             if (r.canceled || !r.formValues) return;
             // Re-validate permission inside .then() to prevent session-tag-revocation bypass
@@ -534,12 +534,12 @@ function openEditLootItemForm(player: Player, entityId: string, itemId: string):
     (new ModalFormData() as any)
         .title(`Editing: ${itemId}`)
         .textField("Chance:", "[0.01-100]", { defaultValue: `${config.chance}` })
-        .toggle("Enchantable?", { defaultValue: !!config.enchantments })
+        .toggle("Enchantable?", !!config.enchantments)
         .dropdown("Category:", categories, Math.max(0, catIdx))
         .textField("Enchant Chance:", "[0-100]", { defaultValue: `${config.enchantments?.chance ?? 50}` })
-        .toggle("Stackable?", { defaultValue: config.stackable !== false })
-        .toggle("Random Durability?", { defaultValue: config.randomdurability === true })
-        .toggle("§cDELETE THIS ITEM?§r", { defaultValue: false })
+        .toggle("Stackable?", config.stackable !== false)
+        .toggle("Random Durability?", config.randomdurability === true)
+        .toggle("§cDELETE THIS ITEM?§r", false)
         .show(player).then((r: any) => {
             if (r.canceled || !r.formValues) return;
             // Re-validate permission inside .then() to prevent session-tag-revocation bypass
@@ -590,7 +590,7 @@ function openAAConfigForm(player: Player): void {
         form.textField(`Qty for ${range}:`, `Update`, { defaultValue: `${qty}` });
         form.textField(`Speed for ${range}:`, `Update`, { defaultValue: `${speed}` });
         form.textField(`Max Stack for ${range}:`, `Update`, { defaultValue: `${maxStack}` });
-        form.toggle(`§cRemove Range ${range}?§r`, { defaultValue: false });
+        form.toggle(`§cRemove Range ${range}?§r`, false);
     });
 
     form.show(player).then((r: any) => {
@@ -1096,11 +1096,11 @@ function openLocationSearchForm(player: Player, allSpawners: Record<string, any>
 
         const form = (new ModalFormData() as any)
             .title("Search Spawners by Location")
-            .toggle("Use current location", { defaultValue: true })
+            .toggle("Use current location", true)
             .textField("X Coordinate", "Enter X coordinate", { defaultValue: playerX.toString() })
             .textField("Z Coordinate", "Enter Z coordinate", { defaultValue: playerZ.toString() })
             .slider("Search Radius", 10, 500, 10, 50)
-            .toggle("Include inactive spawners", { defaultValue: true });
+            .toggle("Include inactive spawners", true);
 
         form.show(player).then((r: any) => {
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {

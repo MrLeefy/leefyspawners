@@ -3380,7 +3380,7 @@ function openToggleLootDropForm(player) {
   const currentCap = configDatabase2.read("itemSpillCap") || 5;
   const currentXpCap = configDatabase2.read("xpSpillCap") || 3;
   const playerKillOnly = configDatabase2.read("playerKillOnly") ?? false;
-  new ModalFormData3().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", { defaultValue: playerKillOnly }).textField("Max item drops near stack:", "Enter integer (>=1)", { defaultValue: `${currentCap}` }).textField("Max XP orbs near stack:", "Enter integer (>=1)", { defaultValue: `${currentXpCap}` }).show(player).then((r) => {
+  new ModalFormData3().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", playerKillOnly).textField("Max item drops near stack:", "Enter integer (>=1)", { defaultValue: `${currentCap}` }).textField("Max XP orbs near stack:", "Enter integer (>=1)", { defaultValue: `${currentXpCap}` }).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3633,7 +3633,7 @@ function openAddNewLootItemForm(player, entityId) {
   }
   const lootManager = lootManagerInstance;
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
-  new ModalFormData3().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", { defaultValue: "" }).textField("Chance:", "[0.01-100]", { defaultValue: "100" }).toggle("Enchantable?", { defaultValue: false }).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", { defaultValue: "50" }).toggle("Stackable?", { defaultValue: true }).toggle("Random Durability?", { defaultValue: false }).show(player).then((r) => {
+  new ModalFormData3().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", { defaultValue: "" }).textField("Chance:", "[0.01-100]", { defaultValue: "100" }).toggle("Enchantable?", false).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", { defaultValue: "50" }).toggle("Stackable?", true).toggle("Random Durability?", false).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3672,7 +3672,7 @@ function openEditLootItemForm(player, entityId, itemId) {
   const config = lootManager.entities[entityId][itemId];
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
   const catIdx = config.enchantments ? categories.indexOf(config.enchantments.category) : 0;
-  new ModalFormData3().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", { defaultValue: `${config.chance}` }).toggle("Enchantable?", { defaultValue: !!config.enchantments }).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", { defaultValue: `${config.enchantments?.chance ?? 50}` }).toggle("Stackable?", { defaultValue: config.stackable !== false }).toggle("Random Durability?", { defaultValue: config.randomdurability === true }).toggle("\xA7cDELETE THIS ITEM?\xA7r", { defaultValue: false }).show(player).then((r) => {
+  new ModalFormData3().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", { defaultValue: `${config.chance}` }).toggle("Enchantable?", !!config.enchantments).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", { defaultValue: `${config.enchantments?.chance ?? 50}` }).toggle("Stackable?", config.stackable !== false).toggle("Random Durability?", config.randomdurability === true).toggle("\xA7cDELETE THIS ITEM?\xA7r", false).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3721,7 +3721,7 @@ function openAAConfigForm(player) {
     form.textField(`Qty for ${range}:`, `Update`, { defaultValue: `${qty}` });
     form.textField(`Speed for ${range}:`, `Update`, { defaultValue: `${speed}` });
     form.textField(`Max Stack for ${range}:`, `Update`, { defaultValue: `${maxStack}` });
-    form.toggle(`\xA7cRemove Range ${range}?\xA7r`, { defaultValue: false });
+    form.toggle(`\xA7cRemove Range ${range}?\xA7r`, false);
   });
   form.show(player).then((r) => {
     if (r.canceled || !r.formValues)
@@ -4141,7 +4141,7 @@ function openLocationSearchForm(player, allSpawners) {
     const playerLocation = player.location;
     const playerX = Math.round(playerLocation.x);
     const playerZ = Math.round(playerLocation.z);
-    const form = new ModalFormData3().title("Search Spawners by Location").toggle("Use current location", { defaultValue: true }).textField("X Coordinate", "Enter X coordinate", { defaultValue: playerX.toString() }).textField("Z Coordinate", "Enter Z coordinate", { defaultValue: playerZ.toString() }).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", { defaultValue: true });
+    const form = new ModalFormData3().title("Search Spawners by Location").toggle("Use current location", true).textField("X Coordinate", "Enter X coordinate", { defaultValue: playerX.toString() }).textField("Z Coordinate", "Enter Z coordinate", { defaultValue: playerZ.toString() }).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", true);
     form.show(player).then((r) => {
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
