@@ -595,7 +595,7 @@ function slider(player: Player, spawnerType: string, block: Block, level: number
     slider.slider('Set Range', 1, 32, 1, 1);
 
     system.run(() => {
-        slider.show(player).then((response) => {
+        slider.show(player).then((response: any) => {
             activeForms.delete(coordinates); // Release lock
 
             // Re-validate permission and proximity

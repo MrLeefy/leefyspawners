@@ -3026,7 +3026,7 @@ var SecurityService = class {
       "onload=",
       "onerror=",
       "<script",
-      "</script>",
+      "<\/script>",
       "eval(",
       "exec(",
       "system(",
