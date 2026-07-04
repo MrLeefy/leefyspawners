@@ -7,114 +7,118 @@ const { FakePlayer } = ScoreboardIdentityType;
 const databases = new Map<string, ScoreboardDatabaseManager>();
 const split = DATABASE.SPLIT_DELIMITER;
 
-// Clear old legacy/corrupted database objectives on tick 1 to start fresh
-system.run(() => {
-    // Check if migration has already been completed in the new database
-    const configDb = new ScoreboardDatabaseManager("ConfigValues", DatabaseSavingModes.END_TICK_SAVE);
-    configDb.load();
-    if (configDb.get("migration_completed") === true) {
-        return;
-    }
+// Run legacy database migration after 20 ticks (1 second) to ensure all databases are fully initialized
+system.runTimeout(() => {
+    try {
+        // Check if migration has already been completed in the new database
+        const configDb = new ScoreboardDatabaseManager("ConfigValues", DatabaseSavingModes.END_TICK_SAVE);
+        configDb.load();
+        if (configDb.get("migration_completed") === true) {
+            return;
+        }
 
-    const oldDbNames = [
-        "ConfigValues",
-        "XPDropValues",
-        "SpawnerLocations",
-        "DisplaySpawnerPrices",
-        "DisplaySpawnerConfig",
-        "LootTables",
-        "AAValues"
-    ];
+        const oldDbNames = [
+            "ConfigValues",
+            "XPDropValues",
+            "SpawnerLocations",
+            "DisplaySpawnerPrices",
+            "DisplaySpawnerConfig",
+            "LootTables",
+            "AAValues"
+        ];
 
-    for (const name of oldDbNames) {
-        try {
-            const oldObj = world.scoreboard.getObjective(name);
-            if (oldObj) {
-                console.warn(`[Database Migration] Found old database objective: ${name}. Starting validated migration...`);
-                
-                // Instantiate databases using the ScoreboardDatabaseManager class
-                const oldDb = new ScoreboardDatabaseManager(oldObj, DatabaseSavingModes.END_TICK_SAVE);
-                const newDb = new ScoreboardDatabaseManager(`ls_db:${name}`, DatabaseSavingModes.END_TICK_SAVE);
-                
-                // Synchronously parse and load content
-                oldDb.load();
-                newDb.load();
-                
-                let migrateCount = 0;
-                let skipCount = 0;
-                
-                for (const key of oldDb.keys()) {
-                    const value = oldDb.get(key);
-                    let isValid = false;
+        for (const name of oldDbNames) {
+            try {
+                const oldObj = world.scoreboard.getObjective(name);
+                if (oldObj) {
+                    console.warn(`[Database Migration] Found old database objective: ${name}. Starting validated migration...`);
                     
-                    try {
-                        if (name === "ConfigValues") {
-                            if (key === "stackRadius" && typeof value === "number" && value >= 1 && value <= 100) isValid = true;
-                            else if (key === "spawnSpeed" && typeof value === "number" && value >= 1 && value <= 60) isValid = true;
-                            else if (key === "maxStack" && typeof value === "number" && value >= 1 && value <= 5000) isValid = true;
-                            else if (typeof value === "boolean") isValid = true;
-                        } 
-                        else if (name === "SpawnerLocations") {
-                            const coords = key.split(",");
-                            if (coords.length === 3) {
-                                const [x, y, z] = coords.map(c => parseFloat(c.trim()));
-                                if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                                    if (value && typeof value === "object" && typeof (value as any).typeId === "string") {
-                                        isValid = true;
+                    // Instantiate databases using the ScoreboardDatabaseManager class
+                    const oldDb = new ScoreboardDatabaseManager(oldObj, DatabaseSavingModes.END_TICK_SAVE);
+                    const newDb = new ScoreboardDatabaseManager(`ls_db:${name}`, DatabaseSavingModes.END_TICK_SAVE);
+                    
+                    // Synchronously parse and load content
+                    oldDb.load();
+                    newDb.load();
+                    
+                    let migrateCount = 0;
+                    let skipCount = 0;
+                    
+                    for (const key of oldDb.keys()) {
+                        const value = oldDb.get(key);
+                        let isValid = false;
+                        
+                        try {
+                            if (name === "ConfigValues") {
+                                if (key === "stackRadius" && typeof value === "number" && value >= 1 && value <= 100) isValid = true;
+                                else if (key === "spawnSpeed" && typeof value === "number" && value >= 1 && value <= 60) isValid = true;
+                                else if (key === "maxStack" && typeof value === "number" && value >= 1 && value <= 5000) isValid = true;
+                                else if (typeof value === "boolean") isValid = true;
+                            } 
+                            else if (name === "SpawnerLocations") {
+                                const coords = key.split(",");
+                                if (coords.length === 3) {
+                                    const [x, y, z] = coords.map(c => parseFloat(c.trim()));
+                                    if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                                        if (value && typeof value === "object" && typeof (value as any).typeId === "string") {
+                                            isValid = true;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        else if (name === "XPDropValues") {
-                            if (typeof key === "string" && value && typeof value === "object" && typeof (value as any).amount === "number") {
-                                isValid = true;
+                            else if (name === "XPDropValues") {
+                                if (typeof key === "string" && value && typeof value === "object" && typeof (value as any).amount === "number") {
+                                    isValid = true;
+                                }
                             }
-                        }
-                        else if (name === "DisplaySpawnerPrices" || name === "DisplaySpawnerConfig") {
-                            if (typeof key === "string" && (typeof value === "number" || typeof value === "boolean" || typeof value === "string")) {
-                                isValid = true;
+                            else if (name === "DisplaySpawnerPrices" || name === "DisplaySpawnerConfig") {
+                                if (typeof key === "string" && (typeof value === "number" || typeof value === "boolean" || typeof value === "string")) {
+                                    isValid = true;
+                                }
                             }
-                        }
-                        else if (name === "LootTables") {
-                            if (typeof key === "string" && value && typeof value === "object") {
-                                isValid = true;
+                            else if (name === "LootTables") {
+                                if (typeof key === "string" && value && typeof value === "object") {
+                                    isValid = true;
+                                }
                             }
-                        }
-                        else if (name === "AAValues") {
-                            if (typeof key === "string" && value !== undefined) {
-                                isValid = true;
+                            else if (name === "AAValues") {
+                                if (typeof key === "string" && value !== undefined) {
+                                    isValid = true;
+                                }
                             }
+                        } catch (validationErr) {
+                            isValid = false;
                         }
-                    } catch (validationErr) {
-                        isValid = false;
+                        
+                        if (isValid) {
+                            newDb.set(key, value);
+                            migrateCount++;
+                        } else {
+                            skipCount++;
+                        }
                     }
                     
-                    if (isValid) {
-                        newDb.set(key, value);
-                        migrateCount++;
-                    } else {
-                        skipCount++;
+                    if (migrateCount > 0) {
+                        newDb._executeSave();
+                        console.warn(`[Database Migration] Successfully migrated ${migrateCount} records (skipped ${skipCount} invalid) from ${name} -> ls_db:${name}`);
                     }
+                    
+                    // Do NOT delete the old objective (leaving it as a backup)
+                    console.warn(`[Database Migration] Preserved legacy objective as read-only backup: ${name}`);
                 }
-                
-                if (migrateCount > 0) {
-                    newDb._executeSave();
-                    console.warn(`[Database Migration] Successfully migrated ${migrateCount} records (skipped ${skipCount} invalid) from ${name} -> ls_db:${name}`);
-                }
-                
-                // Do NOT delete the old objective (leaving it as a backup)
-                console.warn(`[Database Migration] Preserved legacy objective as read-only backup: ${name}`);
+            } catch (error) {
+                console.error(`[Database Migration] Error migrating database ${name}:`, error);
             }
-        } catch (error) {
-            console.error(`[Database Migration] Error migrating database ${name}:`, error);
         }
-    }
 
-    // Mark migration as completed in the new database
-    configDb.set("migration_completed", true);
-    configDb._executeSave();
-    console.log("[Database Migration] Migration marked as completed in new database.");
-});
+        // Mark migration as completed in the new database
+        configDb.set("migration_completed", true);
+        configDb._executeSave();
+        console.log("[Database Migration] Migration marked as completed in new database.");
+    } catch (e) {
+        console.error("[Database Migration] Startup handler crashed:", e);
+    }
+}, 20);
 
 const CHUNK_SIZE = 150;
 const CHUNK_PREFIX = "__chunk__";
