@@ -9,6 +9,13 @@ const split = DATABASE.SPLIT_DELIMITER;
 
 // Clear old legacy/corrupted database objectives on tick 1 to start fresh
 system.run(() => {
+    // Check if migration has already been completed in the new database
+    const configDb = new ScoreboardDatabaseManager("ConfigValues", DatabaseSavingModes.END_TICK_SAVE);
+    configDb.load();
+    if (configDb.get("migration_completed") === true) {
+        return;
+    }
+
     const oldDbNames = [
         "ConfigValues",
         "XPDropValues",
@@ -95,14 +102,18 @@ system.run(() => {
                     console.warn(`[Database Migration] Successfully migrated ${migrateCount} records (skipped ${skipCount} invalid) from ${name} -> ls_db:${name}`);
                 }
                 
-                // Remove old objective
-                world.scoreboard.removeObjective(name);
-                console.warn(`[Database Migration] Successfully cleaned up legacy objective: ${name}`);
+                // Do NOT delete the old objective (leaving it as a backup)
+                console.warn(`[Database Migration] Preserved legacy objective as read-only backup: ${name}`);
             }
         } catch (error) {
             console.error(`[Database Migration] Error migrating database ${name}:`, error);
         }
     }
+
+    // Mark migration as completed in the new database
+    configDb.set("migration_completed", true);
+    configDb.save();
+    console.log("[Database Migration] Migration marked as completed in new database.");
 });
 
 const CHUNK_SIZE = 150;
