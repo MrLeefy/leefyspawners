@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.55 RES - Jul 04",
-		"description": "LeefySpawners Resource Pack v8.2.55 - Full code audit fixes - Jul 2026",
+		"name": "LeefySpawners v8.2.56 RES - Jul 04",
+		"description": "LeefySpawners Resource Pack v8.2.56 - Fixed spawner block geometry rendering - Jul 2026",
 		"uuid": "4c4408eb-8bba-4915-a388-c0fe7f228af1",
 		"version": [
 			8,
 			2,
-			55
+			56
 		],
 		"min_engine_version": [
 			1,
@@ -22,7 +22,7 @@
 			"version": [
 				8,
 				2,
-				55
+				56
 			]
 		}
 	],
@@ -32,7 +32,7 @@
 			"version": [
 				8,
 				2,
-				55
+				56
 			]
 		}
 	]

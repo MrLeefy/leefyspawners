@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.55 BEH - Jul 04",
-		"description": "LeefySpawners Behavior Pack v8.2.55 - Full code audit fixes: console.error, perf config, slider, database safety, zero price - Jul 2026",
+		"name": "LeefySpawners v8.2.56 BEH - Jul 04",
+		"description": "LeefySpawners Behavior Pack v8.2.56 - Fixed spawner block geometry + form API + code audit fixes - Jul 2026",
 		"uuid": "4113cd5c-9918-4963-b8f3-b7fbe086c33b",
 		"version": [
 			8,
 			2,
-			55
+			56
 		],
 		"min_engine_version": [
 			1,
@@ -22,7 +22,7 @@
 			"version": [
 				8,
 				2,
-				55
+				56
 			]
 		},
 		{
@@ -31,7 +31,7 @@
 			"version": [
 				8,
 				2,
-				55
+				56
 			],
 			"type": "script",
 			"language": "javascript",
@@ -52,7 +52,7 @@
 			"version": [
 				8,
 				2,
-				55
+				56
 			]
 		}
 	]
