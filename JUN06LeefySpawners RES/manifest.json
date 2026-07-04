@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.56 RES - Jul 04",
-		"description": "LeefySpawners Resource Pack v8.2.56 - Fixed spawner block geometry rendering - Jul 2026",
-		"uuid": "4c4408eb-8bba-4915-a388-c0fe7f228af1",
+		"name": "LeefySpawners v8.2.57 RES - Jul 04",
+		"description": "LeefySpawners Resource Pack v8.2.57 - Fixed spawner block geometry rendering - Jul 2026",
+		"uuid": "0ef89453-b467-4415-8ddd-048c804c5c74",
 		"version": [
 			8,
 			2,
-			56
+			57
 		],
 		"min_engine_version": [
 			1,
@@ -18,21 +18,21 @@
 	"modules": [
 		{
 			"type": "resources",
-			"uuid": "4a1e559e-d840-4241-b2e7-4c1e0ba31071",
+			"uuid": "11773deb-4779-4e46-9c9f-b57b7c5acea7",
 			"version": [
 				8,
 				2,
-				56
+				57
 			]
 		}
 	],
 	"dependencies": [
 		{
-			"uuid": "4113cd5c-9918-4963-b8f3-b7fbe086c33b",
+			"uuid": "edc97a52-2df7-4061-8dd2-c2b39575a71b",
 			"version": [
 				8,
 				2,
-				56
+				57
 			]
 		}
 	]
