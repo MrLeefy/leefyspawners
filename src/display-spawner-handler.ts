@@ -273,21 +273,33 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
  * Shows the price change form to admins
  */
 async function showChangePriceForm(player: Player, blockId: string, blockLocation: Vector3): Promise<void> {
+    console.warn(`[DS-DEBUG] showChangePriceForm called for blockId=${blockId}`);
     const mobName = getFriendlyName(blockId);
     const currentPrice = getPrice(blockId);
+    console.warn(`[DS-DEBUG] currentPrice=${currentPrice} (type: ${typeof currentPrice})`);
 
-    const form = new ModalFormData()
-        .title("§l§6Change Spawner Price")
-        .textField(
-            `§7Set price for §e${mobName} Spawner\n§7Current: §a$${currentPrice.toLocaleString()}\n\n§7Enter new price:`,
-            "e.g., 50000",
-            { defaultValue: currentPrice.toString() }
-        );
+    let form: ModalFormData;
+    try {
+        form = new ModalFormData()
+            .title("§l§6Change Spawner Price")
+            .textField(
+                `§7Set price for §e${mobName} Spawner\n§7Current: §a$${currentPrice.toLocaleString()}\n\n§7Enter new price:`,
+                "e.g., 50000",
+                { defaultValue: currentPrice.toString() }
+            );
+        console.warn(`[DS-DEBUG] Price form built OK`);
+    } catch (buildErr) {
+        console.warn(`[DS-DEBUG] CRASH building price form: ${buildErr}`);
+        return;
+    }
 
     try {
+        console.warn(`[DS-DEBUG] Calling forceShowForm for price...`);
         const response = await forceShowForm(player, form);
+        console.warn(`[DS-DEBUG] Price form response: canceled=${response.canceled}, reason=${response.cancelationReason}, values=${JSON.stringify(response.formValues)}`);
 
         if (response.canceled || !response.formValues) {
+            console.warn(`[DS-DEBUG] Price form was canceled or had no values - returning`);
             return;
         }
 
@@ -306,7 +318,7 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
         // Show admin form again
         await showAdminForm(player, blockId, blockLocation);
     } catch (error) {
-        console.warn(`[Display Spawner] Error showing price form: ${error}`);
+        console.warn(`[DS-DEBUG] EXCEPTION in price form show: ${error}`);
     }
 }
 
@@ -314,20 +326,32 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
  * Shows the money objective change form to admins
  */
 async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blockLocation: Vector3): Promise<void> {
+    console.warn(`[DS-DEBUG] showChangeMoneyObjectiveForm called`);
     const currentObjective = getMoneyObjective();
+    console.warn(`[DS-DEBUG] currentObjective=${currentObjective} (type: ${typeof currentObjective})`);
 
-    const form = new ModalFormData()
-        .title("§l§6Change Money Objective")
-        .textField(
-            `§7Enter the scoreboard objective name for money\n§7Current: §e${currentObjective}\n\n§7Common examples:\n§7- money\n§7- balance\n§7- coins\n§7- cash\n\n§7Objective Name:`,
-            "e.g., money",
-            { defaultValue: currentObjective }
-        );
+    let form: ModalFormData;
+    try {
+        form = new ModalFormData()
+            .title("§l§6Change Money Objective")
+            .textField(
+                `§7Enter the scoreboard objective name for money\n§7Current: §e${currentObjective}\n\n§7Common examples:\n§7- money\n§7- balance\n§7- coins\n§7- cash\n\n§7Objective Name:`,
+                "e.g., money",
+                { defaultValue: currentObjective }
+            );
+        console.warn(`[DS-DEBUG] Money objective form built OK`);
+    } catch (buildErr) {
+        console.warn(`[DS-DEBUG] CRASH building money objective form: ${buildErr}`);
+        return;
+    }
 
     try {
+        console.warn(`[DS-DEBUG] Calling forceShowForm for money objective...`);
         const response = await forceShowForm(player, form);
+        console.warn(`[DS-DEBUG] Money obj form response: canceled=${response.canceled}, reason=${response.cancelationReason}, values=${JSON.stringify(response.formValues)}`);
 
         if (response.canceled || !response.formValues) {
+            console.warn(`[DS-DEBUG] Money obj form was canceled or had no values - returning`);
             return;
         }
 

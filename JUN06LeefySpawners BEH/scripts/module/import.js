@@ -6108,19 +6108,31 @@ async function showAdminForm(player, blockId, blockLocation) {
   }
 }
 async function showChangePriceForm(player, blockId, blockLocation) {
+  console.warn(`[DS-DEBUG] showChangePriceForm called for blockId=${blockId}`);
   const mobName = getFriendlyName(blockId);
   const currentPrice = getPrice(blockId);
-  const form = new ModalFormData4().title("\xA7l\xA76Change Spawner Price").textField(
-    `\xA77Set price for \xA7e${mobName} Spawner
+  console.warn(`[DS-DEBUG] currentPrice=${currentPrice} (type: ${typeof currentPrice})`);
+  let form;
+  try {
+    form = new ModalFormData4().title("\xA7l\xA76Change Spawner Price").textField(
+      `\xA77Set price for \xA7e${mobName} Spawner
 \xA77Current: \xA7a$${currentPrice.toLocaleString()}
 
 \xA77Enter new price:`,
-    "e.g., 50000",
-    { defaultValue: currentPrice.toString() }
-  );
+      "e.g., 50000",
+      { defaultValue: currentPrice.toString() }
+    );
+    console.warn(`[DS-DEBUG] Price form built OK`);
+  } catch (buildErr) {
+    console.warn(`[DS-DEBUG] CRASH building price form: ${buildErr}`);
+    return;
+  }
   try {
+    console.warn(`[DS-DEBUG] Calling forceShowForm for price...`);
     const response = await forceShowForm(player, form);
+    console.warn(`[DS-DEBUG] Price form response: canceled=${response.canceled}, reason=${response.cancelationReason}, values=${JSON.stringify(response.formValues)}`);
     if (response.canceled || !response.formValues) {
+      console.warn(`[DS-DEBUG] Price form was canceled or had no values - returning`);
       return;
     }
     const newPrice = Number(response.formValues[0]);
@@ -6133,13 +6145,17 @@ async function showChangePriceForm(player, blockId, blockLocation) {
     player.sendMessage(`\xA7a\u2713 Price updated to \xA7e$${newPrice.toLocaleString()} \xA7afor ${mobName} Spawner!`);
     await showAdminForm(player, blockId, blockLocation);
   } catch (error) {
-    console.warn(`[Display Spawner] Error showing price form: ${error}`);
+    console.warn(`[DS-DEBUG] EXCEPTION in price form show: ${error}`);
   }
 }
 async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
+  console.warn(`[DS-DEBUG] showChangeMoneyObjectiveForm called`);
   const currentObjective = getMoneyObjective();
-  const form = new ModalFormData4().title("\xA7l\xA76Change Money Objective").textField(
-    `\xA77Enter the scoreboard objective name for money
+  console.warn(`[DS-DEBUG] currentObjective=${currentObjective} (type: ${typeof currentObjective})`);
+  let form;
+  try {
+    form = new ModalFormData4().title("\xA7l\xA76Change Money Objective").textField(
+      `\xA77Enter the scoreboard objective name for money
 \xA77Current: \xA7e${currentObjective}
 
 \xA77Common examples:
@@ -6149,12 +6165,20 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
 \xA77- cash
 
 \xA77Objective Name:`,
-    "e.g., money",
-    { defaultValue: currentObjective }
-  );
+      "e.g., money",
+      { defaultValue: currentObjective }
+    );
+    console.warn(`[DS-DEBUG] Money objective form built OK`);
+  } catch (buildErr) {
+    console.warn(`[DS-DEBUG] CRASH building money objective form: ${buildErr}`);
+    return;
+  }
   try {
+    console.warn(`[DS-DEBUG] Calling forceShowForm for money objective...`);
     const response = await forceShowForm(player, form);
+    console.warn(`[DS-DEBUG] Money obj form response: canceled=${response.canceled}, reason=${response.cancelationReason}, values=${JSON.stringify(response.formValues)}`);
     if (response.canceled || !response.formValues) {
+      console.warn(`[DS-DEBUG] Money obj form was canceled or had no values - returning`);
       return;
     }
     const newObjective = response.formValues[0].trim();
