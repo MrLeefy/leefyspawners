@@ -98,7 +98,7 @@ system.run(() => {
                 }
                 
                 if (migrateCount > 0) {
-                    newDb.save();
+                    newDb._executeSave();
                     console.warn(`[Database Migration] Successfully migrated ${migrateCount} records (skipped ${skipCount} invalid) from ${name} -> ls_db:${name}`);
                 }
                 
@@ -112,7 +112,7 @@ system.run(() => {
 
     // Mark migration as completed in the new database
     configDb.set("migration_completed", true);
-    configDb.save();
+    configDb._executeSave();
     console.log("[Database Migration] Migration marked as completed in new database.");
 });
 
