@@ -86,7 +86,8 @@
             },
             "minecraft:movement.basic": {
                 "max_turn": 30.0
-            }
+            },
+            "minecraft:navigation.generic": {}
         },
         "events": {
             "despawn": {
