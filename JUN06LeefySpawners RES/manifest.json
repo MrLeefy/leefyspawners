@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.63 RES - Jul 04",
-		"description": "LeefySpawners Resource Pack v8.2.63 - Dynamic Form Queue - Jul 2026",
-		"uuid": "1e5c4a1b-4609-41b3-b7ca-7ca128f8338f",
+		"name": "LeefySpawners v8.2.64 RES - Jul 04",
+		"description": "LeefySpawners Resource Pack v8.2.64 - Dynamic Form Queue - Jul 2026",
+		"uuid": "95155b18-8b16-4b7e-a1c0-3a6f57f95ca0",
 		"version": [
 			8,
 			2,
-			63
+			64
 		],
 		"min_engine_version": [
 			1,
@@ -18,21 +18,21 @@
 	"modules": [
 		{
 			"type": "resources",
-			"uuid": "8e3c15b1-2d7f-4ca7-9934-25c4b4984f2c",
+			"uuid": "b7bdf9b1-727d-4bf0-a1a5-5de4f9324f99",
 			"version": [
 				8,
 				2,
-				63
+				64
 			]
 		}
 	],
 	"dependencies": [
 		{
-			"uuid": "43b71c2f-e8b2-4d1a-96e0-25c2b0d346b9",
+			"uuid": "f0fed28c-15ac-4ba1-8b3e-09d839d434c6",
 			"version": [
 				8,
 				2,
-				63
+				64
 			]
 		}
 	]
