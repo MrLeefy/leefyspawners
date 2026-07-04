@@ -930,15 +930,30 @@ import { FormCancelationReason } from "@minecraft/server-ui";
 async function forceShowForm(player, form) {
   let attempts = 0;
   while (attempts < 40) {
-    const response = await form.show(player);
-    if (response.canceled && response.cancelationReason === FormCancelationReason.UserBusy) {
+    try {
+      const response = await form.show(player);
+      if (response.canceled && response.cancelationReason === FormCancelationReason.UserBusy) {
+        attempts++;
+        await system2.waitTicks(1);
+        continue;
+      }
+      return response;
+    } catch (err) {
+      console.warn(`[forceShowForm] form.show() threw on attempt ${attempts}: ${err}`);
+      if (!player || !player.isValid) {
+        console.warn(`[forceShowForm] Player is no longer valid, aborting`);
+        return { canceled: true, cancelationReason: "PlayerInvalid" };
+      }
       attempts++;
       await system2.waitTicks(1);
-      continue;
     }
-    return response;
   }
-  return form.show(player);
+  try {
+    return await form.show(player);
+  } catch (err) {
+    console.warn(`[forceShowForm] Final fallback attempt threw: ${err}`);
+    return { canceled: true, cancelationReason: "MaxAttemptsExceeded" };
+  }
 }
 
 // src/loot_table.ts
