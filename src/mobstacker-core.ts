@@ -43,16 +43,11 @@ let LOGGING_ENABLED = false; // Global toggle for all logging (disabled by defau
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
 
-// Override console methods to respect global logging toggle
+// Override console.log to respect global logging toggle
+// NOTE: console.error is NEVER suppressed — errors must always be visible for debugging
 console.log = function (...args) {
     if (LOGGING_ENABLED) {
         originalConsoleLog.apply(console, args);
-    }
-};
-
-console.error = function (...args) {
-    if (LOGGING_ENABLED) {
-        originalConsoleError.apply(console, args);
     }
 };
 
@@ -772,6 +767,7 @@ const MAX_CONSECUTIVE_ERRORS = 5;
 let currentInterval = SMALLEST_INTERVAL;
 
 // Performance configuration for optimized spawning
+// Returns LIVE values from the database so admin changes take effect immediately
 function getPerformanceConfig() {
     return {
         PLAYER_ACTIVATION_RADIUS: configDatabase.read("performanceActivationRadius") || 50,
@@ -782,8 +778,8 @@ function getPerformanceConfig() {
     };
 }
 
-// Cache config at startup
-const PERFORMANCE_CONFIG = getPerformanceConfig();
+// Note: getPerformanceConfig() is called directly at the start of each spawner processing cycle
+// and once during interval setup. No caching needed — DB reads are cheap and admin changes apply instantly.
 
 // Maxed spawner optimization
 const maxedSpawners = new Map();
@@ -870,9 +866,12 @@ function* spawnerProcessingJob() {
             return; 
         }
 
+        // Read performance config LIVE from database each cycle (admin changes apply immediately)
+        const perfConfig = getPerformanceConfig();
+
         // Fetch all active players once to prevent C++/JS boundary crossing inside the loop
         const activePlayers = overworld.getPlayers();
-        const playerRadiusSq = PERFORMANCE_CONFIG.PLAYER_ACTIVATION_RADIUS * PERFORMANCE_CONFIG.PLAYER_ACTIVATION_RADIUS;
+        const playerRadiusSq = perfConfig.PLAYER_ACTIVATION_RADIUS * perfConfig.PLAYER_ACTIVATION_RADIUS;
 
         let spawnsThisCycle = 0;
         let processedCount = 0;
@@ -925,7 +924,7 @@ function* spawnerProcessingJob() {
             const now = Date.now();
             if (maxedSpawners.has(spawnKey)) {
                 const lastMaxedCheck = maxedSpawners.get(spawnKey);
-                if (now - lastMaxedCheck < PERFORMANCE_CONFIG.MAXED_SPAWNER_RECHECK_MS) {
+                if (now - lastMaxedCheck < perfConfig.MAXED_SPAWNER_RECHECK_MS) {
                     skippedMaxed++;
                     continue; 
                 }
@@ -936,7 +935,7 @@ function* spawnerProcessingJob() {
             const lastKill = lastKilled.get(spawnKey) || 0;
             const speedMillis = speed * 1000;
 
-            if (lastSpawn === 0 && PERFORMANCE_CONFIG.INITIAL_DELAY_RANDOM) {
+            if (lastSpawn === 0 && perfConfig.INITIAL_DELAY_RANDOM) {
                 const randomDelay = Math.random() * speedMillis;
                 lastSpawnTime.set(spawnKey, now - randomDelay);
                 continue;
@@ -945,7 +944,7 @@ function* spawnerProcessingJob() {
             if (now - lastSpawn < speedMillis) continue;
             if (now - lastKill < cooldownMillis) continue;
 
-            if (spawnsThisCycle >= PERFORMANCE_CONFIG.MAX_SPAWNS_PER_CYCLE) {
+            if (spawnsThisCycle >= perfConfig.MAX_SPAWNS_PER_CYCLE) {
                 continue; 
             }
 
@@ -1071,8 +1070,14 @@ const stackingIntervalFunction = () => {
     }
 };
 
-// Start the interval
-let activeInterval = system.runInterval(stackingIntervalFunction, PERFORMANCE_CONFIG.SPAWN_INTERVAL_TICKS);
+// Start the interval — deferred to tick 3 so database is fully loaded with admin perf settings
+let activeInterval: number;
+system.run(() => {
+    system.run(() => {
+        const perfConfig = getPerformanceConfig();
+        activeInterval = system.runInterval(stackingIntervalFunction, perfConfig.SPAWN_INTERVAL_TICKS);
+    });
+});
 
 // Memory management functions (optimised to use chronological insertion-order Map eviction - zero sorting garbage!)
 function enforceMapLimits() {

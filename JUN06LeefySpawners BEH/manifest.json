@@ -2,7 +2,7 @@
 	"format_version": 2,
 	"header": {
 		"name": "LeefySpawners v8.2.55 BEH - Jul 04",
-		"description": "LeefySpawners Behavior Pack v8.2.55 - Fixed ModalFormData API signatures (toggle/textField/slider) causing settings to not save - Jul 2026",
+		"description": "LeefySpawners Behavior Pack v8.2.55 - Full code audit fixes: console.error, perf config, slider, database safety, zero price - Jul 2026",
 		"uuid": "4113cd5c-9918-4963-b8f3-b7fbe086c33b",
 		"version": [
 			8,

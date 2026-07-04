@@ -590,16 +590,19 @@ function slider(player: Player, spawnerType: string, block: Block, level: number
         return;
     }
 
-    const slider = new ModalFormData();
+    const slider = (new ModalFormData() as any);
     slider.title('Select Spawner Level');
-    slider.slider('Set Range', 1, 32, { valueStep: 1, defaultValue: 1 });
+    slider.slider('Set Range', 1, 32, 1, 1);
 
     system.run(() => {
         slider.show(player).then((response) => {
             activeForms.delete(coordinates); // Release lock
 
             // Re-validate permission and proximity
-            if (!player || !player.isValid || !player.hasTag(`admin`)) {
+            if (!player || !player.isValid) {
+                return;
+            }
+            if (!player.hasTag(`admin`)) {
                 player.sendMessage("§cYou don't have permission to use this feature.");
                 return;
             }

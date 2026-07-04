@@ -706,11 +706,20 @@ export class Database {
     }
 
     delete(key: string): boolean {
-        return this.Database.delete(key)
+        try {
+            return this.Database.delete(key);
+        } catch (error) {
+            console.error(`Database delete error for key "${key}":`, error);
+            return false;
+        }
     }
 
     clear(): void {
-        this.Database.clear();
+        try {
+            this.Database.clear();
+        } catch (error) {
+            console.error(`Database clear error:`, error);
+        }
     }
 
     keys(): string[] {

@@ -680,10 +680,19 @@ var Database = class {
     }
   }
   delete(key) {
-    return this.Database.delete(key);
+    try {
+      return this.Database.delete(key);
+    } catch (error) {
+      console.error(`Database delete error for key "${key}":`, error);
+      return false;
+    }
   }
   clear() {
-    this.Database.clear();
+    try {
+      this.Database.clear();
+    } catch (error) {
+      console.error(`Database clear error:`, error);
+    }
   }
   keys() {
     try {
@@ -2313,11 +2322,14 @@ function slider(player, spawnerType, block, level, cost, typeId, upgradee, downg
   }
   const slider2 = new ModalFormData();
   slider2.title("Select Spawner Level");
-  slider2.slider("Set Range", 1, 32, { valueStep: 1, defaultValue: 1 });
+  slider2.slider("Set Range", 1, 32, 1, 1);
   system2.run(() => {
     slider2.show(player).then((response) => {
       activeForms.delete(coordinates);
-      if (!player || !player.isValid || !player.hasTag(`admin`)) {
+      if (!player || !player.isValid) {
+        return;
+      }
+      if (!player.hasTag(`admin`)) {
         player.sendMessage("\xA7cYou don't have permission to use this feature.");
         return;
       }
@@ -4563,15 +4575,9 @@ var STATS_MEMORY_LIMITS = {
 };
 var LOGGING_ENABLED = false;
 var originalConsoleLog = console.log;
-var originalConsoleError = console.error;
 console.log = function(...args) {
   if (LOGGING_ENABLED) {
     originalConsoleLog.apply(console, args);
-  }
-};
-console.error = function(...args) {
-  if (LOGGING_ENABLED) {
-    originalConsoleError.apply(console, args);
   }
 };
 function debugLog2(message, ...args) {
@@ -5140,7 +5146,6 @@ function getPerformanceConfig() {
     // 30 seconds backup check
   };
 }
-var PERFORMANCE_CONFIG = getPerformanceConfig();
 var maxedSpawners = /* @__PURE__ */ new Map();
 var entitySpawnerOwnership = /* @__PURE__ */ new Map();
 function clearMaxedSpawnerCache(x, y, z) {
@@ -5203,8 +5208,9 @@ function* spawnerProcessingJob() {
     if (spawnruleEntities.length === 0) {
       return;
     }
+    const perfConfig = getPerformanceConfig();
     const activePlayers = overworld.getPlayers();
-    const playerRadiusSq = PERFORMANCE_CONFIG.PLAYER_ACTIVATION_RADIUS * PERFORMANCE_CONFIG.PLAYER_ACTIVATION_RADIUS;
+    const playerRadiusSq = perfConfig.PLAYER_ACTIVATION_RADIUS * perfConfig.PLAYER_ACTIVATION_RADIUS;
     let spawnsThisCycle = 0;
     let processedCount = 0;
     let skippedNoPlayers = 0;
@@ -5246,7 +5252,7 @@ function* spawnerProcessingJob() {
       const now = Date.now();
       if (maxedSpawners.has(spawnKey)) {
         const lastMaxedCheck = maxedSpawners.get(spawnKey);
-        if (now - lastMaxedCheck < PERFORMANCE_CONFIG.MAXED_SPAWNER_RECHECK_MS) {
+        if (now - lastMaxedCheck < perfConfig.MAXED_SPAWNER_RECHECK_MS) {
           skippedMaxed++;
           continue;
         }
@@ -5254,7 +5260,7 @@ function* spawnerProcessingJob() {
       const lastSpawn = lastSpawnTime.get(spawnKey) || 0;
       const lastKill = lastKilled.get(spawnKey) || 0;
       const speedMillis = speed * 1e3;
-      if (lastSpawn === 0 && PERFORMANCE_CONFIG.INITIAL_DELAY_RANDOM) {
+      if (lastSpawn === 0 && perfConfig.INITIAL_DELAY_RANDOM) {
         const randomDelay = Math.random() * speedMillis;
         lastSpawnTime.set(spawnKey, now - randomDelay);
         continue;
@@ -5263,7 +5269,7 @@ function* spawnerProcessingJob() {
         continue;
       if (now - lastKill < cooldownMillis)
         continue;
-      if (spawnsThisCycle >= PERFORMANCE_CONFIG.MAX_SPAWNS_PER_CYCLE) {
+      if (spawnsThisCycle >= perfConfig.MAX_SPAWNS_PER_CYCLE) {
         continue;
       }
       if (!spawnruleEntity.isValid)
@@ -5365,7 +5371,13 @@ var stackingIntervalFunction = () => {
     performanceMetrics.criticalCount++;
   }
 };
-var activeInterval = system4.runInterval(stackingIntervalFunction, PERFORMANCE_CONFIG.SPAWN_INTERVAL_TICKS);
+var activeInterval;
+system4.run(() => {
+  system4.run(() => {
+    const perfConfig = getPerformanceConfig();
+    activeInterval = system4.runInterval(stackingIntervalFunction, perfConfig.SPAWN_INTERVAL_TICKS);
+  });
+});
 function enforceMapLimits() {
   const now = Date.now();
   const cutoffTime = now - ENTRY_MAX_AGE;
@@ -6081,8 +6093,8 @@ async function showChangePriceForm(player, blockId, blockLocation) {
     }
     const newPriceText = response.formValues[0].trim();
     const newPrice = parseInt(newPriceText);
-    if (isNaN(newPrice) || newPrice < 0) {
-      player.sendMessage(`\xA7c\u2717 Invalid price! Please enter a valid number.`);
+    if (isNaN(newPrice) || newPrice < 1) {
+      player.sendMessage(`\xA7c\u2717 Invalid price! Please enter a number greater than 0.`);
       system7.run(() => {
         showAdminForm(player, blockId, blockLocation);
       });

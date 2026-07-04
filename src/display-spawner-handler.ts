@@ -294,8 +294,8 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
         const newPrice = parseInt(newPriceText);
 
         // Validate the input
-        if (isNaN(newPrice) || newPrice < 0) {
-            player.sendMessage(`§c✗ Invalid price! Please enter a valid number.`);
+        if (isNaN(newPrice) || newPrice < 1) {
+            player.sendMessage(`§c✗ Invalid price! Please enter a number greater than 0.`);
             system.run(() => { showAdminForm(player, blockId, blockLocation); });
             return;
         }

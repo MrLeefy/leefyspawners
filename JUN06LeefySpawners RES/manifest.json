@@ -2,7 +2,7 @@
 	"format_version": 2,
 	"header": {
 		"name": "LeefySpawners v8.2.55 RES - Jul 04",
-		"description": "LeefySpawners Resource Pack v8.2.55 - Fixed ModalFormData API signatures causing settings to not save - Jul 2026",
+		"description": "LeefySpawners Resource Pack v8.2.55 - Full code audit fixes - Jul 2026",
 		"uuid": "4c4408eb-8bba-4915-a388-c0fe7f228af1",
 		"version": [
 			8,
