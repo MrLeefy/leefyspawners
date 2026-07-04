@@ -142,9 +142,12 @@ res.header.uuid = newResUuid;
 res.header.version = newVer;
 res.header.name = bumpTextWithVersion(res.header.name, newVerStr, `LeefySpawners v${newVerStr} RES - Jun 06`);
 res.header.description = bumpTextWithVersion(res.header.description, newVerStr, `LeefySpawners Resource Pack v${newVerStr} - Production Release - Jun 2026 Update`);
-// DO NOT UPDATE res.modules versions or uuids! The user specifically requested: 
-// "its only the top uuid and version change ever... never change other stuff unless told"
-// Bumping RES module versions breaks legacy textures (purple/black issue).
+if (res.modules) {
+    res.modules.forEach(m => {
+        m.uuid = randomUUID();
+        m.version = newVer; // Keep modules version in sync
+    });
+}
 
 // Update mutual dependencies
 if (beh.dependencies) {
