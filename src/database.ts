@@ -33,68 +33,70 @@ system.runTimeout(() => {
                 if (oldObj) {
                     console.warn(`[Database Migration] Found old database objective: ${name}. Starting validated migration...`);
                     
-                    // Instantiate databases using the ScoreboardDatabaseManager class
-                    const oldDb = new ScoreboardDatabaseManager(oldObj, DatabaseSavingModes.END_TICK_SAVE);
                     const newDb = new ScoreboardDatabaseManager(`ls_db:${name}`, DatabaseSavingModes.END_TICK_SAVE);
-                    
-                    // Synchronously parse and load content
-                    oldDb.load();
-                    newDb.load();
+                    newDb.load(); // Singleton cached, already loaded!
                     
                     let migrateCount = 0;
                     let skipCount = 0;
                     
-                    for (const key of oldDb.keys()) {
-                        const value = oldDb.get(key);
-                        let isValid = false;
-                        
-                        try {
-                            if (name === "ConfigValues") {
-                                if (key === "stackRadius" && typeof value === "number" && value >= 1 && value <= 100) isValid = true;
-                                else if (key === "spawnSpeed" && typeof value === "number" && value >= 1 && value <= 60) isValid = true;
-                                else if (key === "maxStack" && typeof value === "number" && value >= 1 && value <= 5000) isValid = true;
-                                else if (typeof value === "boolean") isValid = true;
-                            } 
-                            else if (name === "SpawnerLocations") {
-                                const coords = key.split(",");
-                                if (coords.length === 3) {
-                                    const [x, y, z] = coords.map(c => parseFloat(c.trim()));
-                                    if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                                        if (value && typeof value === "object" && typeof (value as any).typeId === "string") {
-                                            isValid = true;
+                    for (const participant of oldObj.getParticipants()) {
+                        const displayName = participant.displayName;
+                        const parts = displayName.split(split);
+                        if (parts.length >= 2) {
+                            const key = parts[0];
+                            const rawVal = parts.slice(1).join(split);
+                            
+                            try {
+                                const value = JSON.parse(rawVal);
+                                let isValid = false;
+                                
+                                if (name === "ConfigValues") {
+                                    if (key === "stackRadius" && typeof value === "number" && value >= 1 && value <= 100) isValid = true;
+                                    else if (key === "spawnSpeed" && typeof value === "number" && value >= 1 && value <= 60) isValid = true;
+                                    else if (key === "maxStack" && typeof value === "number" && value >= 1 && value <= 5000) isValid = true;
+                                    else if (typeof value === "boolean") isValid = true;
+                                } 
+                                else if (name === "SpawnerLocations") {
+                                    const coords = key.split(",");
+                                    if (coords.length === 3) {
+                                        const [x, y, z] = coords.map(c => parseFloat(c.trim()));
+                                        if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                                            if (value && typeof value === "object" && typeof (value as any).typeId === "string") {
+                                                isValid = true;
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            else if (name === "XPDropValues") {
-                                if (typeof key === "string" && value && typeof value === "object" && typeof (value as any).amount === "number") {
-                                    isValid = true;
+                                else if (name === "XPDropValues") {
+                                    if (typeof key === "string" && value && typeof value === "object" && typeof (value as any).amount === "number") {
+                                        isValid = true;
+                                    }
                                 }
-                            }
-                            else if (name === "DisplaySpawnerPrices" || name === "DisplaySpawnerConfig") {
-                                if (typeof key === "string" && (typeof value === "number" || typeof value === "boolean" || typeof value === "string")) {
-                                    isValid = true;
+                                else if (name === "DisplaySpawnerPrices" || name === "DisplaySpawnerConfig") {
+                                    if (typeof key === "string" && (typeof value === "number" || typeof value === "boolean" || typeof value === "string")) {
+                                        isValid = true;
+                                    }
                                 }
-                            }
-                            else if (name === "LootTables") {
-                                if (typeof key === "string" && value && typeof value === "object") {
-                                    isValid = true;
+                                else if (name === "LootTables") {
+                                    if (typeof key === "string" && value && typeof value === "object") {
+                                        isValid = true;
+                                    }
                                 }
-                            }
-                            else if (name === "AAValues") {
-                                if (typeof key === "string" && value !== undefined) {
-                                    isValid = true;
+                                else if (name === "AAValues") {
+                                    if (typeof key === "string" && value !== undefined) {
+                                        isValid = true;
+                                    }
                                 }
+                                
+                                if (isValid) {
+                                    newDb.set(key, value);
+                                    migrateCount++;
+                                } else {
+                                    skipCount++;
+                                }
+                            } catch (e) {
+                                skipCount++;
                             }
-                        } catch (validationErr) {
-                            isValid = false;
-                        }
-                        
-                        if (isValid) {
-                            newDb.set(key, value);
-                            migrateCount++;
-                        } else {
-                            skipCount++;
                         }
                     }
                     
