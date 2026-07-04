@@ -1,6 +1,25 @@
-import { world, system, Player, Block, Vector3, Entity, EntityInventoryComponent, EntityHitEntityAfterEvent, PlayerSpawnAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent } from "@minecraft/server";
+import { world, system, Player, Block, Vector3, Entity, EntityInventoryComponent, EntityHitEntityAfterEvent, PlayerSpawnAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent, ItemStack } from "@minecraft/server";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 import { Database } from "./database";
+
+// Helper to give items to player natively without commands, spawning on ground if inventory is full
+function giveItemNatively(player: Player, itemTypeId: string, amount: number): void {
+    try {
+        const inventory = (player as any).getComponent('inventory');
+        const container = inventory?.container;
+        if (container) {
+            const itemStack = new ItemStack(itemTypeId, amount);
+            const remaining = container.addItem(itemStack);
+            if (remaining && remaining.amount > 0) {
+                player.dimension.spawnItem(remaining, player.location);
+            }
+        } else {
+            player.dimension.spawnItem(new ItemStack(itemTypeId, amount), player.location);
+        }
+    } catch (e) {
+        console.error(`[Display Spawner] Error giving item natively: ${e}`);
+    }
+}
 
 /**
  * Display Spawner Handler
@@ -395,18 +414,8 @@ async function showShopForm(player: Player, blockId: string): Promise<void> {
 
         // Process purchase - give actual functional spawners (level 1)
         if (removePlayerMoney(player, totalCost)) {
-            try {
-                player.dimension.runCommand(`give "${player.name}" ${actualSpawnerItem} ${quantity}`);
-                player.sendMessage(`§a✓ Purchased §e${quantity}x ${mobName} Spawner (Lvl 1) §afor §e$${totalCost.toLocaleString()}§a!`);
-            } catch (error) {
-                player.sendMessage(`§c✗ Error giving items. Refunding money...`);
-                const moneyObjectiveName = getMoneyObjective();
-                const moneyObjective = world.scoreboard.getObjective(moneyObjectiveName);
-                if (moneyObjective) {
-                    const score = moneyObjective.getScore(player) ?? 0;
-                    moneyObjective.setScore(player, score + totalCost);
-                }
-            }
+            giveItemNatively(player, actualSpawnerItem, quantity);
+            player.sendMessage(`§a✓ Purchased §e${quantity}x ${mobName} Spawner (Lvl 1) §afor §e$${totalCost.toLocaleString()}§a!`);
         } else {
             player.sendMessage(`§c✗ Transaction failed!`);
         }
