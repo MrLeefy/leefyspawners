@@ -90,7 +90,17 @@ const SPAWNER_TO_ENTITY_MAP: Record<string, string> = {
     "mrleefy:zombiespawner_display": "mrleefy:zombiestill_display",
     "mrleefy:villagerspawner_display": "mrleefy:villagerstill_display",
     "mrleefy:enderdragonspawner_display": "mrleefy:enderdragonstill_display",
-    "mrleefy:snowmanspawner_display": "mrleefy:snowmanstill_display"
+    "mrleefy:snowmanspawner_display": "mrleefy:snowmanstill_display",
+    "mrleefy:amethystcrawlerspawner_display": "mrleefy:amethystcrawlerstill_display",
+    "mrleefy:coalcrawlerspawner_display": "mrleefy:coalcrawlerstill_display",
+    "mrleefy:coppercrawlerspawner_display": "mrleefy:coppercrawlerstill_display",
+    "mrleefy:glowstonecrawlerspawner_display": "mrleefy:glowstonecrawlerstill_display",
+    "mrleefy:icecrawlerspawner_display": "mrleefy:icecrawlerstill_display",
+    "mrleefy:lapiscrawlerspawner_display": "mrleefy:lapiscrawlerstill_display",
+    "mrleefy:obsidiancrawlerspawner_display": "mrleefy:obsidiancrawlerstill_display",
+    "mrleefy:quartzcrawlerspawner_display": "mrleefy:quartzcrawlerstill_display",
+    "mrleefy:redstonecrawlerspawner_display": "mrleefy:redstonecrawlerstill_display",
+    "mrleefy:spongecrawlerspawner_display": "mrleefy:spongecrawlerstill_display"
 };
 
 // Default prices for each spawner type
@@ -123,7 +133,17 @@ const DEFAULT_PRICES: Record<string, number> = {
     "mrleefy:zombiespawner_display": 6000,
     "mrleefy:villagerspawner_display": 12000,
     "mrleefy:enderdragonspawner_display": 250000,
-    "mrleefy:snowmanspawner_display": 6000
+    "mrleefy:snowmanspawner_display": 6000,
+    "mrleefy:amethystcrawlerspawner_display": 15000,
+    "mrleefy:coalcrawlerspawner_display": 8000,
+    "mrleefy:coppercrawlerspawner_display": 10000,
+    "mrleefy:glowstonecrawlerspawner_display": 12000,
+    "mrleefy:icecrawlerspawner_display": 10000,
+    "mrleefy:lapiscrawlerspawner_display": 12000,
+    "mrleefy:obsidiancrawlerspawner_display": 30000,
+    "mrleefy:quartzcrawlerspawner_display": 15000,
+    "mrleefy:redstonecrawlerspawner_display": 12000,
+    "mrleefy:spongecrawlerspawner_display": 15000
 };
 
 // Get friendly name from block ID
