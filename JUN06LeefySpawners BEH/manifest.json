@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.57 BEH - Jul 04",
-		"description": "LeefySpawners Behavior Pack v8.2.57 - Fixed spawner block geometry + form API + code audit fixes - Jul 2026",
-		"uuid": "edc97a52-2df7-4061-8dd2-c2b39575a71b",
+		"name": "LeefySpawners v8.2.58 BEH - Jul 04",
+		"description": "LeefySpawners Behavior Pack v8.2.58 - Fixed spawner block geometry + form API + code audit fixes - Jul 2026",
+		"uuid": "36811700-5e22-47d9-b825-5f3974e52d4c",
 		"version": [
 			8,
 			2,
-			57
+			58
 		],
 		"min_engine_version": [
 			1,
@@ -18,20 +18,20 @@
 	"modules": [
 		{
 			"type": "data",
-			"uuid": "6ade1ba1-0f60-4428-97c0-88377e135016",
+			"uuid": "b4e9ee19-e8dc-4f4d-a688-7325ae1c20fd",
 			"version": [
 				8,
 				2,
-				57
+				58
 			]
 		},
 		{
 			"description": "",
-			"uuid": "191c4355-9a1f-497f-96f5-5c2f0cc2e91a",
+			"uuid": "5dd12cfb-6dbf-460f-a05b-69a7e4111ac0",
 			"version": [
 				8,
 				2,
-				57
+				58
 			],
 			"type": "script",
 			"language": "javascript",
@@ -48,11 +48,11 @@
 			"version": "1.2.0"
 		},
 		{
-			"uuid": "0ef89453-b467-4415-8ddd-048c804c5c74",
+			"uuid": "4004bd73-5192-4144-823c-4a13bdfe7348",
 			"version": [
 				8,
 				2,
-				57
+				58
 			]
 		}
 	]
