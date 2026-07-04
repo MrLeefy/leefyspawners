@@ -630,7 +630,13 @@
                     }
                 ]
             },
-            "minecraft:physics": {}
+            "minecraft:physics": {},
+            "minecraft:movement": {
+                "value": 0.0
+            },
+            "minecraft:movement.basic": {
+                "max_turn": 30.0
+            }
         },
         "events": {
             "minecraft:entity_spawned": {

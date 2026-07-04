@@ -1,90 +1,100 @@
 {
     "format_version": "1.21.0",
     "minecraft:entity": {
-      "description": {
-        "identifier": "mrleefy:ravagerstill_display",
-        "is_spawnable": false,
-        "is_summonable": true,
-        "is_experimental": false
-      },
-      "component_groups": {
-        "bridge:execute_command_id_1": {
-          "minecraft:skin_id": {
-            "value": 1
-          }
+        "description": {
+            "identifier": "mrleefy:ravagerstill_display",
+            "is_spawnable": false,
+            "is_summonable": true,
+            "is_experimental": false
         },
-        "bridge:execute_no_command": {
-          "minecraft:skin_id": {
-            "value": 0
-          }
+        "component_groups": {
+            "bridge:execute_command_id_1": {
+                "minecraft:skin_id": {
+                    "value": 1
+                }
+            },
+            "bridge:execute_no_command": {
+                "minecraft:skin_id": {
+                    "value": 0
+                }
+            },
+            "minecraft:despawn": {
+                "minecraft:instant_despawn": {}
+            }
         },
-        "minecraft:despawn": {
-          "minecraft:instant_despawn": {}
+        "components": {
+            "minecraft:physics": {},
+            "minecraft:pushable": {
+                "is_pushable": true,
+                "is_pushable_by_piston": true
+            },
+            "minecraft:push_through": {
+                "value": 1
+            },
+            "minecraft:loot": {
+                "table": "loot_tables/entities/ravager_cancel.json"
+            },
+            "minecraft:nameable": {
+                "always_show": false,
+                "allow_name_tag_renaming": false
+            },
+            "minecraft:health": {
+                "value": 20,
+                "max": 20
+            },
+            "minecraft:collision_box": {
+                "width": 1.95,
+                "height": 2.2
+            },
+            "minecraft:fire_immune": false,
+            "minecraft:behavior.float": {
+                "priority": 0
+            },
+            "minecraft:behavior.hurt_by_target": {
+                "priority": 1
+            },
+            "minecraft:behavior.look_at_player": {
+                "priority": 2,
+                "look_distance": 8.0
+            },
+            "minecraft:behavior.random_look_around": {
+                "priority": 9
+            },
+            "minecraft:type_family": {
+                "family": [
+                    "monster",
+                    "ravager",
+                    "mob"
+                ]
+            },
+            "minecraft:on_hurt": {
+                "target": "self"
+            },
+            "minecraft:conditional_bandwidth_optimization": {},
+            "minecraft:on_hurt_by_player": {
+                "target": "self"
+            },
+            "minecraft:damage_sensor": {
+                "triggers": {
+                    "cause": "all",
+                    "deals_damage": false
+                }
+            },
+            "minecraft:movement": {
+                "value": 0.0
+            },
+            "minecraft:movement.basic": {
+                "max_turn": 30.0
+            }
+        },
+        "events": {
+            "despawn": {
+                "add": {
+                    "component_groups": [
+                        "minecraft:despawn"
+                    ]
+                }
+            }
         }
-      },
-      "components": {
-        "minecraft:physics": {},
-        "minecraft:pushable": {
-          "is_pushable": true,
-          "is_pushable_by_piston": true
-        },
-        "minecraft:push_through": {
-          "value": 1
-        },
-        "minecraft:loot": {
-          "table": "loot_tables/entities/ravager_cancel.json"
-        },
-        "minecraft:nameable": {
-          "always_show": false,
-          "allow_name_tag_renaming": false
-        },
-        "minecraft:health": {
-          "value": 20,
-          "max": 20
-        },
-        "minecraft:collision_box": {
-          "width": 1.95,
-          "height": 2.2
-        },
-        "minecraft:fire_immune": false,
-        "minecraft:behavior.float": {
-          "priority": 0
-        },
-        "minecraft:behavior.hurt_by_target": {
-          "priority": 1
-        },
-        "minecraft:behavior.look_at_player": {
-          "priority": 2,
-          "look_distance": 8.0
-        },
-        "minecraft:behavior.random_look_around": {
-          "priority": 9
-        },
-        "minecraft:type_family": {
-          "family": [
-            "monster",
-            "ravager",
-            "mob"
-          ]
-        },
-        "minecraft:on_hurt": {
-          "target": "self"
-        },
-        "minecraft:conditional_bandwidth_optimization": {},
-        "minecraft:on_hurt_by_player": {
-          "target": "self"
-        },
-        "minecraft:damage_sensor": {"triggers": {"cause": "all", "deals_damage": false}}
-      },
-      "events": {
-        "despawn": {
-          "add": {
-            "component_groups": [
-              "minecraft:despawn"
-            ]
-          }
-        }
-      }
     }
-  }
-  
+}

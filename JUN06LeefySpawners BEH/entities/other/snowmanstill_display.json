@@ -73,7 +73,13 @@
                 "width": 0.0,
                 "height": 0.0
             },
-            "minecraft:conditional_bandwidth_optimization": {}
+            "minecraft:conditional_bandwidth_optimization": {},
+            "minecraft:movement": {
+                "value": 0.0
+            },
+            "minecraft:movement.basic": {
+                "max_turn": 30.0
+            }
         },
         "events": {
             "minecraft:entity_spawned": {

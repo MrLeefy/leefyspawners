@@ -91,6 +91,12 @@
             "minecraft:conditional_bandwidth_optimization": {},
             "minecraft:scale": {
                 "value": 3
+            },
+            "minecraft:movement": {
+                "value": 0.0
+            },
+            "minecraft:movement.basic": {
+                "max_turn": 30.0
             }
         },
         "events": {
