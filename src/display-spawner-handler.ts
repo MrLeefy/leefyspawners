@@ -281,7 +281,7 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
         .textField(
             `§7Set price for §e${mobName} Spawner\n§7Current: §a$${currentPrice.toLocaleString()}\n\n§7Enter new price:`,
             "e.g., 50000",
-            { defaultValue: currentPrice.toString() }
+            currentPrice.toString()
         );
 
     try {
@@ -321,7 +321,7 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
         .textField(
             `§7Enter the scoreboard objective name for money\n§7Current: §e${currentObjective}\n\n§7Common examples:\n§7- money\n§7- balance\n§7- coins\n§7- cash\n\n§7Objective Name:`,
             "e.g., money",
-            { defaultValue: currentObjective }
+            currentObjective
         );
 
     try {
