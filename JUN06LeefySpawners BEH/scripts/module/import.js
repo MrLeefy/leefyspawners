@@ -6080,9 +6080,9 @@ async function showAdminForm(player, blockId, blockLocation) {
     if (response.selection === 0) {
       spawnDisplayEntity(player, entityId, blockLocation, mobName);
     } else if (response.selection === 1) {
-      showChangePriceForm(player, blockId, blockLocation);
+      await showChangePriceForm(player, blockId, blockLocation);
     } else if (response.selection === 2) {
-      showChangeMoneyObjectiveForm(player, blockId, blockLocation);
+      await showChangeMoneyObjectiveForm(player, blockId, blockLocation);
     }
   } catch (error) {
     console.warn(`[Display Spawner] Error showing admin form: ${error}`);

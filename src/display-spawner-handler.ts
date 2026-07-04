@@ -274,10 +274,10 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
             spawnDisplayEntity(player, entityId, blockLocation, mobName);
         } else if (response.selection === 1) {
             // Change price 
-            showChangePriceForm(player, blockId, blockLocation);
+            await showChangePriceForm(player, blockId, blockLocation);
         } else if (response.selection === 2) {
             // Change money objective 
-            showChangeMoneyObjectiveForm(player, blockId, blockLocation);
+            await showChangeMoneyObjectiveForm(player, blockId, blockLocation);
         }
     } catch (error) {
         console.warn(`[Display Spawner] Error showing admin form: ${error}`);
