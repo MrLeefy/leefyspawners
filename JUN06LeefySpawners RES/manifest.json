@@ -1,8 +1,8 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.54 RES - Jul 03",
-		"description": "LeefySpawners Resource Pack v8.2.54 - Reverted terrain texture mappings to original flat ore blocks - Jul 2026",
+		"name": "LeefySpawners v8.2.54 RES - Jul 04",
+		"description": "LeefySpawners Resource Pack v8.2.54 - Fixed ModalFormData API signatures causing settings to not save - Jul 2026",
 		"uuid": "0432170a-1bb2-46df-b418-46b6ec4f00cd",
 		"version": [
 			8,

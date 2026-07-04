@@ -403,7 +403,7 @@ async function showShopForm(player: Player, blockId: string): Promise<void> {
         return;
     }
 
-    const form = new ModalFormData()
+    const form = (new ModalFormData() as any)
         .title("§l§5Spawner Shop")
         .slider(
             `§7${mobName} Spawner (Level 1)\n` +
@@ -413,7 +413,8 @@ async function showShopForm(player: Player, blockId: string): Promise<void> {
             `§7Select quantity:`,
             1,
             maxAffordable,
-            { valueStep: 1 }
+            1,
+            1
         );
 
     try {

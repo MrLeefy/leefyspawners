@@ -95,48 +95,104 @@ import { world, ScoreboardIdentityType, system } from "@minecraft/server";
 var { FakePlayer } = ScoreboardIdentityType;
 var databases = /* @__PURE__ */ new Map();
 var split = DATABASE.SPLIT_DELIMITER;
-system.run(() => {
-  const oldDbNames = [
-    "ConfigValues",
-    "XPDropValues",
-    "SpawnerLocations",
-    "DisplaySpawnerPrices",
-    "DisplaySpawnerConfig",
-    "LootTables",
-    "AAValues"
-  ];
-  for (const name of oldDbNames) {
-    const oldName = name;
-    const newName = `ls_db:${name}`;
-    try {
-      const oldObj = world.scoreboard.getObjective(oldName);
-      if (oldObj) {
-        console.warn(`[Database Migration] Found old database objective: ${oldName}. Migrating to ${newName}...`);
-        const newObj = world.scoreboard.getObjective(newName) ?? world.scoreboard.addObjective(newName, newName);
-        const newParticipants = newObj.getParticipants();
-        if (newParticipants.length === 0) {
-          const oldParticipants = oldObj.getParticipants();
+system.runTimeout(() => {
+  try {
+    const configDb = new ScoreboardDatabaseManager("ConfigValues", DatabaseSavingModes.END_TICK_SAVE);
+    configDb.load();
+    if (configDb.get("migration_completed") === true) {
+      return;
+    }
+    const oldDbNames = [
+      "ConfigValues",
+      "XPDropValues",
+      "SpawnerLocations",
+      "DisplaySpawnerPrices",
+      "DisplaySpawnerConfig",
+      "LootTables",
+      "AAValues"
+    ];
+    for (const name of oldDbNames) {
+      try {
+        const oldObj = world.scoreboard.getObjective(name);
+        if (oldObj) {
+          console.warn(`[Database Migration] Found old database objective: ${name}. Starting validated migration...`);
+          const newDb = new ScoreboardDatabaseManager(`ls_db:${name}`, DatabaseSavingModes.END_TICK_SAVE);
+          newDb.load();
           let migrateCount = 0;
-          for (const participant of oldParticipants) {
-            try {
-              newObj.setScore(participant, oldObj.getScore(participant) ?? 0);
-              migrateCount++;
-            } catch (err) {
-              console.error(`[Database Migration] Failed to migrate participant in ${oldName}:`, err);
+          let skipCount = 0;
+          for (const participant of oldObj.getParticipants()) {
+            const displayName = participant.displayName;
+            const parts = displayName.split(split);
+            if (parts.length >= 2) {
+              const key = parts[0];
+              const rawVal = parts.slice(1).join(split);
+              try {
+                const value = JSON.parse(rawVal);
+                let isValid = false;
+                if (name === "ConfigValues") {
+                  if (key === "stackRadius" && typeof value === "number" && value >= 1 && value <= 100)
+                    isValid = true;
+                  else if (key === "spawnSpeed" && typeof value === "number" && value >= 1 && value <= 60)
+                    isValid = true;
+                  else if (key === "maxStack" && typeof value === "number" && value >= 1 && value <= 5e3)
+                    isValid = true;
+                  else if (typeof value === "boolean")
+                    isValid = true;
+                } else if (name === "SpawnerLocations") {
+                  const coords = key.split(",");
+                  if (coords.length === 3) {
+                    const [x, y, z] = coords.map((c) => parseFloat(c.trim()));
+                    if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                      if (value && typeof value === "object" && typeof value.typeId === "string") {
+                        isValid = true;
+                      }
+                    }
+                  }
+                } else if (name === "XPDropValues") {
+                  if (typeof key === "string" && value && typeof value === "object" && typeof value.amount === "number") {
+                    isValid = true;
+                  }
+                } else if (name === "DisplaySpawnerPrices" || name === "DisplaySpawnerConfig") {
+                  if (typeof key === "string" && (typeof value === "number" || typeof value === "boolean" || typeof value === "string")) {
+                    isValid = true;
+                  }
+                } else if (name === "LootTables") {
+                  if (typeof key === "string" && value && typeof value === "object") {
+                    isValid = true;
+                  }
+                } else if (name === "AAValues") {
+                  if (typeof key === "string" && value !== void 0) {
+                    isValid = true;
+                  }
+                }
+                if (isValid) {
+                  newDb.set(key, value);
+                  migrateCount++;
+                } else {
+                  skipCount++;
+                }
+              } catch (e) {
+                skipCount++;
+              }
             }
           }
-          console.warn(`[Database Migration] Successfully migrated ${migrateCount} records for ${oldName} -> ${newName}`);
-        } else {
-          console.warn(`[Database Migration] New objective ${newName} already contains data. Skipping copy step.`);
+          if (migrateCount > 0) {
+            newDb._executeSave();
+            console.warn(`[Database Migration] Successfully migrated ${migrateCount} records (skipped ${skipCount} invalid) from ${name} -> ls_db:${name}`);
+          }
+          console.warn(`[Database Migration] Preserved legacy objective as read-only backup: ${name}`);
         }
-        world.scoreboard.removeObjective(oldName);
-        console.warn(`[Database Migration] Successfully removed old database objective: ${oldName}`);
+      } catch (error) {
+        console.error(`[Database Migration] Error migrating database ${name}:`, error);
       }
-    } catch (error) {
-      console.error(`[Database Migration] Error migrating database ${oldName}:`, error);
     }
+    configDb.set("migration_completed", true);
+    configDb._executeSave();
+    console.log("[Database Migration] Migration marked as completed in new database.");
+  } catch (e) {
+    console.error("[Database Migration] Startup handler crashed:", e);
   }
-});
+}, 20);
 var CHUNK_SIZE = 150;
 var CHUNK_PREFIX = "__chunk__";
 var isShutdownRegistered = false;
@@ -2958,7 +3014,7 @@ var SecurityService = class {
       "onload=",
       "onerror=",
       "<script",
-      "<\/script>",
+      "</script>",
       "eval(",
       "exec(",
       "system(",
@@ -3280,7 +3336,7 @@ function openToggleLootDropForm(player) {
   const currentCap = configDatabase2.read("itemSpillCap") || 5;
   const currentXpCap = configDatabase2.read("xpSpillCap") || 3;
   const playerKillOnly = configDatabase2.read("playerKillOnly") ?? false;
-  new ModalFormData2().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", playerKillOnly).textField("Max item drops near stack:", "Enter integer (>=1)", `${currentCap}`).textField("Max XP orbs near stack:", "Enter integer (>=1)", `${currentXpCap}`).show(player).then((r) => {
+  new ModalFormData2().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", { defaultValue: playerKillOnly }).textField("Max item drops near stack:", "Enter integer (>=1)", { defaultValue: `${currentCap}` }).textField("Max XP orbs near stack:", "Enter integer (>=1)", { defaultValue: `${currentXpCap}` }).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3323,8 +3379,8 @@ function openPerformanceConfigForm(player) {
     5,
     currentMaxSpawns
   ).toggle(
-    "\xA7bRandom Initial Spawn Delays:\xA7r\n\xA77Randomizes first spawn time (0-100% of interval).\n\xA77Prevents all spawners from syncing up.\n\xA7aRecommended: Enabled\xA7r",
-    currentRandomDelay
+    "\xA7bRandom Initial Spawn Delays:\xA7r\n\xA77Randomizes first spawn time (0-100%%% of interval).\n\xA77Prevents all spawners from syncing up.\n\xA7aRecommended: Enabled\xA7r",
+    { defaultValue: currentRandomDelay }
   ).slider(
     "\xA7bSpawn Check Interval (ticks):\xA7r\n\xA77How often to check spawners (20 ticks = 1 second).\n\xA77Lower = More responsive, higher CPU usage\n\xA7eDefault: 20 ticks\xA7r",
     10,
@@ -3505,7 +3561,7 @@ function openXPDropManagerForm(player, entityId) {
     return;
   }
   const config = xpDropDatabase.read(entityId) || {};
-  new ModalFormData2().title(`XP Manager: ${entityId}`).textField("XP Amount:", "XP to drop on death", `${config.amount ?? 1}`).slider("Drop Chance (%)", 1, 100, 1, config.chance ?? 100).show(player).then((r) => {
+  new ModalFormData2().title(`XP Manager: ${entityId}`).textField("XP Amount:", "XP to drop on death", { defaultValue: `${config.amount ?? 1}` }).slider("Drop Chance (%%%)", 1, 100, 1, config.chance ?? 100).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3533,7 +3589,7 @@ function openAddNewLootItemForm(player, entityId) {
   }
   const lootManager = lootManagerInstance;
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
-  new ModalFormData2().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", "").textField("Chance:", "[0.01-100]", "100").toggle("Enchantable?", false).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", "50").toggle("Stackable?", true).toggle("Random Durability?", false).show(player).then((r) => {
+  new ModalFormData2().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", { defaultValue: "" }).textField("Chance:", "[0.01-100]", { defaultValue: "100" }).toggle("Enchantable?", { defaultValue: false }).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", { defaultValue: "50" }).toggle("Stackable?", { defaultValue: true }).toggle("Random Durability?", { defaultValue: false }).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3572,7 +3628,7 @@ function openEditLootItemForm(player, entityId, itemId) {
   const config = lootManager.entities[entityId][itemId];
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
   const catIdx = config.enchantments ? categories.indexOf(config.enchantments.category) : 0;
-  new ModalFormData2().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", `${config.chance}`).toggle("Enchantable?", !!config.enchantments).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", `${config.enchantments?.chance ?? 50}`).toggle("Stackable?", config.stackable !== false).toggle("Random Durability?", config.randomdurability === true).toggle("\xA7cDELETE THIS ITEM?\xA7r", false).show(player).then((r) => {
+  new ModalFormData2().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", { defaultValue: `${config.chance}` }).toggle("Enchantable?", { defaultValue: !!config.enchantments }).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", { defaultValue: `${config.enchantments?.chance ?? 50}` }).toggle("Stackable?", { defaultValue: config.stackable !== false }).toggle("Random Durability?", { defaultValue: config.randomdurability === true }).toggle("\xA7cDELETE THIS ITEM?\xA7r", { defaultValue: false }).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3613,15 +3669,15 @@ function openAAConfigForm(player) {
   const form = new ModalFormData2().title("Spawner Settings");
   const entries = [];
   aaDatabase.forEach((val, key) => entries.push([key, val]));
-  form.textField("Add New Range:", "e.g., 1-10 or 33-33", "");
-  form.textField("New Range - Quantity:", "e.g., 1", "");
-  form.textField("New Range - Speed (sec):", "e.g., 10", "");
-  form.textField("New Range - Max Stack:", "e.g., 100", "");
+  form.textField("Add New Range:", "e.g., 1-10 or 33-33", { defaultValue: "" });
+  form.textField("New Range - Quantity:", "e.g., 1", { defaultValue: "" });
+  form.textField("New Range - Speed (sec):", "e.g., 10", { defaultValue: "" });
+  form.textField("New Range - Max Stack:", "e.g., 100", { defaultValue: "" });
   entries.forEach(([range, { qty, speed, maxStack }]) => {
-    form.textField(`Qty for ${range}:`, `Update`, `${qty}`);
-    form.textField(`Speed for ${range}:`, `Update`, `${speed}`);
-    form.textField(`Max Stack for ${range}:`, `Update`, `${maxStack}`);
-    form.toggle(`\xA7cRemove Range ${range}?\xA7r`, false);
+    form.textField(`Qty for ${range}:`, `Update`, { defaultValue: `${qty}` });
+    form.textField(`Speed for ${range}:`, `Update`, { defaultValue: `${speed}` });
+    form.textField(`Max Stack for ${range}:`, `Update`, { defaultValue: `${maxStack}` });
+    form.toggle(`\xA7cRemove Range ${range}?\xA7r`, { defaultValue: false });
   });
   form.show(player).then((r) => {
     if (r.canceled || !r.formValues)
@@ -4041,7 +4097,7 @@ function openLocationSearchForm(player, allSpawners) {
     const playerLocation = player.location;
     const playerX = Math.round(playerLocation.x);
     const playerZ = Math.round(playerLocation.z);
-    const form = new ModalFormData2().title("Search Spawners by Location").toggle("Use current location", true).textField("X Coordinate", "Enter X coordinate", playerX.toString()).textField("Z Coordinate", "Enter Z coordinate", playerZ.toString()).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", true);
+    const form = new ModalFormData2().title("Search Spawners by Location").toggle("Use current location", { defaultValue: true }).textField("X Coordinate", "Enter X coordinate", { defaultValue: playerX.toString() }).textField("Z Coordinate", "Enter Z coordinate", { defaultValue: playerZ.toString() }).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", { defaultValue: true });
     form.show(player).then((r) => {
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -5866,7 +5922,17 @@ var SPAWNER_TO_ENTITY_MAP = {
   "mrleefy:zombiespawner_display": "mrleefy:zombiestill_display",
   "mrleefy:villagerspawner_display": "mrleefy:villagerstill_display",
   "mrleefy:enderdragonspawner_display": "mrleefy:enderdragonstill_display",
-  "mrleefy:snowmanspawner_display": "mrleefy:snowmanstill_display"
+  "mrleefy:snowmanspawner_display": "mrleefy:snowmanstill_display",
+  "mrleefy:amethystcrawlerspawner_display": "mrleefy:amethystcrawlerstill_display",
+  "mrleefy:coalcrawlerspawner_display": "mrleefy:coalcrawlerstill_display",
+  "mrleefy:coppercrawlerspawner_display": "mrleefy:coppercrawlerstill_display",
+  "mrleefy:glowstonecrawlerspawner_display": "mrleefy:glowstonecrawlerstill_display",
+  "mrleefy:icecrawlerspawner_display": "mrleefy:icecrawlerstill_display",
+  "mrleefy:lapiscrawlerspawner_display": "mrleefy:lapiscrawlerstill_display",
+  "mrleefy:obsidiancrawlerspawner_display": "mrleefy:obsidiancrawlerstill_display",
+  "mrleefy:quartzcrawlerspawner_display": "mrleefy:quartzcrawlerstill_display",
+  "mrleefy:redstonecrawlerspawner_display": "mrleefy:redstonecrawlerstill_display",
+  "mrleefy:spongecrawlerspawner_display": "mrleefy:spongecrawlerstill_display"
 };
 var DEFAULT_PRICES = {
   "mrleefy:blazespawner_display": 1e4,
@@ -5897,7 +5963,17 @@ var DEFAULT_PRICES = {
   "mrleefy:zombiespawner_display": 6e3,
   "mrleefy:villagerspawner_display": 12e3,
   "mrleefy:enderdragonspawner_display": 25e4,
-  "mrleefy:snowmanspawner_display": 6e3
+  "mrleefy:snowmanspawner_display": 6e3,
+  "mrleefy:amethystcrawlerspawner_display": 15e3,
+  "mrleefy:coalcrawlerspawner_display": 8e3,
+  "mrleefy:coppercrawlerspawner_display": 1e4,
+  "mrleefy:glowstonecrawlerspawner_display": 12e3,
+  "mrleefy:icecrawlerspawner_display": 1e4,
+  "mrleefy:lapiscrawlerspawner_display": 12e3,
+  "mrleefy:obsidiancrawlerspawner_display": 3e4,
+  "mrleefy:quartzcrawlerspawner_display": 15e3,
+  "mrleefy:redstonecrawlerspawner_display": 12e3,
+  "mrleefy:spongecrawlerspawner_display": 15e3
 };
 function getFriendlyName(blockId) {
   const name = blockId.replace("mrleefy:", "").replace("spawner_display", "");
@@ -6112,7 +6188,8 @@ async function showShopForm(player, blockId) {
 \xA77Select quantity:`,
     1,
     maxAffordable,
-    { valueStep: 1 }
+    1,
+    1
   );
   try {
     const response = await form.show(player);
