@@ -66,18 +66,25 @@ Remove-Item -Path $ResourceDest -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item -Path ".\JUN06LeefySpawners BEH" -Destination (Split-Path $BehaviorDest) -Recurse -Force
 Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ResourceDest) -Recurse -Force
 
-# 4. Deploy to local Endstone server dev folders
-Write-Host "Deploying addon to local Endstone server dev folders..." -ForegroundColor Cyan
+# 4. Deploy to local Endstone server folders
+Write-Host "Deploying addon to local Endstone server folders..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path (Split-Path $ServerBehaviorDest) | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $ServerResourceDest) | Out-Null
+$ServerResourcePacksDest = Join-Path $ServerPath "bedrock_server\resource_packs\JUN06LeefySpawners RES"
+New-Item -ItemType Directory -Force -Path (Split-Path $ServerResourcePacksDest) | Out-Null
+
 Remove-Item -Path $ServerBehaviorDest -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $ServerResourceDest -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path $ServerResourcePacksDest -Recurse -Force -ErrorAction SilentlyContinue
+
 Copy-Item -Path ".\JUN06LeefySpawners BEH" -Destination (Split-Path $ServerBehaviorDest) -Recurse -Force
 Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ServerResourceDest) -Recurse -Force
+Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ServerResourcePacksDest) -Recurse -Force
 
 # Delete old packs from server dev folders to prevent duplicate package loads
 Remove-Item -Path (Join-Path $ServerPath "bedrock_server\development_behavior_packs\OCT30LeefySpawners BEH") -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path (Join-Path $ServerPath "bedrock_server\development_resource_packs\OCT30LeefySpawners RES") -Recurse -Force -ErrorAction SilentlyContinue
+
 
 # 5. Register packs in the active server world configuration
 Write-Host "Ensuring addon packs are registered in server world configuration..." -ForegroundColor Cyan
@@ -123,7 +130,7 @@ Write-Host "4. Enter one of the following IP addresses:" -ForegroundColor White
 foreach ($ip in $LocalIPs) {
     Write-Host "   -> $ip" -ForegroundColor Yellow
 }
-Write-Host "5. Enter Port: 19133" -ForegroundColor Yellow
+Write-Host "5. Enter Port: 19135" -ForegroundColor Yellow
 Write-Host "6. Click Save and Join!" -ForegroundColor White
 Write-Host "==================================================" -ForegroundColor Green
 Write-Host "Clickable Addon Package (local link):" -ForegroundColor White

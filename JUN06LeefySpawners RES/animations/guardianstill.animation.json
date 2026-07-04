@@ -66,40 +66,40 @@
 			"loop": true,
 			"bones": {
 				"spikepart0": {
-					"position": ["-this", "24+-8*(1+math.cos(query.life_time*20*1.5)*0.01+(variable.spike_extension+variable.spike_shake))-this", "8*(1+math.cos(query.life_time*20*1.5)*0.01-(variable.spike_extension+variable.spike_shake))-this"]
+					"position": ["-this", "24+-8*(1+math.cos(query.life_time*20*1.5)*0.01+(0+0))-this", "8*(1+math.cos(query.life_time*20*1.5)*0.01-(0+0))-this"]
 				},
 				"spikepart1": {
-					"position": ["-this", "24+-8*(1+math.cos(query.life_time*20*1.5+1)*0.01+(variable.spike_extension+variable.spike_shake))-this", "-8*(1+math.cos(query.life_time*20*1.5+1)*0.01-(variable.spike_extension+variable.spike_shake))-this"]
+					"position": ["-this", "24+-8*(1+math.cos(query.life_time*20*1.5+1)*0.01+(0+0))-this", "-8*(1+math.cos(query.life_time*20*1.5+1)*0.01-(0+0))-this"]
 				},
 				"spikepart10": {
-					"position": ["8*(1+math.cos(query.life_time*20*1.5+10)*0.01-(variable.spike_extension+variable.spike_shake))-this", "-8+8*(1+math.cos(query.life_time*20*1.5+10)*0.01+(variable.spike_extension+variable.spike_shake))-this", "-this"]
+					"position": ["8*(1+math.cos(query.life_time*20*1.5+10)*0.01-(0+0))-this", "-8+8*(1+math.cos(query.life_time*20*1.5+10)*0.01+(0+0))-this", "-this"]
 				},
 				"spikepart11": {
-					"position": ["-8*(1+math.cos(query.life_time*20*1.5+11)*0.01-(variable.spike_extension+variable.spike_shake))-this", "-8+8*(1+math.cos(query.life_time*20*1.5+11)*0.01+(variable.spike_extension+variable.spike_shake))-this", "-this"]
+					"position": ["-8*(1+math.cos(query.life_time*20*1.5+11)*0.01-(0+0))-this", "-8+8*(1+math.cos(query.life_time*20*1.5+11)*0.01+(0+0))-this", "-this"]
 				},
 				"spikepart2": {
-					"position": ["8*(1+math.cos(query.life_time*20*1.5+2)*0.01-(variable.spike_extension+variable.spike_shake))-this", "24+-8*(1+math.cos(query.life_time*20*1.5+2)*0.01+(variable.spike_extension+variable.spike_shake))-this", "-this"]
+					"position": ["8*(1+math.cos(query.life_time*20*1.5+2)*0.01-(0+0))-this", "24+-8*(1+math.cos(query.life_time*20*1.5+2)*0.01+(0+0))-this", "-this"]
 				},
 				"spikepart3": {
-					"position": ["-8*(1+math.cos(query.life_time*20*1.5+3)*0.01-(variable.spike_extension+variable.spike_shake))-this", "24+-8*(1+math.cos(query.life_time*20*1.5+3)*0.01+(variable.spike_extension+variable.spike_shake))-this", 0]
+					"position": ["-8*(1+math.cos(query.life_time*20*1.5+3)*0.01-(0+0))-this", "24+-8*(1+math.cos(query.life_time*20*1.5+3)*0.01+(0+0))-this", 0]
 				},
 				"spikepart4": {
-					"position": ["-8*(1+math.cos(query.life_time*20*1.5+4)*0.01-(variable.spike_extension-variable.spike_shake))-this", "8-this", "-8*(1+math.cos(query.life_time*20*1.5+4)*0.01-(variable.spike_extension-variable.spike_shake))-this"]
+					"position": ["-8*(1+math.cos(query.life_time*20*1.5+4)*0.01-(0-0))-this", "8-this", "-8*(1+math.cos(query.life_time*20*1.5+4)*0.01-(0-0))-this"]
 				},
 				"spikepart5": {
-					"position": ["8*(1+math.cos(query.life_time*20*1.5+5)*0.01-(variable.spike_extension-variable.spike_shake))-this", "8-this", "-8*(1+math.cos(query.life_time*20*1.5+5)*0.01-(variable.spike_extension-variable.spike_shake))-this"]
+					"position": ["8*(1+math.cos(query.life_time*20*1.5+5)*0.01-(0-0))-this", "8-this", "-8*(1+math.cos(query.life_time*20*1.5+5)*0.01-(0-0))-this"]
 				},
 				"spikepart6": {
-					"position": ["8*(1+math.cos(query.life_time*20*1.5+6)*0.01-(variable.spike_extension-variable.spike_shake))-this", "8-this", "8*(1+math.cos(query.life_time*20*1.5+6)*0.01-(variable.spike_extension-variable.spike_shake))-this"]
+					"position": ["8*(1+math.cos(query.life_time*20*1.5+6)*0.01-(0-0))-this", "8-this", "8*(1+math.cos(query.life_time*20*1.5+6)*0.01-(0-0))-this"]
 				},
 				"spikepart7": {
-					"position": ["-8*(1+math.cos(query.life_time*20*1.5+7)*0.01-(variable.spike_extension-variable.spike_shake))-this", "8-this", "8*(1+math.cos(query.life_time*20*1.5+7)*0.01-(variable.spike_extension-variable.spike_shake))-this"]
+					"position": ["-8*(1+math.cos(query.life_time*20*1.5+7)*0.01-(0-0))-this", "8-this", "8*(1+math.cos(query.life_time*20*1.5+7)*0.01-(0-0))-this"]
 				},
 				"spikepart8": {
-					"position": ["-this", "-8+8*(1+math.cos(query.life_time*20*1.5+8)*0.01+(variable.spike_extension+variable.spike_shake))-this", "8*(1+math.cos(query.life_time*20*1.5+8)*0.01-(variable.spike_extension+variable.spike_shake))-this"]
+					"position": ["-this", "-8+8*(1+math.cos(query.life_time*20*1.5+8)*0.01+(0+0))-this", "8*(1+math.cos(query.life_time*20*1.5+8)*0.01-(0+0))-this"]
 				},
 				"spikepart9": {
-					"position": ["-this", "-8+8*(1+math.cos(query.life_time*20*1.5+9)*0.01+(variable.spike_extension+variable.spike_shake))-this", "-8*(1+math.cos(query.life_time*20*1.5+9)*0.01-(variable.spike_extension+variable.spike_shake))-this"]
+					"position": ["-this", "-8+8*(1+math.cos(query.life_time*20*1.5+9)*0.01+(0+0))-this", "-8*(1+math.cos(query.life_time*20*1.5+9)*0.01-(0+0))-this"]
 				}
 			}
 		},
@@ -107,15 +107,15 @@
 			"loop": true,
 			"bones": {
 				"tailpart0": {
-					"rotation": [0, "variable.tail_base_angle*11.6-this", 0]
+					"rotation": [0, "0*11.6-this", 0]
 				},
 				"tailpart1": {
 					"position": ["-1.5-this", "-0.5-this", "14.0-this"],
-					"rotation": [0, "variable.tail_base_angle*22.8-this", 0]
+					"rotation": [0, "0*22.8-this", 0]
 				},
 				"tailpart2": {
 					"position": ["0.5-this", "-0.5-this", "6.0-this"],
-					"rotation": [0, "variable.tail_base_angle*34.4-this", 0]
+					"rotation": [0, "0*34.4-this", 0]
 				}
 			}
 		}

@@ -8,10 +8,10 @@
 					"rotation" : [ "query.head_x_rotation(0) - this", "query.head_y_rotation(0) - this", "-this" ]
 				},
 				"head2" : {
-					"rotation" : [ "query.head_x_rotation(1) - this", "query.head_y_rotation(1) - this", "-this" ]
+					"rotation" : [ "0 - this", "0 - this", "-this" ]
 				},
 				"head3" : {
-					"rotation" : [ "query.head_x_rotation(2) - this", "query.head_y_rotation(2) - this", "-this" ]
+					"rotation" : [ "0 - this", "0 - this", "-this" ]
 				}
 			}
 		},

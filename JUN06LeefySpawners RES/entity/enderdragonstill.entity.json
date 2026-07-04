@@ -1,28 +1,26 @@
 {
-    "format_version": "1.8.0",
+    "format_version": "1.10.0",
     "minecraft:client_entity": {
         "description": {
             "identifier": "mrleefy:enderdragonstill",
             "min_engine_version": "1.8.0",
             "materials": {
-                "default": "dragon"
+                "default": "entity_alphatest"
             },
             "textures": {
-                "default": "textures/entity/dragon/dragon"
+                "default": "textures/entity/dragon/dragonstill"
             },
             "geometry": {
-                "default": "geometry.dragon"
+                "default": "geometry.mountdragon_defaultdm1"
+            },
+            "animations": {
+                "idle": "animation.dragondm1.on_ground"
             },
             "scripts": {
-                "pre_animation": [
-                    "variable.base_scale = 0.5;"
-                ],
-                "scalex": "variable.base_scale",
-                "scaley": "variable.base_scale",
-                "scalez": "variable.base_scale"
+                "animate": [ "idle" ]
             },
             "render_controllers": [
-                "controller.render.default"
+                "controller.render.enderdragonstill"
             ]
         }
     }

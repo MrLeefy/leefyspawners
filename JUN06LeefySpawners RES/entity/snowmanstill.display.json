@@ -1,0 +1,21 @@
+{
+    "format_version": "1.10.0",
+    "minecraft:client_entity": {
+        "description": {
+            "identifier": "mrleefy:snowmanstill_display",
+            "min_engine_version": "1.10.0",
+            "materials": {
+                "default": "entity"
+            },
+            "textures": {
+                "default": "textures/entity/snowmanstill"
+            },
+            "geometry": {
+                "default": "geometry.snowmanstill_display"
+            },
+            "render_controllers": [
+                "controller.render.default"
+            ]
+        }
+    }
+}

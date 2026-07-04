@@ -393,7 +393,7 @@ function calculateSpawnerTotals() {
         'mrleefy:witherstill', 'mrleefy:spiderstill', 'mrleefy:slimestill',
         'mrleefy:vindicatorstill', 'mrleefy:skeletonstill', 'mrleefy:shulkerstill',
         'mrleefy:breezestill', 'mrleefy:piglinbrutestill', 'mrleefy:wardenstill',
-        'mrleefy:ravagerstill',
+        'mrleefy:ravagerstill', 'mrleefy:snowmanstill',
         // Crawlers
         'mrleefy:coalcrawlerstill', 'mrleefy:glowstonecrawlerstill', 'mrleefy:obsidiancrawlerstill',
         'mrleefy:icecrawlerstill', 'mrleefy:spongecrawlerstill', 'mrleefy:lapiscrawlerstill',
@@ -685,6 +685,7 @@ export const validMobs = [
     { typeId: 'mrleefy:piglinbrutestill', displayName: 'PiglinBrute' },
     { typeId: 'mrleefy:wardenstill', displayName: 'Warden' },
     { typeId: 'mrleefy:ravagerstill', displayName: 'Ravager' },
+    { typeId: 'mrleefy:snowmanstill', displayName: 'Snow Golem' },
     // --- Crawlers ---
     { typeId: 'mrleefy:coalcrawlerstill', displayName: 'Coal Crawler' },
     { typeId: 'mrleefy:glowstonecrawlerstill', displayName: 'Glowstone Crawler' },

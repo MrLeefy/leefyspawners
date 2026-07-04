@@ -70,7 +70,8 @@ const SPAWNER_TO_ENTITY_MAP: Record<string, string> = {
     "mrleefy:witherskeletonspawner_display": "mrleefy:witherskeletonstill_display",
     "mrleefy:zombiespawner_display": "mrleefy:zombiestill_display",
     "mrleefy:villagerspawner_display": "mrleefy:villagerstill_display",
-    "mrleefy:enderdragonspawner_display": "mrleefy:enderdragonstill_display"
+    "mrleefy:enderdragonspawner_display": "mrleefy:enderdragonstill_display",
+    "mrleefy:snowmanspawner_display": "mrleefy:snowmanstill_display"
 };
 
 // Default prices for each spawner type
@@ -102,7 +103,8 @@ const DEFAULT_PRICES: Record<string, number> = {
     "mrleefy:witherskeletonspawner_display": 10000,
     "mrleefy:zombiespawner_display": 6000,
     "mrleefy:villagerspawner_display": 12000,
-    "mrleefy:enderdragonspawner_display": 250000
+    "mrleefy:enderdragonspawner_display": 250000,
+    "mrleefy:snowmanspawner_display": 6000
 };
 
 // Get friendly name from block ID

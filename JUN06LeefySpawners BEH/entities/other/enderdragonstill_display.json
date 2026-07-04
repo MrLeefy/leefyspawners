@@ -17,8 +17,8 @@
                 "allow_name_tag_renaming": false
             },
             "minecraft:health": {
-                "value": 20,
-                "max": 20
+                "value": 25,
+                "max": 25
             },
             "minecraft:collision_box": {
                 "width": 0.0,

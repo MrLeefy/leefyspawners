@@ -1,0 +1,88 @@
+{
+    "format_version": "1.8.0",
+    "animations": {
+        "animation.enderdragonstill.idle": {
+            "loop": true,
+            "animation_length": 4.0,
+            "bones": {
+                "root": {
+                    "rotation": [ 0, 0, 0 ],
+                    "position": [ 0, 0, 0 ]
+                },
+                "jaw": {
+                    "rotation": [ 25, 0, 0 ]
+                },
+                "neck": {
+                    "rotation": [ -15, 0, 0 ]
+                },
+                "head": {
+                    "rotation": [ 10, 0, 0 ]
+                },
+                "wing": {
+                    "rotation": {
+                        "0.0":  [ 0, 0, -40 ],
+                        "2.0":  [ 0, 0, -28 ],
+                        "4.0":  [ 0, 0, -40 ]
+                    }
+                },
+                "wingtip": {
+                    "rotation": {
+                        "0.0":  [ 0, 0, -25 ],
+                        "2.0":  [ 0, 0, -10 ],
+                        "4.0":  [ 0, 0, -25 ]
+                    }
+                },
+                "wing1": {
+                    "rotation": {
+                        "0.0":  [ 0, 0, 40 ],
+                        "2.0":  [ 0, 0, 28 ],
+                        "4.0":  [ 0, 0, 40 ]
+                    }
+                },
+                "wingtip1": {
+                    "rotation": {
+                        "0.0":  [ 0, 0, 25 ],
+                        "2.0":  [ 0, 0, 10 ],
+                        "4.0":  [ 0, 0, 25 ]
+                    }
+                },
+                "rearleg": {
+                    "rotation": [ 15, 0, -15 ]
+                },
+                "rearleg1": {
+                    "rotation": [ 15, 0, 15 ]
+                },
+                "frontleg": {
+                    "rotation": [ 20, 0, -10 ]
+                },
+                "frontleg1": {
+                    "rotation": [ 20, 0, 10 ]
+                },
+                "rearlegtip": {
+                    "rotation": [ 40, 0, 0 ]
+                },
+                "rearlegtip1": {
+                    "rotation": [ 40, 0, 0 ]
+                },
+                "frontlegtip": {
+                    "rotation": [ 40, 0, 0 ]
+                },
+                "frontlegtip1": {
+                    "rotation": [ 40, 0, 0 ]
+                },
+                "rearfoot": {
+                    "rotation": [ -30, 0, 0 ]
+                },
+                "rearfoot1": {
+                    "rotation": [ -30, 0, 0 ]
+                },
+                "frontfoot": {
+                    "rotation": [ -30, 0, 0 ]
+                },
+                "frontfoot1": {
+                    "rotation": [ -30, 0, 0 ]
+                }
+            }
+        }
+    }
+}

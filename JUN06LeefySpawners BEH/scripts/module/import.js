@@ -1,1 +1,6200 @@
-var __defProp=Object['defineProperty'];var __defNormalProp=(_0x10d255,_0x17ec02,_0x229d39)=>_0x17ec02 in _0x10d255?__defProp(_0x10d255,_0x17ec02,{'enumerable':!![],'configurable':!![],'writable':!![],'value':_0x229d39}):_0x10d255[_0x17ec02]=_0x229d39;var __publicField=(_0x150fb8,_0xd38095,_0x212b3f)=>{__defNormalProp(_0x150fb8,typeof _0xd38095!=='symbol'?_0xd38095+'':_0xd38095,_0x212b3f);return _0x212b3f;};import{world as _0x3f6127,system as _0x127759}from'@minecraft/server';var TIMING={'SMALLEST_INTERVAL':0x14,'COOLDOWN_MILLIS':0x7d0,'MESSAGE_DELAY':0x3e8,'FORM_COOLDOWN':0xbb8,'INTERACTION_WINDOW_MILLIS':0x78*0x3e8,'GLOBAL_COOLDOWN_MILLIS':0xa*0x3c*0x3e8,'DEATH_PROCESSED_CLEAR_INTERVAL':0x258,'DEFAULT_SPAWN_SPEED':0xf,'DEFAULT_SPAWN_QTY':0x1,'DEFAULT_MAX_STACK':0x64};var UI={'NAME_TAG_CONFIG':'§e[\x20§7x#\x20@\x20§e]','ADMIN_PERMISSION_TAG':'admin','OWNER_PERMISSION_TAG':'owner','MAX_STACK_RADIUS':0x64,'MIN_STACK_RADIUS':0x1,'DEFAULT_STACK_RADIUS':0x32,'MAX_SPAWNER_LEVEL':0x20,'MIN_SPAWNER_LEVEL':0x1,'UPGRADE_COST_BASE':0x2710,'UPGRADE_COST_MULTIPLIER':0x64,'REFUND_PERCENTAGE':0x4d};var DATABASE={'MAX_CHANGES_BEFORE_CLEANUP':0x3e8,'BATCH_SIZE':0xa,'MAX_DATA_LENGTH':0x7530,'SPLIT_DELIMITER':'\x0a_`Split`_\x0a','DEFAULT_SAVE_INTERVAL':0x5};var ENTITIES={'SPAWNRULE_ENTITY_TYPE':'mrleefy:spawnrule','PLAYER_TYPE_ID':'minecraft:player','ITEM_TYPE':'minecraft:item','XP_ORB_TYPE':'minecraft:xp_orb','MAX_ITEM_SPILL_CAP':0x5,'MAX_XP_SPILL_CAP':0x3,'DEFAULT_ITEM_SPILL_CAP':0x5,'DEFAULT_XP_SPILL_CAP':0x3};var VALIDATION={'MIN_RADIUS':0x1,'MAX_RADIUS':0x64,'MIN_LEVEL':0x1,'MAX_LEVEL':0x20,'MIN_SPEED':0x1,'MAX_SPEED':0x3c,'MIN_QTY':0x0,'MAX_QTY':0x64,'MIN_STACK':0x1,'MAX_STACK':0x1388};var ERROR_MESSAGES={'INVALID_PLAYER':'Invalid\x20player\x20provided','INVALID_BLOCK':'Invalid\x20spawner\x20block\x20detected','INVALID_LEVEL':'Invalid\x20spawner\x20level\x20detected','INVALID_COORDINATES':'Invalid\x20spawner\x20location\x20detected','INVALID_SPAWNER_TYPE':'Invalid\x20spawner\x20type\x20detected','NO_PERMISSION':'You\x20don\x27t\x20have\x20permission\x20to\x20use\x20this\x20feature','NO_SPAWNERS_INVENTORY':'You\x20don\x27t\x20have\x20enough\x20spawners\x20in\x20your\x20inventory\x20to\x20upgrade','MAX_LEVEL_REACHED':'Cannot\x20upgrade\x20further.\x20Maximum\x20level\x20reached','INVALID_INPUT':'Invalid\x20input\x20provided','CONFIG_UPDATE_ERROR':'An\x20error\x20occurred\x20while\x20updating\x20the\x20configuration','INVALID_RADIUS':'Invalid\x20input.\x20Radius\x20must\x20be\x20a\x20positive\x20number\x20between\x201\x20and\x20100'};var PERFORMANCE={'CACHE_DURATION':0x7530,'BATCH_PROCESS_SIZE':0xa,'MAX_MAP_SIZE':0x2710,'CLEANUP_THRESHOLD':0x3e8,'ADAPTIVE_CLEANUP_THRESHOLD':0x64,'FAST_DISTANCE_THRESHOLD':0x64};import{world,ScoreboardIdentityType,system}from'@minecraft/server';var {FakePlayer}=ScoreboardIdentityType;var databases=new Map();var split=DATABASE['SPLIT_DELIMITER'];var CHUNK_SIZE=0x96;var CHUNK_PREFIX='__chunk__';var isShutdownRegistered=![];function safeSubstring(_0x4f2189,_0xfc9233,_0xb8068f){if(_0xfc9233>=_0x4f2189['length'])return'';let _0x1e9c6a=_0xfc9233;if(_0xfc9233>0x0&&isSurrogatePairAt(_0x4f2189,_0xfc9233-0x1)){_0x1e9c6a=_0xfc9233-0x1;}let _0xf553ee=_0xb8068f;if(_0xb8068f<_0x4f2189['length']&&isSurrogatePairAt(_0x4f2189,_0xb8068f-0x1)){_0xf553ee=_0xb8068f-0x1;}return _0x4f2189['substring'](_0x1e9c6a,_0xf553ee);}function isSurrogatePairAt(_0x317cbd,_0x40d943){const _0xda2ddd=_0x317cbd['charCodeAt'](_0x40d943);return _0xda2ddd>=0xd800&&_0xda2ddd<=0xdbff;}if(!isShutdownRegistered){isShutdownRegistered=!![];}var DatabaseSavingModes={'ONE_TIME_SAVE':'OneTimeSave','END_TICK_SAVE':'EndTickSave','TICK_INTERVAL':'TickInterval'};var ChangeAction={'Change':0x0,'Remove':0x1};function run(_0x102592,_0x3b4858,_0x171ffe,_0xf5e87d){if(!_0x102592['_scoreboard_']||!_0x102592['_scoreboard_']['isValid']){console['warn']('Database\x20objective\x20\x22'+_0x102592['_nameId_']+'\x22\x20was\x20lost\x20or\x20invalid!\x20Rebuilding...');_0x102592['rebuild']();return;}if(_0x102592['_source_']['has'](_0x3b4858)){const _0x4ddce5=_0x102592['_source_']['get'](_0x3b4858);if(Array['isArray'](_0x4ddce5)){for(const _0xe8f61d of _0x4ddce5){try{_0x102592['_scoreboard_']['removeParticipant'](_0xe8f61d);}catch(_0x2d0685){}}}else if(_0x4ddce5){try{_0x102592['_scoreboard_']['removeParticipant'](_0x4ddce5);}catch(_0x3855e3){}}}if(_0xf5e87d===ChangeAction['Remove']){_0x102592['_source_']['delete'](_0x3b4858);}else{if(_0x171ffe&&_0x171ffe['isChunked']){_0x102592['_source_']['set'](_0x3b4858,_0x171ffe['parts']);for(const _0x130210 of _0x171ffe['parts']){try{_0x102592['_scoreboard_']['setScore'](_0x130210,0x0);}catch(_0x4282e3){console['error']('Failed\x20to\x20setScore\x20for\x20chunk\x20in\x20database\x20\x22'+_0x102592['id']+'\x22:',_0x4282e3);}}}else if(_0x171ffe){_0x102592['_source_']['set'](_0x3b4858,_0x171ffe['part']);try{_0x102592['_scoreboard_']['setScore'](_0x171ffe['part'],0x0);}catch(_0x581bc4){console['error']('Failed\x20to\x20setScore\x20in\x20database\x20\x22'+_0x102592['id']+'\x22:',_0x581bc4);}}}}var SavingModes={[DatabaseSavingModes['ONE_TIME_SAVE']](_0x33dfc7,_0x51a5c9,_0x4957f5,_0x5e65fe){run(_0x33dfc7,_0x51a5c9,_0x4957f5,_0x5e65fe);},[DatabaseSavingModes['END_TICK_SAVE']](_0x2e68de,_0x57b250,_0xd0e6d2,_0x3cdfc2){_0x2e68de['_changes_']['set'](_0x57b250,{'action':_0x3cdfc2,'value':_0xd0e6d2});_0x2e68de['hasChanges']=!![];if(!_0x2e68de['_saveScheduled_']){_0x2e68de['_saveScheduled_']=!![];system['run'](()=>{_0x2e68de['_saveScheduled_']=![];_0x2e68de['_executeSave']();});}},[DatabaseSavingModes['TICK_INTERVAL']](_0x51f5ac,_0x1aab6c,_0x197acf,_0x3d2ee1){_0x51f5ac['_changes_']['set'](_0x1aab6c,{'action':_0x3d2ee1,'value':_0x197acf});_0x51f5ac['hasChanges']=!![];}};var ScoreboardDatabaseManager=class extends Map{constructor(_0x224300,_0x1dd0d7=DatabaseSavingModes['END_TICK_SAVE'],_0x55350e=0x5){super();__publicField(this,'_loaded_',![]);__publicField(this,'_saveMode_');__publicField(this,'hasChanges',![]);__publicField(this,'_loadingPromise_',null);__publicField(this,'_saveScheduled_',![]);__publicField(this,'_nameId_');__publicField(this,'interval');__publicField(this,'_scoreboard_');__publicField(this,'_source_');__publicField(this,'_changes_');__publicField(this,'_maxChanges_');__publicField(this,'_lastCleanup_');__publicField(this,'_intervalId');let _0x2e5fb9;if(typeof _0x224300==='string'){_0x2e5fb9=_0x224300['startsWith']('ls_db:')?_0x224300:'ls_db:'+_0x224300;}else{_0x2e5fb9=_0x224300;}this['_saveMode_']=_0x1dd0d7;this['_nameId_']=typeof _0x2e5fb9==='string'?_0x2e5fb9:_0x2e5fb9['id'];this['interval']=_0x55350e??0x5;const _0x1dbeab=databases['get'](this['_nameId_']);if(_0x1dbeab)return _0x1dbeab;this['_source_']=new Map();this['_changes_']=new Map();this['_maxChanges_']=DATABASE['MAX_CHANGES_BEFORE_CLEANUP'];this['_lastCleanup_']=Date['now']();databases['set'](this['_nameId_'],this);if(this['_saveMode_']===DatabaseSavingModes['TICK_INTERVAL']){this['_intervalId']=system['runInterval'](()=>{if(this['hasChanges']&&!this['_saveScheduled_']){this['_saveScheduled_']=!![];system['run'](()=>{this['_saveScheduled_']=![];this['_executeSave']();});}},this['interval']);}system['run'](()=>{try{this['_scoreboard_']=typeof _0x2e5fb9==='string'?world['scoreboard']['getObjective'](_0x2e5fb9)??world['scoreboard']['addObjective'](_0x2e5fb9,_0x2e5fb9):_0x2e5fb9;this['_nameId_']=this['id'];this['load']();}catch(_0x2f6b03){console['error']('[Database]\x20Init\x20failed\x20for\x20'+this['_nameId_']+':',_0x2f6b03);}});}get['maxLength'](){return DATABASE['MAX_DATA_LENGTH'];}get['_parser_'](){return JSON;}get['savingMode'](){return this['_saveMode_'];}['_assertObjectiveValid'](){if(!this['_scoreboard_'])return;if(!this['_scoreboard_']['isValid']){console['warn']('[Database]\x20Read\x20audit\x20failed!\x20Objective\x20\x22'+this['_nameId_']+'\x22\x20was\x20lost.\x20Recovering...');this['rebuild']();}}['load'](){if(this['_loaded_'])return this;if(!this['_scoreboard_'])return this;const _0x56f612=new Map();this['_source_']=new Map();super['clear']();this['_assertObjectiveValid']();for(const _0x7e877 of this['_scoreboard_']['getParticipants']()){const {displayName:_0x1d179f,type:_0x31e30e}=_0x7e877;if(_0x31e30e!==FakePlayer)continue;if(_0x1d179f['startsWith'](CHUNK_PREFIX+split)){const _0x1307ba=_0x1d179f['split'](split);if(_0x1307ba['length']>=0x5){const [,_0xd7603,_0x109c96,_0x57d800,..._0x499f95]=_0x1307ba;const _0xa9f8ce=parseInt(_0x109c96,0xa);const _0xf6148=parseInt(_0x57d800,0xa);const _0x3fb80a=_0x499f95['join'](split);if(isNaN(_0xa9f8ce)||isNaN(_0xf6148))continue;if(!_0x56f612['has'](_0xd7603))_0x56f612['set'](_0xd7603,[]);_0x56f612['get'](_0xd7603)['push']({'index':_0xa9f8ce,'total':_0xf6148,'data':_0x3fb80a,'rawName':_0x1d179f});}}else{const _0x5ed119=_0x1d179f['split'](split);if(_0x5ed119['length']>=0x2){const _0x4d4aff=_0x5ed119[0x0];const _0x48f496=_0x5ed119['slice'](0x1)['join'](split);this['_source_']['set'](_0x4d4aff,_0x1d179f);try{super['set'](_0x4d4aff,this['_parser_']['parse'](_0x48f496));}catch(_0x4741ae){console['error']('Error\x20parsing\x20data\x20for\x20key\x20\x22'+_0x4d4aff+'\x22:',_0x4741ae);}}}}for(const [_0x442c38,_0x57f8a7]of _0x56f612['entries']()){const _0x33eb62=new Map();for(const _0x37da3f of _0x57f8a7){_0x33eb62['set'](_0x37da3f['index'],_0x37da3f);}const _0x1f5dad=Array['from'](_0x33eb62['values']())['sort']((_0x4c1ff3,_0x32926d)=>_0x4c1ff3['index']-_0x32926d['index']);this['_source_']['set'](_0x442c38,_0x1f5dad['map'](_0x5d05f5=>_0x5d05f5['rawName']));if(_0x1f5dad['length']>0x0&&_0x1f5dad['length']===_0x1f5dad[0x0]['total']){const _0x237622=_0x1f5dad['map'](_0x39c0ec=>_0x39c0ec['data'])['join']('');try{super['set'](_0x442c38,this['_parser_']['parse'](_0x237622));}catch(_0xc0535d){console['error']('Error\x20parsing\x20chunked\x20data\x20for\x20key\x20\x22'+_0x442c38+'\x22:',_0xc0535d);}}else{console['error']('Incomplete\x20chunked\x20data\x20for\x20key\x20\x22'+_0x442c38+'\x22:\x20expected\x20'+_0x1f5dad[0x0]?.['total']+'\x20chunks,\x20got\x20'+_0x1f5dad['length']);}}this['_loaded_']=!![];return this;}['loadAsync'](){if(this['_loaded_'])return this['_loadingPromise_']??Promise['resolve'](this);const _0x2272ee=((async()=>{return this['load']();})());this['_loadingPromise_']=_0x2272ee;return _0x2272ee;}['set'](_0x43f504,_0x226bf3){if(!this['_loaded_'])throw new ReferenceError('Database\x20is\x20not\x20loaded');this['_assertObjectiveValid']();const _0x17d925=this['_parser_']['stringify'](_0x226bf3);const _0x6cc935=''+_0x43f504+split+_0x17d925;let _0x242305;if(_0x6cc935['length']<=0xf0){_0x242305={'isChunked':![],'part':_0x6cc935};}else{const _0x27c294=Math['ceil'](_0x17d925['length']/CHUNK_SIZE);if(_0x17d925['length']>this['maxLength']){throw new RangeError('Value\x20is\x20too\x20large:\x20'+_0x17d925['length']+'\x20characters\x20(max:\x20'+this['maxLength']+')');}const _0xd410c7=[];for(let _0x83cbab=0x0;_0x83cbab<_0x27c294;_0x83cbab++){const _0x56d6ca=safeSubstring(_0x17d925,_0x83cbab*CHUNK_SIZE,(_0x83cbab+0x1)*CHUNK_SIZE);const _0x20ab66=''+CHUNK_PREFIX+split+_0x43f504+split+_0x83cbab+split+_0x27c294+split+_0x56d6ca;if(_0x20ab66['length']>0x100){throw new RangeError('Key\x20name\x20\x22'+_0x43f504+'\x22\x20is\x20too\x20long\x20for\x20the\x20chunking\x20system');}_0xd410c7['push'](_0x20ab66);}_0x242305={'isChunked':!![],'parts':_0xd410c7};}super['set'](_0x43f504,_0x226bf3);this['_onChange_'](_0x43f504,_0x242305,ChangeAction['Change']);return this;}['delete'](_0x311515){if(!this['_loaded_'])throw new ReferenceError('Database\x20is\x20not\x20loaded');this['_assertObjectiveValid']();const _0x1e00c=null;super['delete'](_0x311515);this['_onChange_'](_0x311515,_0x1e00c,ChangeAction['Remove']);return!![];}['clear'](){if(!this['_loaded_'])throw new ReferenceError('Database\x20is\x20not\x20loaded');for(const _0x1daab2 of this['keys']()){this['delete'](_0x1daab2);}}['forEach'](_0x514060){if(!this['_loaded_'])throw new ReferenceError('Database\x20is\x20not\x20loaded');this['_assertObjectiveValid']();for(const [_0x46bf3b,_0x239187]of this['entries']()){_0x514060(_0x239187,_0x46bf3b,this);}}['keys'](){if(!this['_loaded_'])throw new ReferenceError('Database\x20is\x20not\x20loaded');this['_assertObjectiveValid']();return super['keys']();}['values'](){if(!this['_loaded_'])throw new ReferenceError('Database\x20is\x20not\x20loaded');this['_assertObjectiveValid']();return super['values']();}get['length'](){this['_assertObjectiveValid']();return super['size'];}['_onChange_'](_0x8d1bab,_0x1ca4fb,_0x1034d5){if(!this['_loaded_'])throw new ReferenceError('Database\x20is\x20not\x20loaded');if(this['_changes_']['size']>this['_maxChanges_']){this['_cleanupChanges']();}SavingModes[this['_saveMode_']](this,_0x8d1bab,_0x1ca4fb,_0x1034d5);}['_cleanupChanges'](){try{this['_executeSave']();this['_lastCleanup_']=Date['now']();}catch(_0x5642f5){console['error']('Error\x20during\x20change\x20cleanup:\x20'+_0x5642f5);}}['_executeSave'](){if(this['_changes_']['size']===0x0)return;const _0x259146=new Map(this['_changes_']);this['_changes_']['clear']();this['hasChanges']=![];for(const [_0x573c22,{action:_0x475b55,value:_0x1c27ba}]of _0x259146['entries']()){try{run(this,_0x573c22,_0x1c27ba,_0x475b55);}catch(_0x52fee3){console['error']('Error\x20saving\x20key\x20\x22'+_0x573c22+'\x22\x20in\x20database\x20\x22'+this['id']+'\x22:',_0x52fee3);}}}['_clearInMemory'](){super['clear']();this['_source_']['clear']();this['hasChanges']=![];}get['objective'](){return this['_scoreboard_'];}get['id'](){return this['_scoreboard_']['id'];}get['loaded'](){return this['_loaded_'];}get['type'](){return'DefaultJsonType';}get['loadingAwaiter'](){return this['_loadingPromise_']??this['loadAsync']();}['cleanup'](){if(this['_loaded_']){this['_cleanupChanges']();}return this;}['getStats'](){return{'size':this['length'],'pendingChanges':this['_changes_']['size'],'loaded':this['_loaded_'],'saveMode':this['_saveMode_'],'lastCleanup':this['_lastCleanup_'],'id':this['id']};}['rebuild'](){if(this['objective']?.['isValid'])return this;try{const _0x563fda=Array['from'](super['entries']());const _0x348a74=new Map(this['_changes_']);this['_clearInMemory']();try{const _0x28564a=world['scoreboard']['getObjective'](this['_nameId_']);if(_0x28564a){world['scoreboard']['removeObjective'](this['_nameId_']);}}catch(_0x38e294){}const _0x43112a=world['scoreboard']['addObjective'](this['_nameId_'],this['_nameId_']);this['_scoreboard_']=_0x43112a;for(const [_0x324cb6,_0x55f76e]of _0x563fda){try{const _0x1716fa=this['_parser_']['stringify'](_0x55f76e);const _0x19d950=''+_0x324cb6+split+_0x1716fa;if(_0x19d950['length']<=0xf0){_0x43112a['setScore'](_0x19d950,0x0);this['_source_']['set'](_0x324cb6,_0x19d950);}else{const _0x1b8a0c=Math['ceil'](_0x1716fa['length']/CHUNK_SIZE);const _0x9b3e36=[];for(let _0x3c9bbc=0x0;_0x3c9bbc<_0x1b8a0c;_0x3c9bbc++){const _0x87edb7=safeSubstring(_0x1716fa,_0x3c9bbc*CHUNK_SIZE,(_0x3c9bbc+0x1)*CHUNK_SIZE);const _0xb6dd6f=''+CHUNK_PREFIX+split+_0x324cb6+split+_0x3c9bbc+split+_0x1b8a0c+split+_0x87edb7;_0x9b3e36['push'](_0xb6dd6f);_0x43112a['setScore'](_0xb6dd6f,0x0);}this['_source_']['set'](_0x324cb6,_0x9b3e36);}super['set'](_0x324cb6,_0x55f76e);}catch(_0x1de81b){console['error']('Error\x20rebuilding\x20entry\x20\x22'+_0x324cb6+'\x22\x20in\x20database\x20\x22'+this['_nameId_']+'\x22:',_0x1de81b);}}this['_changes_']=_0x348a74;if(this['_changes_']['size']>0x0)this['hasChanges']=!![];}catch(_0x158e8d){console['error']('Critical\x20error\x20during\x20database\x20rebuild:\x20'+_0x158e8d);}return this;}async['rebuildAsync'](){return this['rebuild']();}};var JsonDatabase=class extends ScoreboardDatabaseManager{get['type'](){return'JsonType';}};var Database=class{constructor(_0x420189){__publicField(this,'Database');try{this['Database']=new JsonDatabase(_0x420189)['load']();if(!this['Database']){throw new Error('Failed\x20to\x20create\x20database:\x20'+_0x420189);}}catch(_0x1d2272){console['error']('Database\x20constructor\x20error\x20for\x20'+_0x420189+':',_0x1d2272);try{const _0x2ed7e9=databases['get'](_0x420189);if(_0x2ed7e9){_0x2ed7e9['cleanup']();if(_0x2ed7e9['_intervalId']){system['clearRun'](_0x2ed7e9['_intervalId']);}databases['delete'](_0x420189);}}catch(_0x4e138d){console['error']('Error\x20cleaning\x20up\x20failed\x20database\x20instance:',_0x4e138d);}this['Database']=new Map();}}get['length'](){try{return this['Database']['size']||this['Database']['length']||0x0;}catch(_0x544df7){return 0x0;}}['read'](_0x549e6d){try{return this['Database']['get']?this['Database']['get'](_0x549e6d):void 0x0;}catch(_0x35394a){return void 0x0;}}['write'](_0x33553e,_0xedae40){try{if(this['Database']['set']){return this['Database']['set'](_0x33553e,_0xedae40);}else{throw new Error('Database\x20does\x20not\x20support\x20set\x20operation');}}catch(_0x1dc6f1){return void 0x0;}}['has'](_0x4e6603){try{return this['Database']['has']?this['Database']['has'](_0x4e6603):![];}catch(_0x35bcdc){return![];}}['delete'](_0x4610eb){return this['Database']['delete'](_0x4610eb);}['clear'](){this['Database']['clear']();}['keys'](){try{return this['Database']['keys']?Array['from'](this['Database']['keys']()):[];}catch(_0xffd052){return[];}}['values'](){try{return this['Database']['values']?Array['from'](this['Database']['values']()):[];}catch(_0xf87447){return[];}}['forEach'](_0x28ff3c){try{if(this['Database']['forEach']){this['Database']['forEach']((_0x531066,_0x38e4b7)=>_0x28ff3c(_0x531066,_0x38e4b7));}}catch(_0xf619e7){}}['getStats'](){try{return this['Database']&&typeof this['Database']['getStats']==='function'?this['Database']['getStats']():{'size':this['length']};}catch(_0x4f520d){return{'error':String(_0x4f520d)};}}};var ConfigurationService=class{constructor(){__publicField(this,'configDatabase');__publicField(this,'xpDropDatabase');__publicField(this,'spawnerDatabase');__publicField(this,'cache');__publicField(this,'cacheExpiry');__publicField(this,'CACHE_DURATION');this['configDatabase']=new Database('ConfigValues');this['xpDropDatabase']=new Database('XPDropValues');this['spawnerDatabase']=new Database('SpawnerLocations');this['cache']=new Map();this['cacheExpiry']=new Map();this['CACHE_DURATION']=PERFORMANCE['CACHE_DURATION'];}['getConfig'](_0x52ffa8,_0x1f7d48=null){const _0x265e19=Date['now']();const _0x90e3b9='config_'+_0x52ffa8;if(this['cache']['has'](_0x90e3b9)&&(this['cacheExpiry']['get'](_0x90e3b9)??0x0)>_0x265e19){return this['cache']['get'](_0x90e3b9);}let _0x49468d;switch(_0x52ffa8){case'playerKillOnly':_0x49468d=this['configDatabase']['read'](_0x52ffa8)??![];break;case'itemSpillCap':_0x49468d=this['configDatabase']['read'](_0x52ffa8)??ENTITIES['DEFAULT_ITEM_SPILL_CAP'];break;case'xpSpillCap':_0x49468d=this['configDatabase']['read'](_0x52ffa8)??ENTITIES['DEFAULT_XP_SPILL_CAP'];break;case'stackRadius':_0x49468d=this['configDatabase']['read'](_0x52ffa8)??UI['DEFAULT_STACK_RADIUS'];break;default:_0x49468d=this['configDatabase']['read'](_0x52ffa8)??_0x1f7d48;}this['cache']['set'](_0x90e3b9,_0x49468d);this['cacheExpiry']['set'](_0x90e3b9,_0x265e19+this['CACHE_DURATION']);return _0x49468d;}['setConfig'](_0x4e8848,_0x3eb0a0){if(!this['validateConfig'](_0x4e8848,_0x3eb0a0)){throw new Error('Invalid\x20configuration\x20value\x20for\x20'+_0x4e8848+':\x20'+_0x3eb0a0);}this['configDatabase']['write'](_0x4e8848,_0x3eb0a0);const _0x2773b8='config_'+_0x4e8848;this['cache']['delete'](_0x2773b8);this['cacheExpiry']['delete'](_0x2773b8);}['validateConfig'](_0x5f2357,_0x4ecf91){switch(_0x5f2357){case'stackRadius':return typeof _0x4ecf91==='number'&&_0x4ecf91>=VALIDATION['MIN_RADIUS']&&_0x4ecf91<=VALIDATION['MAX_RADIUS'];case'itemSpillCap':case'xpSpillCap':return typeof _0x4ecf91==='number'&&_0x4ecf91>=0x1&&_0x4ecf91<=0xa;case'playerKillOnly':return typeof _0x4ecf91==='boolean';default:return!![];}}['getXpDropConfig'](_0xd79bf4){const _0x3ad4fe='xp_'+_0xd79bf4;const _0x5612d1=Date['now']();if(this['cache']['has'](_0x3ad4fe)&&(this['cacheExpiry']['get'](_0x3ad4fe)??0x0)>_0x5612d1){return this['cache']['get'](_0x3ad4fe);}const _0x2bcaca=this['xpDropDatabase']['read'](_0xd79bf4);this['cache']['set'](_0x3ad4fe,_0x2bcaca);this['cacheExpiry']['set'](_0x3ad4fe,_0x5612d1+this['CACHE_DURATION']);return _0x2bcaca;}['setXpDropConfig'](_0x1d33d9,_0x48a72f){if(!_0x48a72f||typeof _0x48a72f!=='object'){throw new Error('Invalid\x20XP\x20configuration');}if(typeof _0x48a72f['amount']!=='number'||_0x48a72f['amount']<0x0){throw new Error('Invalid\x20XP\x20amount');}if(typeof _0x48a72f['chance']!=='number'||_0x48a72f['chance']<0x0||_0x48a72f['chance']>0x64){throw new Error('Invalid\x20XP\x20chance');}this['xpDropDatabase']['write'](_0x1d33d9,_0x48a72f);const _0x50abf7='xp_'+_0x1d33d9;this['cache']['delete'](_0x50abf7);this['cacheExpiry']['delete'](_0x50abf7);}['getSpawnerLocation'](_0x9a3929){const _0x4ff993='spawner_'+_0x9a3929;const _0x5a29c7=Date['now']();if(this['cache']['has'](_0x4ff993)&&(this['cacheExpiry']['get'](_0x4ff993)??0x0)>_0x5a29c7){return this['cache']['get'](_0x4ff993);}const _0x5d50c4=this['spawnerDatabase']['read'](_0x9a3929);this['cache']['set'](_0x4ff993,_0x5d50c4);this['cacheExpiry']['set'](_0x4ff993,_0x5a29c7+this['CACHE_DURATION']);return _0x5d50c4;}['setSpawnerLocation'](_0x48672c,_0x4ebbdd){this['spawnerDatabase']['write'](_0x48672c,_0x4ebbdd);const _0x4e5bc4='spawner_'+_0x48672c;this['cache']['delete'](_0x4e5bc4);this['cacheExpiry']['delete'](_0x4e5bc4);}['removeSpawnerLocation'](_0x3d292b){this['spawnerDatabase']['delete'](_0x3d292b);const _0xde1903='spawner_'+_0x3d292b;this['cache']['delete'](_0xde1903);this['cacheExpiry']['delete'](_0xde1903);}['clearCache'](){this['cache']['clear']();this['cacheExpiry']['clear']();}['getStats'](){return{'cachedConfigs':this['cache']['size'],'configDatabase':this['configDatabase']['getStats'](),'xpDatabase':this['xpDropDatabase']['getStats'](),'spawnerDatabase':this['spawnerDatabase']['getStats']()};}['getAllConfig'](){return{'playerKillOnly':this['getConfig']('playerKillOnly',![]),'itemSpillCap':this['getConfig']('itemSpillCap',ENTITIES['DEFAULT_ITEM_SPILL_CAP']),'xpSpillCap':this['getConfig']('xpSpillCap',ENTITIES['DEFAULT_XP_SPILL_CAP']),'stackRadius':this['getConfig']('stackRadius',UI['DEFAULT_STACK_RADIUS'])};}};var configService=new ConfigurationService();import{system as _0x4af5fc}from'@minecraft/server';import{system as _0x1dc4ce,world as _0x4e4c68}from'@minecraft/server';import{world as _0x543fa6,system as _0xffb04f}from'@minecraft/server';import{ActionFormData as _0x5a5ee7,ModalFormData as _0x25de0f,MessageFormData}from'@minecraft/server-ui';import{world as _0x2ae70e,ItemStack}from'@minecraft/server';var lootTableDatabase=new Database('LootTables');var configDatabase=new Database('ConfigValues');var configCache=new Map();var configCacheExpiry=new Map();var CACHE_DURATION=0x7530;var MAX_CACHE_SIZE=0x32;function getCachedConfig(_0x3296fc,_0x57650f){const _0x34bbf5=Date['now']();const _0x3b9407=_0x3296fc;if(configCache['has'](_0x3b9407)&&(configCacheExpiry['get'](_0x3b9407)??0x0)>_0x34bbf5){return configCache['get'](_0x3b9407);}const _0x49b33f=configDatabase['read'](_0x3296fc)??_0x57650f;configCache['set'](_0x3b9407,_0x49b33f);configCacheExpiry['set'](_0x3b9407,_0x34bbf5+CACHE_DURATION);if(configCache['size']>MAX_CACHE_SIZE){const _0x52253c=[];for(const [_0x15a9a2,_0x3389f0]of configCacheExpiry['entries']()){if(_0x3389f0<=_0x34bbf5){_0x52253c['push'](_0x15a9a2);}}_0x52253c['forEach'](_0x1e1c83=>{configCache['delete'](_0x1e1c83);configCacheExpiry['delete'](_0x1e1c83);});if(configCache['size']>MAX_CACHE_SIZE){const _0x4fc196=Array['from'](configCacheExpiry['entries']());_0x4fc196['sort']((_0x3da2bd,_0x37ed8a)=>_0x3da2bd[0x1]-_0x37ed8a[0x1]);const _0x4d0981=_0x4fc196['slice'](0x0,configCache['size']-MAX_CACHE_SIZE);_0x4d0981['forEach'](([_0x55b17b])=>{configCache['delete'](_0x55b17b);configCacheExpiry['delete'](_0x55b17b);});}}return _0x49b33f;}var _LootManager=class _LootManager{constructor(){__publicField(this,'defaultEntities');__publicField(this,'entities');__publicField(this,'enchantmentCategories');__publicField(this,'enchantmentIncompatibilities');if(_LootManager['instance']){return _LootManager['instance'];}this['defaultEntities']={'mrleefy:piglinbrutestill':{'minecraft:golden_axe':{'chance':8.5},'minecraft:gold_nugget':{'chance':0x64}},'mrleefy:breezestill':{'minecraft:wind_charge':{'chance':0xa},'minecraft:breeze_rod':{'chance':0x50}},'mrleefy:ravagerstill':{'minecraft:saddle':{'chance':0x50},'minecraft:wolf_armor':{'chance':0.1},'minecraft:diamond_horse_armor':{'chance':0.1},'minecraft:golden_horse_armor':{'chance':0.2},'minecraft:iron_horse_armor':{'chance':0x1}},'mrleefy:blazestill':{'minecraft:blaze_rod':{'chance':0x64,'quantity':0x1}},'mrleefy:cowstill':{'minecraft:leather':{'chance':0x64,'quantity':0x1},'minecraft:beef':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:sheepstill':{'minecraft:wool':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:mutton':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:pigstill':{'minecraft:porkchop':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:chickenstill':{'minecraft:feather':{'chance':0x32,'quantity':0x1,'stackable':!![]},'minecraft:chicken':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:emeraldgolemstill':{'minecraft:emerald':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:netheritegolemstill':{'minecraft:netherite_ingot':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:irongolemstill':{'minecraft:iron_ingot':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:poppy':{'chance':0x19,'quantity':0x1,'stackable':!![]}},'mrleefy:diamondgolemstill':{'minecraft:diamond':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:goldgolemstill':{'minecraft:gold_ingot':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:endermanstill':{'minecraft:ender_pearl':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:creeperstill':{'minecraft:gunpowder':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:magmacubestill':{'minecraft:magma_cream':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:guardianstill':{'minecraft:prismarine_shard':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:prismarine_crystals':{'chance':0x32,'quantity':0x1,'stackable':!![]}},'mrleefy:witherskeletonstill':{'minecraft:coal':{'chance':0x19,'quantity':0x1,'stackable':!![]},'minecraft:bone':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:wither_skeleton_skull':{'chance':0x1,'stackable':![]}},'mrleefy:zombiestill':{'minecraft:rotten_flesh':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:iron_ingot':{'chance':0x2,'quantity':0x1,'stackable':!![]},'minecraft:carrot':{'chance':0x2,'quantity':0x1,'stackable':!![]},'minecraft:potato':{'chance':0x2,'quantity':0x1,'stackable':!![]}},'mrleefy:villagerstill':{'minecraft:emerald':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:book':{'chance':0x2d,'quantity':0x1,'stackable':!![]},'minecraft:enchanted_book':{'chance':0x4,'stackable':![]},'minecraft:experience_bottle':{'chance':0x1e,'quantity':0x1,'stackable':!![]},'minecraft:empty_map':{'chance':0xf,'quantity':0x1,'stackable':!![]},'minecraft:compass':{'chance':0x8,'quantity':0x1,'stackable':!![]},'minecraft:clock':{'chance':0x8,'quantity':0x1,'stackable':!![]},'minecraft:bread':{'chance':0x28,'quantity':0x1,'stackable':!![]},'minecraft:cookie':{'chance':0x14,'quantity':0x1,'stackable':!![]},'minecraft:pumpkin_pie':{'chance':0xf,'quantity':0x1,'stackable':!![]},'minecraft:apple':{'chance':0x1e,'quantity':0x1,'stackable':!![]},'minecraft:golden_carrot':{'chance':0xa,'quantity':0x1,'stackable':!![]},'minecraft:iron_sword':{'chance':0x3,'stackable':![],'randomdurability':!![]},'minecraft:iron_axe':{'chance':0x3,'stackable':![],'randomdurability':!![]},'minecraft:iron_pickaxe':{'chance':0x3,'stackable':![],'randomdurability':!![]},'minecraft:iron_shovel':{'chance':0x3,'stackable':![],'randomdurability':!![]},'minecraft:diamond_sword':{'chance':0.5,'stackable':![],'randomdurability':!![]},'minecraft:diamond_axe':{'chance':0.5,'stackable':![],'randomdurability':!![]},'minecraft:diamond_pickaxe':{'chance':0.5,'stackable':![],'randomdurability':!![]},'minecraft:diamond_shovel':{'chance':0.5,'stackable':![],'randomdurability':!![]},'minecraft:shield':{'chance':0x5,'stackable':![],'randomdurability':!![]},'minecraft:bow':{'chance':0x5,'stackable':![],'randomdurability':!![]},'minecraft:crossbow':{'chance':0x5,'stackable':![],'randomdurability':!![]},'minecraft:shears':{'chance':0xa,'stackable':![],'randomdurability':!![]},'minecraft:saddle':{'chance':0x3,'stackable':![]},'minecraft:iron_helmet':{'chance':0x2,'stackable':![],'randomdurability':!![]},'minecraft:iron_chestplate':{'chance':0x2,'stackable':![],'randomdurability':!![]},'minecraft:iron_leggings':{'chance':0x2,'stackable':![],'randomdurability':!![]},'minecraft:iron_boots':{'chance':0x2,'stackable':![],'randomdurability':!![]},'minecraft:chainmail_helmet':{'chance':0x3,'stackable':![],'randomdurability':!![]},'minecraft:chainmail_chestplate':{'chance':0x3,'stackable':![],'randomdurability':!![]},'minecraft:chainmail_leggings':{'chance':0x3,'stackable':![],'randomdurability':!![]},'minecraft:chainmail_boots':{'chance':0x3,'stackable':![],'randomdurability':!![]},'minecraft:diamond_helmet':{'chance':0.3,'stackable':![],'randomdurability':!![]},'minecraft:diamond_chestplate':{'chance':0.3,'stackable':![],'randomdurability':!![]},'minecraft:diamond_leggings':{'chance':0.3,'stackable':![],'randomdurability':!![]},'minecraft:diamond_boots':{'chance':0.3,'stackable':![],'randomdurability':!![]},'minecraft:leather_helmet':{'chance':0x5,'stackable':![],'randomdurability':!![]},'minecraft:leather_chestplate':{'chance':0x5,'stackable':![],'randomdurability':!![]},'minecraft:leather_leggings':{'chance':0x5,'stackable':![],'randomdurability':!![]},'minecraft:leather_boots':{'chance':0x5,'stackable':![],'randomdurability':!![]},'minecraft:arrow':{'chance':0x19,'quantity':0x2,'stackable':!![]},'minecraft:flint':{'chance':0x14,'quantity':0x1,'stackable':!![]},'minecraft:feather':{'chance':0x14,'quantity':0x1,'stackable':!![]},'minecraft:leather':{'chance':0x19,'quantity':0x1,'stackable':!![]},'minecraft:redstone':{'chance':0xf,'quantity':0x1,'stackable':!![]},'minecraft:lapis_lazuli':{'chance':0xf,'quantity':0x1,'stackable':!![]},'minecraft:glowstone_dust':{'chance':0xc,'quantity':0x1,'stackable':!![]},'minecraft:ender_pearl':{'chance':0x5,'quantity':0x1,'stackable':!![]},'minecraft:clay_ball':{'chance':0x12,'quantity':0x1,'stackable':!![]},'minecraft:brick':{'chance':0xf,'quantity':0x1,'stackable':!![]}},'mrleefy:witherstill':{'minecraft:nether_star':{'chance':0x64,'quantity':0x1,'stackable':![]}},'mrleefy:enderdragonstill':{'minecraft:dragon_breath':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:dragon_egg':{'chance':0x1,'stackable':![]},'minecraft:experience_bottle':{'chance':0x64,'quantity':0xa,'stackable':!![]},'minecraft:enchanted_book':{'chance':0x14,'stackable':![]},'minecraft:elytra':{'chance':0x2,'stackable':![],'randomdurability':!![]}},'mrleefy:spiderstill':{'minecraft:string':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:spider_eye':{'chance':0xa,'quantity':0x1,'stackable':!![]}},'mrleefy:slimestill':{'minecraft:slime_ball':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:vindicatorstill':{'minecraft:emerald':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:wardenstill':{'minecraft:sculk_catalyst':{'chance':0x1,'quantity':0x1,'stackable':!![]},'minecraft:echo_shard':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:skeletonstill':{'minecraft:bone':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:arrow':{'chance':0x64,'quantity':0x1,'stackable':!![]},'minecraft:bow':{'chance':0x5,'stackable':![],'randomdurability':!![]}},'mrleefy:shulkerstill':{'minecraft:shulker_shell':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:coalcrawlerstill':{'minecraft:coal':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:glowstonecrawlerstill':{'minecraft:glowstone_dust':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:obsidiancrawlerstill':{'minecraft:obsidian':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:icecrawlerstill':{'minecraft:packed_ice':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:spongecrawlerstill':{'minecraft:sponge':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:lapiscrawlerstill':{'minecraft:lapis_lazuli':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:redstonecrawlerstill':{'minecraft:redstone':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:coppercrawlerstill':{'minecraft:copper_ingot':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:quartzcrawlerstill':{'minecraft:quartz':{'chance':0x64,'quantity':0x1,'stackable':!![]}},'mrleefy:amethystcrawlerstill':{'minecraft:amethyst_shard':{'chance':0x64,'quantity':0x1,'stackable':!![]}}};this['entities']={};this['enchantmentCategories']={'axe':[{'type':'sharpness','minLevel':0x1,'maxLevel':0x5},{'type':'smite','minLevel':0x1,'maxLevel':0x5},{'type':'bane_of_arthropods','minLevel':0x1,'maxLevel':0x5},{'type':'efficiency','minLevel':0x1,'maxLevel':0x5},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'fortune','minLevel':0x1,'maxLevel':0x3},{'type':'silk_touch','minLevel':0x1,'maxLevel':0x1},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'helmet':[{'type':'protection','minLevel':0x1,'maxLevel':0x4},{'type':'fire_protection','minLevel':0x1,'maxLevel':0x4},{'type':'blast_protection','minLevel':0x1,'maxLevel':0x4},{'type':'projectile_protection','minLevel':0x1,'maxLevel':0x4},{'type':'respiration','minLevel':0x1,'maxLevel':0x3},{'type':'aqua_affinity','minLevel':0x1,'maxLevel':0x1},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'chestplate':[{'type':'protection','minLevel':0x1,'maxLevel':0x4},{'type':'fire_protection','minLevel':0x1,'maxLevel':0x4},{'type':'blast_protection','minLevel':0x1,'maxLevel':0x4},{'type':'projectile_protection','minLevel':0x1,'maxLevel':0x4},{'type':'thorns','minLevel':0x1,'maxLevel':0x3},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'leggings':[{'type':'protection','minLevel':0x1,'maxLevel':0x4},{'type':'fire_protection','minLevel':0x1,'maxLevel':0x4},{'type':'blast_protection','minLevel':0x1,'maxLevel':0x4},{'type':'projectile_protection','minLevel':0x1,'maxLevel':0x4},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'thorns','minLevel':0x1,'maxLevel':0x3},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'boots':[{'type':'protection','minLevel':0x1,'maxLevel':0x4},{'type':'fire_protection','minLevel':0x1,'maxLevel':0x4},{'type':'blast_protection','minLevel':0x1,'maxLevel':0x4},{'type':'projectile_protection','minLevel':0x1,'maxLevel':0x4},{'type':'feather_falling','minLevel':0x1,'maxLevel':0x4},{'type':'depth_strider','minLevel':0x1,'maxLevel':0x3},{'type':'frost_walker','minLevel':0x1,'maxLevel':0x2},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'soul_speed','minLevel':0x1,'maxLevel':0x3},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'sword':[{'type':'sharpness','minLevel':0x1,'maxLevel':0x5},{'type':'smite','minLevel':0x1,'maxLevel':0x5},{'type':'bane_of_arthropods','minLevel':0x1,'maxLevel':0x5},{'type':'knockback','minLevel':0x1,'maxLevel':0x2},{'type':'fire_aspect','minLevel':0x1,'maxLevel':0x2},{'type':'looting','minLevel':0x1,'maxLevel':0x3},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'trident':[{'type':'impaling','minLevel':0x1,'maxLevel':0x5},{'type':'riptide','minLevel':0x1,'maxLevel':0x3},{'type':'loyalty','minLevel':0x1,'maxLevel':0x3},{'type':'channeling','minLevel':0x1,'maxLevel':0x1},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'bow':[{'type':'power','minLevel':0x1,'maxLevel':0x5},{'type':'punch','minLevel':0x1,'maxLevel':0x2},{'type':'flame','minLevel':0x1,'maxLevel':0x1},{'type':'infinity','minLevel':0x1,'maxLevel':0x1},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'crossbow':[{'type':'piercing','minLevel':0x1,'maxLevel':0x4},{'type':'quick_charge','minLevel':0x1,'maxLevel':0x3},{'type':'multishot','minLevel':0x1,'maxLevel':0x1},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'mace':[{'type':'density','minLevel':0x1,'maxLevel':0x5},{'type':'breach','minLevel':0x1,'maxLevel':0x4},{'type':'wind_burst','minLevel':0x1,'maxLevel':0x3},{'type':'unbreaking','minLevel':0x1,'maxLevel':0x3},{'type':'mending','minLevel':0x1,'maxLevel':0x1},{'type':'fire_aspect','minLevel':0x1,'maxLevel':0x2},{'type':'sharpness','minLevel':0x1,'maxLevel':0x5},{'type':'smite','minLevel':0x1,'maxLevel':0x5},{'type':'bane_of_arthropods','minLevel':0x1,'maxLevel':0x5},{'type':'vanishing','minLevel':0x1,'maxLevel':0x1}],'book':[]};this['enchantmentIncompatibilities']={'protection':['fire_protection','blast_protection','projectile_protection'],'fire_protection':['protection','blast_protection','projectile_protection'],'blast_protection':['protection','fire_protection','projectile_protection'],'projectile_protection':['protection','fire_protection','blast_protection'],'sharpness':['smite','bane_of_arthropods'],'smite':['sharpness','bane_of_arthropods'],'bane_of_arthropods':['sharpness','smite'],'fortune':['silk_touch'],'silk_touch':['fortune'],'infinity':['mending'],'mending':['infinity'],'loyalty':['riptide'],'riptide':['loyalty','channeling'],'channeling':['riptide']};_LootManager['instance']=this;this['initialize']();}['initialize'](){for(const _0x6939b9 in this['defaultEntities']){const _0x33bc3b=lootTableDatabase['read'](_0x6939b9);this['entities'][_0x6939b9]=_0x33bc3b||this['defaultEntities'][_0x6939b9];}}['saveLootTable'](_0x5e995e){if(this['entities'][_0x5e995e]&&Object['keys'](this['entities'][_0x5e995e])['length']>0x0){lootTableDatabase['write'](_0x5e995e,this['entities'][_0x5e995e]);}else{lootTableDatabase['delete'](_0x5e995e);delete this['entities'][_0x5e995e];}}['getLootLevel'](_0xa04fef){try{const _0x577ba2=_0xa04fef['getComponent']('equippable');const _0x2dd4c5=_0x577ba2?.['getEquipment']('Mainhand');if(!_0x2dd4c5)return 0x0;const _0x51c2a4=_0x2dd4c5['getComponent']('enchantable')?.['getEnchantments']()||[];const _0x50485f=_0x51c2a4?.['find'](_0x28286f=>_0x28286f['type']['id']==='looting');return _0x50485f?_0x50485f['level']:0x0;}catch(_0xda5a64){return 0x0;}}['calcLoot'](_0x3802d8,_0x1a9176){const _0x19704b={};const _0x1bb4b5=Object['entries'](_0x3802d8);if(_0x1bb4b5['length']===0x0)return _0x19704b;for(const [_0x310bb4,_0x327fca]of _0x1bb4b5){const _0x1f77ba=_0x327fca['chance']??0x64;const _0x2f24c7=_0x1f77ba*(0x1+_0x1a9176*0.1);if(Math['random']()*0x64<_0x2f24c7){let _0x527068=_0x327fca['quantity']??0x1;if(_0x1a9176>0x0&&_0x327fca['stackable']){const _0x271937=0.25*_0x1a9176;const _0x2af3a3=Math['floor'](_0x271937+Math['random']()*0.5);_0x527068+=Math['min'](_0x2af3a3,_0x1a9176);}_0x19704b[_0x310bb4]={..._0x327fca,'quantity':_0x527068};}}return _0x19704b;}['onEntityDeath'](_0x4670a0){const {deadEntity:_0x137fd3,damageSource:_0x1905c6}=_0x4670a0;if(!_0x137fd3?.['isValid'])return;const _0x5b9f9b=_0x137fd3['typeId'];const _0x4ba849=this['entities'][_0x5b9f9b];if(!_0x4ba849)return;const _0x296457=getCachedConfig('playerKillOnly',![]);const _0x20dc80=_0x1905c6?.['damagingEntity'];if(_0x296457&&(!_0x20dc80||_0x20dc80['typeId']!=='minecraft:player')){return;}const _0x378a57=_0x137fd3['location'];const _0x49a650=_0x137fd3['dimension'];const _0x293d52=getCachedConfig('itemSpillCap',0x5);const _0x86cd61=_0x49a650['getEntities']({'type':'minecraft:item','location':_0x378a57,'maxDistance':0x3,'closest':_0x293d52});if(_0x86cd61['length']>=_0x293d52){return;}const _0x23fd39=_0x20dc80?.['typeId']==='minecraft:player'?this['getLootLevel'](_0x20dc80):0x0;const _0x2d93e1=this['calcLoot'](_0x4ba849,_0x23fd39);this['processLootDrops'](_0x2d93e1,_0x49a650,_0x378a57);}['processLootDrops'](_0x5ec194,_0x65e1cb,_0x2a73d1){const _0x3c73ec=Object['entries'](_0x5ec194);if(_0x3c73ec['length']===0x0)return;const _0x1099d4=[];const _0x1441df=[];const _0x6e4aee=[];for(const [_0xd69778,_0x318c9c]of _0x3c73ec){if(_0xd69778==='minecraft:xp_orb'){_0x1099d4['push'](_0x318c9c);}else if(_0x318c9c['stackable']){_0x1441df['push']({'itemId':_0xd69778,'config':_0x318c9c});}else{_0x6e4aee['push']({'itemId':_0xd69778,'config':_0x318c9c});}}for(const _0x5d76b3 of _0x1099d4){try{_0x65e1cb['spawnEntity'](ENTITIES['XP_ORB_TYPE'],_0x2a73d1,{'amount':_0x5d76b3['quantity']});}catch(_0x4f4618){console['warn']('[LootManager]\x20Error\x20spawning\x20XP\x20orb:\x20'+_0x4f4618);}}for(const {itemId:_0x2d88e0,config:_0x381677}of _0x1441df){try{const _0x5c7d36=this['createItemStack'](_0x2d88e0,_0x381677);_0x65e1cb['spawnItem'](_0x5c7d36,_0x2a73d1);}catch(_0xbb9462){console['warn']('[LootManager]\x20Error\x20spawning\x20loot\x20item\x20'+_0x2d88e0+':\x20'+_0xbb9462);}}for(const {itemId:_0x31e29b,config:_0x48f188}of _0x6e4aee){for(let _0x2fce01=0x0;_0x2fce01<_0x48f188['quantity'];_0x2fce01++){try{const _0x45a56f=this['createItemStack'](_0x31e29b,{..._0x48f188,'quantity':0x1});_0x65e1cb['spawnItem'](_0x45a56f,_0x2a73d1);}catch(_0x3cdefd){console['warn']('[LootManager]\x20Error\x20spawning\x20loot\x20item\x20'+_0x31e29b+':\x20'+_0x3cdefd);break;}}}}['createItemStack'](_0x5547f1,_0x41f1b4){const _0x3da959=new ItemStack(_0x5547f1,_0x41f1b4['quantity']);if(_0x41f1b4['enchantments']){const _0x2f4026=_0x3da959['getComponent']('enchantable');if(_0x2f4026){try{_0x2f4026['addEnchantment']({'type':{'id':_0x41f1b4['enchantments']['category']},'level':0x1});}catch(_0x5384f5){console['warn']('[LootManager]\x20Failed\x20to\x20apply\x20enchantment\x20to\x20'+_0x5547f1+':\x20'+_0x5384f5);}}}else if(_0x5547f1==='minecraft:enchanted_book'){const _0x4f0192=_0x3da959['getComponent']('enchantable');if(_0x4f0192){try{const _0x1afa44=Object['keys'](this['enchantmentCategories']);const _0x41730d=_0x1afa44[Math['floor'](Math['random']()*_0x1afa44['length'])];const _0x5defe5=this['enchantmentCategories'][_0x41730d];if(_0x5defe5&&_0x5defe5['length']>0x0){const _0x3d6c38=_0x5defe5[Math['floor'](Math['random']()*_0x5defe5['length'])];const _0xf105e9=Math['floor'](Math['random']()*(_0x3d6c38['maxLevel']-_0x3d6c38['minLevel']+0x1))+_0x3d6c38['minLevel'];_0x4f0192['addEnchantment']({'type':{'id':_0x3d6c38['type']},'level':_0xf105e9});}}catch(_0x3eeab9){console['warn']('[LootManager]\x20Failed\x20to\x20apply\x20random\x20enchantment\x20to\x20enchanted_book:\x20'+_0x3eeab9);}}}if(_0x41f1b4['randomdurability']){const _0x3392c7=_0x3da959['getComponent']('durability');if(_0x3392c7){_0x3392c7['damage']=Math['floor'](Math['random']()*_0x3392c7['maxDurability']);}}return _0x3da959;}};__publicField(_LootManager,'instance');var LootManager=_LootManager;var lootManagerInstance=new LootManager();_0x2ae70e['afterEvents']['entityDie']['subscribe'](_0x12932e=>{lootManagerInstance['onEntityDeath'](_0x12932e);});import{world as _0x2b9cee,system as _0x32490c,MolangVariableMap}from'@minecraft/server';import{ActionFormData,ModalFormData}from'@minecraft/server-ui';var Vector32=class _Vector3{constructor(_0x5530a8,_0x4c0980,_0x3242cb){__publicField(this,'x',0x0);__publicField(this,'y',0x0);__publicField(this,'z',0x0);this['x']=_0x5530a8;this['y']=_0x4c0980;this['z']=_0x3242cb;}static['Add'](_0x4a71bb,_0x81fd65){return new _Vector3(_0x4a71bb['x']+_0x81fd65['x'],_0x4a71bb['y']+_0x81fd65['y'],_0x4a71bb['z']+_0x81fd65['z']);}static['Subtract'](_0x41a881,_0x3819f0){return new _Vector3(_0x41a881['x']-_0x3819f0['x'],_0x41a881['y']-_0x3819f0['y'],_0x41a881['z']-_0x3819f0['z']);}static['Divide'](_0x55ee39,_0x3584c5){return new _Vector3(_0x55ee39['x']/_0x3584c5['x'],_0x55ee39['y']/_0x3584c5['y'],_0x55ee39['z']/_0x3584c5['z']);}static['Scale'](_0x35903b,_0x33ba18){return new _Vector3(_0x35903b['x']*_0x33ba18,_0x35903b['y']*_0x33ba18,_0x35903b['z']*_0x33ba18);}static['Multiply'](_0xadce46,_0x214e75){return new _Vector3(_0xadce46['x']*_0x214e75['x'],_0xadce46['y']*_0x214e75['y'],_0xadce46['z']*_0x214e75['z']);}static['Equals'](_0x5a1e65,_0x2fe656,_0x240b4b){if(_0x240b4b===void 0x0){return _0x5a1e65['x']===_0x2fe656['x']&&_0x5a1e65['y']===_0x2fe656['y']&&_0x5a1e65['z']===_0x2fe656['z'];}else{return Math['abs'](_0x5a1e65['x']-_0x2fe656['x'])<=_0x240b4b&&Math['abs'](_0x5a1e65['y']-_0x2fe656['y'])<=_0x240b4b&&Math['abs'](_0x5a1e65['z']-_0x2fe656['z'])<=_0x240b4b;}}static['Zero'](){return new _Vector3(0x0,0x0,0x0);}static['Up'](){return new _Vector3(0x0,0x1,0x0);}static['Down'](){return new _Vector3(0x0,-0x1,0x0);}static['Forward'](){return new _Vector3(0x0,0x0,0x1);}static['Back'](){return new _Vector3(0x0,0x0,-0x1);}static['Left'](){return new _Vector3(-0x1,0x0,0x0);}static['Right'](){return new _Vector3(0x1,0x0,0x0);}static['Distance'](_0x57463d,_0x18648d){const _0x1a8b73=_0x18648d['x']-_0x57463d['x'];const _0xffc759=_0x18648d['y']-_0x57463d['y'];const _0x96c360=_0x18648d['z']-_0x57463d['z'];return Math['sqrt'](_0x1a8b73*_0x1a8b73+_0xffc759*_0xffc759+_0x96c360*_0x96c360);}static['Lerp'](_0x112605,_0x317375,_0x237a87){const _0x15b6f0=_0x112605['x']+(_0x317375['x']-_0x112605['x'])*_0x237a87;const _0x85f1f4=_0x112605['y']+(_0x317375['y']-_0x112605['y'])*_0x237a87;const _0x3dfc2f=_0x112605['z']+(_0x317375['z']-_0x112605['z'])*_0x237a87;return new _Vector3(_0x15b6f0,_0x85f1f4,_0x3dfc2f);}static['Dot'](_0x6a7a04,_0x3f21c2){return _0x6a7a04['x']*_0x3f21c2['x']+_0x6a7a04['y']*_0x3f21c2['y']+_0x6a7a04['z']*_0x3f21c2['z'];}static['Cross'](_0x5a6cc1,_0x30a56f){const _0x4eb679=_0x5a6cc1['y']*_0x30a56f['z']-_0x5a6cc1['z']*_0x30a56f['y'];const _0x497741=_0x5a6cc1['z']*_0x30a56f['x']-_0x5a6cc1['x']*_0x30a56f['z'];const _0x59168e=_0x5a6cc1['x']*_0x30a56f['y']-_0x5a6cc1['y']*_0x30a56f['x'];return new _Vector3(_0x4eb679,_0x497741,_0x59168e);}static['Magnitude'](_0x3d6f13){return Math['sqrt'](_0x3d6f13['x']*_0x3d6f13['x']+_0x3d6f13['y']*_0x3d6f13['y']+_0x3d6f13['z']*_0x3d6f13['z']);}static['SqrMagnitude'](_0x39d020){return _0x39d020['x']*_0x39d020['x']+_0x39d020['y']*_0x39d020['y']+_0x39d020['z']*_0x39d020['z'];}static['SqrDistance'](_0x117c33,_0x4a408f){const _0x17e7d0=_0x4a408f['x']-_0x117c33['x'];const _0x43b850=_0x4a408f['y']-_0x117c33['y'];const _0x135d49=_0x4a408f['z']-_0x117c33['z'];return _0x17e7d0*_0x17e7d0+_0x43b850*_0x43b850+_0x135d49*_0x135d49;}static['Normalize'](_0x3cc32c){const _0x94a932=_Vector3['Magnitude'](_0x3cc32c);if(_0x94a932!==0x0){return new _Vector3(_0x3cc32c['x']/_0x94a932,_0x3cc32c['y']/_0x94a932,_0x3cc32c['z']/_0x94a932);}else{return new _Vector3(0x0,0x0,0x0);}}};var cooldowns=new Map();var spawnerDatabase=new Database('SpawnerLocations');var activeForms=new Map();var PLAYER_MEMORY_LIMITS={'ACTIVE_FORMS':0x64,'MESSAGE_TIMES':0x1f4,'INTERACTION_TIMESTAMPS':0xc8,'COOLDOWNS':0x3e8};var PLAYER_CLEANUP_INTERVAL=0x96*0x14;var cooldownTime=TIMING['FORM_COOLDOWN'];var messageTimes=new Map();var messageDelay=TIMING['MESSAGE_DELAY'];_0x2b9cee['beforeEvents']['playerBreakBlock']['subscribe'](_0x402e1f=>{const {player:_0x3fa2c9,block:_0x299ba4}=_0x402e1f;const _0x473553=_0x299ba4['x']+','+_0x299ba4['y']+','+_0x299ba4['z'];if(!spawnerDatabase['has'](_0x473553)&&!activeForms['has'](_0x473553)){return;}if(activeForms['has'](_0x473553)){const _0x31562b=activeForms['get'](_0x473553);const _0x8e85ca=_0x31562b['timestamp']||Date['now']();if(Date['now']()-_0x8e85ca>0x5*0x3c*0x3e8){activeForms['delete'](_0x473553);}else{_0x402e1f['cancel']=!![];_0x3fa2c9['sendMessage']('§cThis\x20block\x20cannot\x20be\x20broken\x20while\x20it\x20is\x20being\x20used.');return;}}if(spawnerDatabase['has'](_0x473553)){spawnerDatabase['delete'](_0x473553);if(!_0x299ba4['typeId']['endsWith']('_display')){_0x32490c['run'](()=>removeSpawnruleAtLocation(_0x299ba4['x'],_0x299ba4['y'],_0x299ba4['z'],_0x299ba4['dimension']));}}else{const _0x1a495d=0x1;const _0x3e7358=_0x299ba4['dimension'];for(let _0x4ebd83=-_0x1a495d;_0x4ebd83<=_0x1a495d;_0x4ebd83++){for(let _0x4d0df4=-_0x1a495d;_0x4d0df4<=_0x1a495d;_0x4d0df4++){for(let _0x36dea3=-_0x1a495d;_0x36dea3<=_0x1a495d;_0x36dea3++){const _0x395c61=_0x299ba4['x']+_0x4ebd83+','+(_0x299ba4['y']+_0x4d0df4)+','+(_0x299ba4['z']+_0x36dea3);if(spawnerDatabase['has'](_0x395c61)){const _0x566dee=_0x3e7358['getBlock'](new Vector32(_0x299ba4['x']+_0x4ebd83,_0x299ba4['y']+_0x4d0df4,_0x299ba4['z']+_0x36dea3));if(!_0x566dee||!_0x566dee['typeId']['startsWith']('mrleefy:')){spawnerDatabase['delete'](_0x395c61);if(!_0x566dee||!_0x566dee['typeId']['endsWith']('_display')){removeSpawnruleAtLocation(_0x299ba4['x']+_0x4ebd83,_0x299ba4['y']+_0x4d0df4,_0x299ba4['z']+_0x36dea3,_0x3e7358);}}}}}}}});_0x2b9cee['afterEvents']['pistonActivate']['subscribe'](_0x163ad4=>{try{const _0x5dfb48=_0x163ad4['dimension'];const _0x5a6969=_0x163ad4['piston']['getAttachedBlocksLocations']();for(const _0x18d118 of _0x5a6969){const _0x169844=_0x5dfb48['getBlock'](_0x18d118);if(_0x169844&&_0x169844['typeId']['startsWith']('mrleefy:')&&_0x169844['typeId']['includes']('spawner')&&!_0x169844['typeId']['endsWith']('_display')){removeSpawnruleAtLocation(_0x18d118['x'],_0x18d118['y'],_0x18d118['z'],_0x5dfb48);const _0x2ee11d=_0x18d118['x']+','+_0x18d118['y']+','+_0x18d118['z'];if(spawnerDatabase['has'](_0x2ee11d)){spawnerDatabase['delete'](_0x2ee11d);}}}}catch(_0x3850ce){console['error']('Error\x20in\x20piston\x20event\x20handler:',_0x3850ce);}});_0x2b9cee['beforeEvents']['explosion']['subscribe'](_0x985899=>{const _0x7c2e5a=_0x985899['dimension'];const _0x5b6a51=_0x985899['getImpactedBlocks']()['filter'](_0x3af4be=>{const _0x41555c=_0x7c2e5a['getBlock'](new Vector32(_0x3af4be['x'],_0x3af4be['y'],_0x3af4be['z']));if(_0x41555c&&_0x41555c['typeId']['startsWith']('mrleefy:')&&_0x41555c['typeId']['includes']('spawner')&&!_0x41555c['typeId']['endsWith']('_display')){return![];}return!![];});_0x985899['setImpactedBlocks'](_0x5b6a51);});_0x2b9cee['afterEvents']['playerPlaceBlock']['subscribe'](_0x19bb2b=>{const _0x7af798=_0x19bb2b['player'];const _0x519340=_0x19bb2b['block'];const _0xb06479=_0x519340['typeId'];if(_0xb06479['startsWith']('mrleefy:')){if(_0xb06479['endsWith']('_display')){return;}const _0x5bb770=_0x519340['x']+','+_0x519340['y']+','+_0x519340['z'];const _0x500c96={'typeId':_0xb06479,'placedBy':_0x7af798['name']||_0x7af798['nameTag']||'Unknown','placedAt':Date['now'](),'entitiesKilled':0x0,'lastAccessed':Date['now']()};spawnerDatabase['write'](_0x5bb770,_0x500c96);try{_0x7af798['runCommand']('summon\x20mrleefy:spawnrule\x20\x22'+_0xb06479+'\x22\x20'+_0x519340['x']+'\x20'+_0x519340['y']+'\x20'+_0x519340['z']);}catch(_0x482401){console['error']('Error\x20executing\x20command:',_0x482401);}}});function handleSpawnerBlockInteraction(_0x378323,_0x4ca986,_0x5b0eda){const _0x7d742b=_0x4ca986['x']+','+_0x4ca986['y']+','+_0x4ca986['z'];const _0x2949f7=_0x4ca986['typeId'];if(!_0x2949f7||!_0x2949f7['startsWith']('mrleefy:')||!_0x2949f7['includes']('spawner')){return;}if(_0x2949f7['endsWith']('_display')){return;}_0x5b0eda['cancel']=!![];if(activeForms['has'](_0x7d742b)){const _0x46e1f2=activeForms['get'](_0x7d742b);const _0x8d92e8=_0x46e1f2['player']||_0x46e1f2;const _0x30b2f4=_0x46e1f2['timestamp']||Date['now']();if(Date['now']()-_0x30b2f4>0x5*0x3c*0x3e8){activeForms['delete'](_0x7d742b);}else if(_0x8d92e8['id']!==_0x378323['id']){_0x378323['sendMessage']('§7This\x20§cspawner§7\x20is\x20currently\x20in\x20use,\x20§cplease\x20wait...');return;}}updateSpawnerDatabaseOnInteraction(_0x7d742b,_0x2949f7,_0x378323);_0x32490c['run'](()=>{const _0x1831ad=_0x2949f7['replace']('mrleefy:','')['replace'](/spawner\d*/,'');const _0x3cde5f=_0x2949f7['match'](/\d*$/);const _0x21b7fc=_0x3cde5f?Number(_0x3cde5f[0x0]):0x0;const _0xde5265=0x2710;const _0x4fd1b4=0x64;const _0xeb21b7=_0x21b7fc*_0xde5265;const _0x1626c2=_0x21b7fc+0x1;const _0x3d06b2=_0x21b7fc-0x1;const _0x1c7bd4=0x4d;const _0x4585f7=_0xeb21b7/_0x4fd1b4*_0x1c7bd4;form1(_0x378323,_0x21b7fc,_0xeb21b7,_0x4ca986,_0x2949f7,_0x1626c2,_0x3d06b2,_0x4585f7,_0x1c7bd4,_0x1831ad,_0x4ca986['x'],_0x4ca986['y'],_0x4ca986['z']);});}if('playerInteractWithBlock'in _0x2b9cee['beforeEvents']){_0x2b9cee['beforeEvents']['playerInteractWithBlock']['subscribe'](_0x4e74f2=>{handleSpawnerBlockInteraction(_0x4e74f2['player'],_0x4e74f2['block'],_0x4e74f2);});}else{_0x2b9cee['beforeEvents']['itemUseOn']['subscribe'](_0x1f4a79=>{handleSpawnerBlockInteraction(_0x1f4a79['source'],_0x1f4a79['block'],_0x1f4a79);});}function isPlayerNearBlock(_0x5f4d97,_0x57b706,_0x43d71a,_0x316670,_0x2ee5e8=0xa){if(!_0x5f4d97||!_0x5f4d97['isValid'])return![];const _0x48c234=_0x5f4d97['location'];const _0x28ac59=_0x48c234['x']-(_0x57b706+0.5);const _0x4e4b59=_0x48c234['y']-(_0x43d71a+0.5);const _0x521c56=_0x48c234['z']-(_0x316670+0.5);return _0x28ac59*_0x28ac59+_0x4e4b59*_0x4e4b59+_0x521c56*_0x521c56<=_0x2ee5e8*_0x2ee5e8;}function validateSpawnerInteraction(_0x11aeff,_0x2ea5ae,_0x837020,_0x3e2172,_0x2e0de1,_0x1eb805){if(!_0x11aeff||!_0x11aeff['isValid']){console['error'](ERROR_MESSAGES['INVALID_PLAYER']);return![];}if(!isPlayerNearBlock(_0x11aeff,_0x3e2172,_0x2e0de1,_0x1eb805,0xa)){_0x11aeff['sendMessage']('§cYou\x20are\x20too\x20far\x20from\x20the\x20spawner.');return![];}if(!_0x2ea5ae||!_0x2ea5ae['isValid']){_0x11aeff['sendMessage'](ERROR_MESSAGES['INVALID_BLOCK']);return![];}if(typeof _0x837020!=='number'||_0x837020<VALIDATION['MIN_LEVEL']||_0x837020>VALIDATION['MAX_LEVEL']){console['error']('Invalid\x20level\x20provided:\x20'+_0x837020);_0x11aeff['sendMessage'](ERROR_MESSAGES['INVALID_LEVEL']);return![];}if(typeof _0x3e2172!=='number'||typeof _0x2e0de1!=='number'||typeof _0x1eb805!=='number'){console['error'](ERROR_MESSAGES['INVALID_COORDINATES']);_0x11aeff['sendMessage'](ERROR_MESSAGES['INVALID_COORDINATES']);return![];}return!![];}function checkPlayerCooldown(_0x12bd94,_0x212cfa){const _0x2e6f05=Date['now']();const _0x1d3470=_0x12bd94['name'];if(cooldowns['has'](_0x1d3470)){const _0x374e75=cooldowns['get'](_0x1d3470);const _0x19b53f=_0x2e6f05-_0x374e75;if(_0x19b53f<cooldownTime){const _0x2011c4=Math['ceil']((cooldownTime-_0x19b53f)/0x3e8);if(!messageTimes['has'](_0x1d3470)||_0x2e6f05-messageTimes['get'](_0x1d3470)>messageDelay){_0x12bd94['sendMessage']('§cWait\x20'+_0x2011c4+'s\x20before\x20interacting\x20again.');messageTimes['set'](_0x1d3470,_0x2e6f05);}return![];}}activeForms['set'](_0x212cfa,{'player':_0x12bd94,'timestamp':_0x2e6f05});cooldowns['set'](_0x1d3470,_0x2e6f05);return!![];}function ensureSpawnruleEntity(_0x378f9e,_0x253c4c,_0x45b5dd,_0xd39551,_0x3c6345){if(typeof _0x253c4c!=='number'||typeof _0x45b5dd!=='number'||typeof _0xd39551!=='number'){console['error']('Invalid\x20coordinates:\x20x='+_0x253c4c+',\x20y='+_0x45b5dd+',\x20z='+_0xd39551);return;}if(!_0x3c6345||typeof _0x3c6345!=='string'){console['error']('Invalid\x20typeId:\x20'+_0x3c6345);return;}try{_0x378f9e['runCommand']('execute\x20as\x20@e[type=mrleefy:spawnrule,x='+_0x253c4c+',y='+_0x45b5dd+',z='+_0xd39551+',dx=0.1,dy=0.1,dz=0.1]\x20run\x20tag\x20@s\x20add\x20existing');}catch(_0x447512){console['error']('Error\x20tagging\x20existing\x20spawnrule:\x20'+_0x447512);}try{_0x378f9e['runCommand']('execute\x20unless\x20entity\x20@e[type=mrleefy:spawnrule,x='+_0x253c4c+',y='+_0x45b5dd+',z='+_0xd39551+',dx=0.1,dy=0.1,dz=0.1,tag=existing]\x20run\x20summon\x20mrleefy:spawnrule\x20\x22'+_0x3c6345+'\x22\x20'+_0x253c4c+'\x20'+_0x45b5dd+'\x20'+_0xd39551);}catch(_0x2b6502){console['error']('Error\x20summoning\x20spawnrule:\x20'+_0x2b6502);}}function createSpawnerForm(_0x2eeec8,_0x202558,_0xd391e4,_0x47378f,_0x4856a0,_0x5a2420,_0x12cbab,_0x219eca,_0x538834,_0x163cc8,_0x1956af,_0x3f0b78,_0x124b1b){const _0x4ebf9a=new ActionFormData();_0x4ebf9a['title']('§l§8'+_0x4856a0+'Spawner§2§r');_0x4ebf9a['body']('§7§l\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20§7Level:\x20§2'+_0x202558+'§r\x0a\x0a');const _0x1dd5fc=[];if(_0x202558<UI['MAX_SPAWNER_LEVEL']){_0x4ebf9a['button']('§l§2Upgrade§8\x20to\x20Lvl\x20'+_0xd391e4,'textures/carrot_golden');_0x1dd5fc['push'](()=>upgradeSpawner(_0x2eeec8,_0x5a2420,_0x202558,_0x4856a0,_0x12cbab,_0x163cc8,_0x1956af,_0x3f0b78));}if(_0x202558<UI['MAX_SPAWNER_LEVEL']){_0x4ebf9a['button']('§l§2Upgrade\x20Max','textures/items/netherite_ingot');_0x1dd5fc['push'](()=>maxUpgradeSpawner(_0x2eeec8,_0x5a2420,_0x202558,_0x4856a0,_0x12cbab,_0x163cc8,_0x1956af,_0x3f0b78));}if(_0x202558>UI['MIN_SPAWNER_LEVEL']){_0x4ebf9a['button']('§l§8Downgrade\x20[§4'+_0x47378f+'§8]','textures/carrot');_0x1dd5fc['push'](()=>downgrade(_0x2eeec8,_0x5a2420,_0x202558,_0x4856a0,_0x219eca,_0x538834,_0x163cc8,_0x1956af,_0x3f0b78));}_0x4ebf9a['button']('§l§2Teleport\x20Stack\x20Here','textures/items/ender_eye');_0x1dd5fc['push'](()=>teleportSpawnerStack(_0x2eeec8,_0x5a2420,_0x4856a0,_0x163cc8,_0x1956af,_0x3f0b78));_0x4ebf9a['button']('§l§8Instructions','textures/items/book_enchanted.png');_0x1dd5fc['push'](()=>showInstructions(_0x2eeec8));if(_0x2eeec8['hasTag'](UI['OWNER_PERMISSION_TAG'])){_0x4ebf9a['button']('§8§lChoose\x20Level','textures/items/diamond');const _0x3d5fd3=()=>slider(_0x2eeec8,_0x4856a0,_0x5a2420,_0x202558,0x2710*_0x202558,_0x12cbab,_0xd391e4,_0x47378f,_0x219eca,_0x538834,_0x163cc8,_0x1956af,_0x3f0b78);_0x3d5fd3['isNested']=!![];_0x1dd5fc['push'](_0x3d5fd3);}_0x4ebf9a['button']('§l§8Close','textures/ruby');_0x1dd5fc['push'](()=>exit(_0x2eeec8));return{'form':_0x4ebf9a,'buttonActions':_0x1dd5fc};}function form1(_0x5c5f88,_0x47f0d9,_0x3e29fc,_0x58f534,_0x28c923,_0x4e2c36,_0x209a3b,_0x267c76,_0x1ff753,_0x3047a0,_0x11dd60,_0x475bf2,_0x24b4af){const _0xcf6e97=_0x11dd60+','+_0x475bf2+','+_0x24b4af;if(!validateSpawnerInteraction(_0x5c5f88,_0x58f534,_0x47f0d9,_0x11dd60,_0x475bf2,_0x24b4af)){return;}if(!checkPlayerCooldown(_0x5c5f88,_0xcf6e97)){return;}ensureSpawnruleEntity(_0x5c5f88,_0x11dd60,_0x475bf2,_0x24b4af,_0x28c923);const {form:_0x1ba49d,buttonActions:_0x3b3f1e}=createSpawnerForm(_0x5c5f88,_0x47f0d9,_0x4e2c36,_0x209a3b,_0x3047a0,_0x58f534,_0x28c923,_0x267c76,_0x1ff753,_0x11dd60,_0x475bf2,_0x24b4af,_0xcf6e97);_0x32490c['run'](()=>{_0x1ba49d['show'](_0x5c5f88)['then'](_0x392719=>{const _0x5ab547=_0x392719['selection']!==void 0x0&&_0x3b3f1e[_0x392719['selection']]&&_0x3b3f1e[_0x392719['selection']]['isNested'];if(!_0x5ab547){activeForms['delete'](_0xcf6e97);}else{activeForms['set'](_0xcf6e97,{'player':_0x5c5f88,'timestamp':Date['now']()});}const _0x52510e=_0x58f534['dimension'];const _0x57bcb9=_0x52510e['getBlock'](new Vector32(_0x11dd60,_0x475bf2,_0x24b4af));if(!_0x57bcb9||_0x57bcb9['typeId']!==_0x28c923){_0x5c5f88['sendMessage'](ERROR_MESSAGES['INVALID_BLOCK']);spawnerDatabase['delete'](_0xcf6e97);activeForms['delete'](_0xcf6e97);return;}if(_0x392719['selection']!==void 0x0&&_0x3b3f1e[_0x392719['selection']]){_0x3b3f1e[_0x392719['selection']]();}})['catch'](()=>{activeForms['delete'](_0xcf6e97);});});}var interactionTimestamps=new Map();var globalCooldowns=new Map();var INTERACTION_WINDOW_MILLIS=0x78*0x3e8;var INTERACTION_LIMIT=0x3;var GLOBAL_COOLDOWN_MILLIS=0xa*0x3c*0x3e8;function teleportSpawnerStack(_0x2567a5,_0xf89c,_0x3a2b03,_0x2b08c8,_0x1ff874,_0x42cf8e){if(!_0x2567a5||!_0x2567a5['isValid']){console['error']('Invalid\x20player\x20provided\x20to\x20teleportSpawnerStack');return;}if(!isPlayerNearBlock(_0x2567a5,_0x2b08c8,_0x1ff874,_0x42cf8e,0xa)){_0x2567a5['sendMessage']('§cYou\x20are\x20too\x20far\x20from\x20the\x20spawner.');return;}if(!_0xf89c||!_0xf89c['isValid']){_0x2567a5['sendMessage']('§cInvalid\x20spawner\x20block\x20detected.');return;}if(!_0x3a2b03||typeof _0x3a2b03!=='string'){console['error']('Invalid\x20spawnerType\x20provided:\x20'+_0x3a2b03);_0x2567a5['sendMessage']('§cInvalid\x20spawner\x20type\x20detected.');return;}if(typeof _0x2b08c8!=='number'||typeof _0x1ff874!=='number'||typeof _0x42cf8e!=='number'){console['error']('Invalid\x20coordinates\x20provided\x20to\x20teleportSpawnerStack');_0x2567a5['sendMessage']('§cInvalid\x20spawner\x20location\x20detected.');return;}const _0x1a8111=Date['now']();const _0xbae479=_0x2567a5['name'];if(globalCooldowns['has'](_0xbae479)){const _0x135137=globalCooldowns['get'](_0xbae479);const _0x249f0e=_0x1a8111-_0x135137;if(_0x249f0e<GLOBAL_COOLDOWN_MILLIS){const _0x53e12b=Math['ceil']((GLOBAL_COOLDOWN_MILLIS-_0x249f0e)/0x3e8);_0x2567a5['sendMessage']('§dPlease\x20wait\x20'+_0x53e12b+'s\x20before\x20teleporting\x20entity\x20stacks...');return;}else{globalCooldowns['delete'](_0xbae479);}}if(!interactionTimestamps['has'](_0xbae479)){interactionTimestamps['set'](_0xbae479,[]);}const _0x147dde=interactionTimestamps['get'](_0xbae479);while(_0x147dde['length']>0x0&&_0x1a8111-_0x147dde[0x0]>INTERACTION_WINDOW_MILLIS){_0x147dde['shift']();}_0x147dde['push'](_0x1a8111);if(_0x147dde['length']>INTERACTION_LIMIT){globalCooldowns['set'](_0xbae479,_0x1a8111);const _0x8ed48a=Math['ceil'](GLOBAL_COOLDOWN_MILLIS/0x3e8);_0x2567a5['sendMessage']('§dPlease\x20wait\x20'+_0x8ed48a+'s\x20before\x20teleporting\x20entity\x20stacks...');return;}const _0x23810d=_0xf89c['dimension'];const _0x52b040=configDatabase2['read']('stackRadius')||0x32;const _0x303bf0=_0x3a2b03['replace'](/_/g,'');const _0x229974='mrleefy:'+_0x303bf0+'still';const _0x4c3008=_0x23810d['getEntities']({'type':_0x229974,'location':_0xf89c['location'],'maxDistance':_0x52b040});if(!_0x4c3008||_0x4c3008['length']===0x0){_0x2567a5['sendMessage']('§cNo\x20entities\x20of\x20type\x20'+_0x303bf0+'\x20found\x20near\x20the\x20spawner.');return;}let _0x2a7f9c=null;let _0x3d2770=Infinity;for(const _0x1ca635 of _0x4c3008){try{if(!_0x1ca635||!_0x1ca635['isValid'])continue;const _0x402349=Math['sqrt'](Math['pow'](_0x1ca635['location']['x']-_0x2b08c8,0x2)+Math['pow'](_0x1ca635['location']['y']-_0x1ff874,0x2)+Math['pow'](_0x1ca635['location']['z']-_0x42cf8e,0x2));if(_0x402349<_0x3d2770){_0x3d2770=_0x402349;_0x2a7f9c=_0x1ca635;}}catch(_0xcb04de){console['error']('Error\x20processing\x20entity:\x20'+_0xcb04de['message']);}}if(_0x2a7f9c){const _0x3fd33d=_0x2b08c8+0.5;const _0x522acf=_0x1ff874+0x1;const _0x1ea8e5=_0x42cf8e+0.5;_0x2a7f9c['teleport'](new Vector32(_0x3fd33d,_0x522acf,_0x1ea8e5),{'keepVelocity':!![]});_0x2567a5['sendMessage']('§aTeleported\x20'+_0x303bf0+'\x20stack\x20to\x20spawner');}else{_0x2567a5['sendMessage']('§cNo\x20valid\x20entities\x20found\x20to\x20teleport.');}}function slider(_0x51e197,_0x320e04,_0x23b6ad,_0x45f369,_0x22737b,_0x391d61,_0x3fe4ea,_0x504ccb,_0x26d0fd,_0x4ff586,_0x28bba2,_0x5027b6,_0x18c50f){if(!_0x51e197||!_0x51e197['isValid']){console['error']('Invalid\x20player\x20provided\x20to\x20slider');return;}const _0x584590=_0x28bba2+','+_0x5027b6+','+_0x18c50f;if(!_0x51e197['hasTag']('admin')){_0x51e197['sendMessage']('§cYou\x20don\x27t\x20have\x20permission\x20to\x20use\x20this\x20feature.');activeForms['delete'](_0x584590);return;}if(!isPlayerNearBlock(_0x51e197,_0x28bba2,_0x5027b6,_0x18c50f,0xa)){_0x51e197['sendMessage']('§cYou\x20are\x20too\x20far\x20from\x20the\x20spawner.');activeForms['delete'](_0x584590);return;}if(!_0x23b6ad||!_0x23b6ad['isValid']){_0x51e197['sendMessage']('§cInvalid\x20spawner\x20block\x20detected.');activeForms['delete'](_0x584590);return;}if(typeof _0x45f369!=='number'||_0x45f369<0x1||_0x45f369>0x20){console['error']('Invalid\x20level\x20provided:\x20'+_0x45f369);_0x51e197['sendMessage']('§cInvalid\x20spawner\x20level\x20detected.');activeForms['delete'](_0x584590);return;}if(!_0x320e04||typeof _0x320e04!=='string'){console['error']('Invalid\x20spawnerType\x20provided:\x20'+_0x320e04);_0x51e197['sendMessage']('§cInvalid\x20spawner\x20type\x20detected.');activeForms['delete'](_0x584590);return;}const _0x5ba8a2=new ModalFormData();_0x5ba8a2['title']('Select\x20Spawner\x20Level');_0x5ba8a2['slider']('Set\x20Range',0x1,0x20,{'valueStep':0x1,'defaultValue':0x1});_0x32490c['run'](()=>{_0x5ba8a2['show'](_0x51e197)['then'](_0x476f28=>{activeForms['delete'](_0x584590);if(!_0x51e197||!_0x51e197['isValid']||!_0x51e197['hasTag']('admin')){_0x51e197['sendMessage']('§cYou\x20don\x27t\x20have\x20permission\x20to\x20use\x20this\x20feature.');return;}if(!isPlayerNearBlock(_0x51e197,_0x28bba2,_0x5027b6,_0x18c50f,0xa)){_0x51e197['sendMessage']('§cYou\x20are\x20too\x20far\x20from\x20the\x20spawner.');return;}if(_0x476f28['formValues']&&_0x476f28['formValues']['length']>0x0){const _0xf2a7c9=_0x476f28['formValues'][0x0];if(_0xf2a7c9){_0x51e197['sendMessage']('§6Level\x20§7set\x20to\x20§2'+_0xf2a7c9);const _0x3829de='mrleefy:'+_0x320e04+'spawner'+_0xf2a7c9;_0x23b6ad['setType'](_0x3829de);clearMaxedSpawnerCache(_0x28bba2,_0x5027b6,_0x18c50f);const _0x4028f4=_0x3829de;try{_0x51e197['runCommand']('execute\x20as\x20@e[type=mrleefy:spawnrule,x='+_0x28bba2+',y='+_0x5027b6+',z='+_0x18c50f+',dx=0.1,dy=0.1,dz=0.1]\x20run\x20tag\x20@s\x20add\x20desme');_0x51e197['runCommand']('kill\x20@e[type=mrleefy:spawnrule,tag=desme]');_0x51e197['runCommand']('summon\x20mrleefy:spawnrule\x20\x22'+_0x4028f4+'\x22\x20'+_0x28bba2+'\x20'+_0x5027b6+'\x20'+_0x18c50f);}catch(_0x495fe4){console['error']('Error\x20executing\x20command:',_0x495fe4);}}}})['catch'](()=>{activeForms['delete'](_0x584590);});});}function showInstructions(_0x44a949){const _0x335f15=new ActionFormData();_0x335f15['title']('§l§eHow\x20To\x20Use\x20Spawners');_0x335f15['body']('§f§lGetting\x20Started§r\x0a§7Place\x20your\x20spawner\x20and\x20tap\x20it\x20to\x20open\x20this\x20menu!\x0a\x0a§a§lUpgrading§r\x0a§7-\x20Have\x20spawners\x20of\x20the\x20§esame\x20type§7\x20in\x20your\x20inventory\x0a§7-\x20Tap\x20§aUpgrade§7\x20to\x20combine\x20them\x0a§7-\x20Higher\x20levels\x20=\x20§efaster\x20spawns§7\x20+\x20§ebigger\x20stacks§7!\x0a\x0a§c§lDowngrading§r\x0a§7-\x20Only\x20works\x20at\x20Level\x202+\x0a§7-\x20Get\x20a\x20spawner\x20back\x20in\x20your\x20inventory\x0a\x0a§b§lMax\x20Upgrade§r\x0a§7-\x20Uses\x20ALL\x20your\x20spawners\x20at\x20once\x0a§7-\x20Upgrades\x20to\x20the\x20highest\x20level\x20possible\x20(max\x2032)\x0a§7-\x20Leftover\x20spawners\x20are\x20returned\x20to\x20you\x0a\x0a§d§lTeleport\x20Stack§r\x0a§7-\x20Brings\x20nearby\x20stacked\x20mobs\x20to\x20this\x20spawner\x0a\x0a§8Max\x20level\x20is\x2032.\x20Each\x20level\x20boosts\x20spawn\x20rate\x20and\x20stack\x20size!');_0x335f15['button']('§l§aGot\x20it!');_0x335f15['show'](_0x44a949);}function maxUpgradeSpawner(_0x3f8136,_0x2319d7,_0x27ce93,_0x59e8fe,_0x466006,_0x5102f7,_0x3d3399,_0x164476){if(!_0x3f8136||!_0x3f8136['isValid'])return;if(!isPlayerNearBlock(_0x3f8136,_0x5102f7,_0x3d3399,_0x164476,0xa)){_0x3f8136['sendMessage']('§cYou\x20are\x20too\x20far\x20from\x20the\x20spawner.');return;}if(_0x27ce93>=0x20){_0x3f8136['sendMessage']('§4Cannot\x20upgrade\x20further.\x20Maximum\x20level\x20reached.');return;}const _0x4ebd31=_0x3f8136['getComponent']('inventory');if(!_0x4ebd31||!_0x4ebd31['container'])return;const _0x2097e=_0x4ebd31['container'];const _0x13a326='mrleefy:'+_0x59e8fe+'spawner';const _0x55d231=[];let _0x3608c9=0x0;for(let _0x2fd6c3=0x0;_0x2fd6c3<_0x2097e['size'];_0x2fd6c3++){const _0x3498c2=_0x2097e['getItem'](_0x2fd6c3);if(_0x3498c2&&_0x3498c2['typeId']['startsWith'](_0x13a326)){const _0x583c0a=parseInt(_0x3498c2['typeId']['replace'](_0x13a326,''))||0x1;_0x55d231['push']({'slot':_0x2fd6c3,'item':_0x3498c2,'level':_0x583c0a});_0x3608c9+=_0x583c0a*_0x3498c2['amount'];}}if(_0x3608c9===0x0){_0x3f8136['sendMessage']('§4You\x20don\x27t\x20have\x20any\x20'+_0x59e8fe+'\x20spawners\x20in\x20your\x20inventory,\x20unable\x20to\x20upgrade.');return;}_0x55d231['sort']((_0x273494,_0x10e0ca)=>_0x273494['level']-_0x10e0ca['level']);const _0xfb47d7=0x20-_0x27ce93;let _0x5b36ff=0x0;const _0x2651f9=[];let _0x5372a7=0x0;for(const _0x534606 of _0x55d231){if(_0x5b36ff>=_0xfb47d7)break;const {slot:_0x872d1,item:_0x30c606,level:_0x253a59}=_0x534606;let _0x5720e2=0x0;for(let _0x1c64a6=0x1;_0x1c64a6<=_0x30c606['amount'];_0x1c64a6++){_0x5b36ff+=_0x253a59;_0x5720e2=_0x1c64a6;if(_0x5b36ff>=_0xfb47d7){if(_0x5b36ff>_0xfb47d7){_0x5372a7=_0x5b36ff-_0xfb47d7;}break;}}_0x2651f9['push']({'slot':_0x872d1,'item':_0x30c606,'amount':_0x5720e2});}for(const _0x2ddd27 of _0x2651f9){const {slot:_0x31957b,item:_0x5c65cf,amount:_0x666870}=_0x2ddd27;if(_0x5c65cf['amount']<=_0x666870){_0x2097e['setItem'](_0x31957b,null);}else{_0x5c65cf['amount']-=_0x666870;_0x2097e['setItem'](_0x31957b,_0x5c65cf);}}const _0x36f8b7=_0x27ce93+Math['min'](_0xfb47d7,_0x5b36ff-_0x5372a7);const _0x21d2ce=''+_0x13a326+_0x36f8b7;_0x2319d7['setType'](_0x21d2ce);const _0x55b6f5=_0x5102f7+','+_0x3d3399+','+_0x164476;const _0x1b7049=spawnerDatabase['read'](_0x55b6f5);if(_0x1b7049){_0x1b7049['typeId']=_0x21d2ce;_0x1b7049['lastAccessed']=Date['now']();spawnerDatabase['write'](_0x55b6f5,_0x1b7049);}clearMaxedSpawnerCache(_0x5102f7,_0x3d3399,_0x164476);try{_0x3f8136['runCommand']('execute\x20as\x20@e[type=mrleefy:spawnrule,x='+_0x5102f7+',y='+_0x3d3399+',z='+_0x164476+',dx=0.1,dy=0.1,dz=0.1]\x20run\x20tag\x20@s\x20add\x20desme');_0x3f8136['runCommand']('kill\x20@e[type=mrleefy:spawnrule,tag=desme]');_0x3f8136['runCommand']('summon\x20mrleefy:spawnrule\x20\x22'+_0x21d2ce+'\x22\x20'+_0x5102f7+'\x20'+_0x3d3399+'\x20'+_0x164476);}catch(_0x47176c){console['error']('Error\x20executing\x20spawnrule\x20commands:',_0x47176c);}_0x3f8136['sendMessage']('§7Successfully\x20Upgraded\x20to\x20level\x20§2§l'+_0x36f8b7);try{_0x3f8136['runCommand']('playsound\x20random.levelup\x20@s');}catch(_0x401dc4){}try{_0x2319d7['dimension']['spawnParticle']('minecraft:crop_growth_area_emitter',new Vector32(_0x2319d7['x']+0.5,_0x2319d7['y']+0.5,_0x2319d7['z']+0.5),new MolangVariableMap());}catch(_0x5d305d){}if(_0x5372a7>0x0){try{_0x3f8136['runCommand']('give\x20@s\x20'+_0x13a326+'1\x20'+_0x5372a7);}catch(_0x310bdc){console['error']('Error\x20executing\x20remainder\x20command:',_0x310bdc);}_0x3f8136['sendMessage']('§7Refunded\x20§2§l'+_0x5372a7+'\x20level\x201\x20spawners§7.');}}function upgradeSpawner(_0x1d73d0,_0x3fff00,_0x5b9015,_0x381a7f,_0x176c80,_0x801654,_0x1abaf6,_0x167afc){if(!_0x1d73d0||!_0x1d73d0['isValid'])return;if(!isPlayerNearBlock(_0x1d73d0,_0x801654,_0x1abaf6,_0x167afc,0xa)){_0x1d73d0['sendMessage']('§cYou\x20are\x20too\x20far\x20from\x20the\x20spawner.');return;}const _0x415382=_0x1d73d0['getComponent']('inventory');if(!_0x415382||!_0x415382['container'])return;const _0x30ce1a=_0x415382['container'];const _0x28817c='mrleefy:'+_0x381a7f+'spawner';const _0x2a6cb1=_0x5b9015+0x1;if(_0x2a6cb1>0x20){_0x1d73d0['sendMessage']('§4Cannot\x20upgrade\x20further.\x20Maximum\x20level\x20reached.');return;}let _0x33958e=0x0;const _0x52e50c=[];const _0x25b942=[];const _0x39104d=[];for(let _0x55ef22=0x0;_0x55ef22<_0x30ce1a['size'];_0x55ef22++){const _0x38b700=_0x30ce1a['getItem'](_0x55ef22);if(_0x38b700&&_0x38b700['typeId']['startsWith'](_0x28817c)){const _0x3850de=parseInt(_0x38b700['typeId']['replace'](_0x28817c,''))||0x1;_0x39104d['push']({'slot':_0x55ef22,'item':_0x38b700,'level':_0x3850de});}}_0x39104d['sort']((_0x42eb4d,_0x81d849)=>_0x42eb4d['level']-_0x81d849['level']);for(const _0x3d9d58 of _0x39104d){const {slot:_0x206831,item:_0x393b2c,level:_0x2025c8}=_0x3d9d58;if(_0x2025c8===0x1){_0x25b942['push']({'slot':_0x206831,'item':_0x393b2c,'amount':0x1});_0x33958e+=0x1;}else if(_0x33958e===0x0){_0x25b942['push']({'slot':_0x206831,'item':_0x393b2c,'amount':0x1});_0x33958e=_0x2025c8;if(_0x2025c8>0x1){_0x52e50c['push']({'level':0x1,'amount':_0x2025c8-0x1});}}if(_0x33958e>=0x1)break;}if(_0x33958e<0x1){_0x1d73d0['sendMessage']('§4You\x20don\x27t\x20have\x20enough\x20spawners\x20in\x20your\x20inventory\x20to\x20upgrade.');return;}for(const _0x5c45ed of _0x25b942){const {slot:_0x3d39d7,item:_0x36c09f,amount:_0x2cfffa}=_0x5c45ed;if(_0x36c09f['amount']<=_0x2cfffa){_0x30ce1a['setItem'](_0x3d39d7,null);}else{_0x36c09f['amount']-=_0x2cfffa;_0x30ce1a['setItem'](_0x3d39d7,_0x36c09f);}}for(const _0x19055b of _0x52e50c){_0x1d73d0['runCommand']('give\x20@s\x20'+_0x28817c+'1\x20'+_0x19055b['amount']);}_0x3fff00['setType'](''+_0x28817c+_0x2a6cb1);_0x1d73d0['sendMessage']('§7Successfully\x20upgraded\x20to\x20level\x20§2§l'+_0x2a6cb1);const _0x404660=_0x801654+','+_0x1abaf6+','+_0x167afc;const _0x476736=spawnerDatabase['read'](_0x404660);if(_0x476736){_0x476736['typeId']=''+_0x28817c+_0x2a6cb1;_0x476736['lastAccessed']=Date['now']();spawnerDatabase['write'](_0x404660,_0x476736);}clearMaxedSpawnerCache(_0x801654,_0x1abaf6,_0x167afc);try{_0x1d73d0['runCommand']('execute\x20as\x20@e[type=mrleefy:spawnrule,x='+_0x801654+',y='+_0x1abaf6+',z='+_0x167afc+',dx=0.1,dy=0.1,dz=0.1]\x20run\x20tag\x20@s\x20add\x20desme');_0x1d73d0['runCommand']('kill\x20@e[type=mrleefy:spawnrule,tag=desme]');_0x1d73d0['runCommand']('summon\x20mrleefy:spawnrule\x20\x22mrleefy:'+_0x381a7f+'spawner'+_0x2a6cb1+'\x22\x20'+_0x801654+'\x20'+_0x1abaf6+'\x20'+_0x167afc);}catch(_0x190f98){console['error']('Error\x20executing\x20command:',_0x190f98);}}function downgrade(_0x48369b,_0x3e67b8,_0x282bb5,_0x2da4f5,_0x10b224,_0x19dc40,_0x1305c1,_0x286bce,_0x15b1bd){if(!_0x48369b||!_0x48369b['isValid'])return;if(!isPlayerNearBlock(_0x48369b,_0x1305c1,_0x286bce,_0x15b1bd,0xa)){_0x48369b['sendMessage']('§cYou\x20are\x20too\x20far\x20from\x20the\x20spawner.');return;}if(!_0x3e67b8||!_0x3e67b8['isValid']){_0x48369b['sendMessage']('§cInvalid\x20spawner\x20block\x20detected.');return;}if(_0x282bb5<=0x1){_0x48369b['sendMessage']('§cCannot\x20downgrade\x20further.\x20Minimum\x20level\x20reached.');return;}const _0x4e2171=_0x1305c1+','+_0x286bce+','+_0x15b1bd;const _0x1fb7eb=_0x3e67b8['dimension'];const _0x5a7d2d=_0x1fb7eb['getBlock'](new Vector32(_0x1305c1,_0x286bce,_0x15b1bd));if(!_0x5a7d2d||_0x5a7d2d['typeId']!=='mrleefy:'+_0x2da4f5+'spawner'+_0x282bb5){_0x48369b['sendMessage']('§cNo\x20spawner\x20block\x20found\x20at\x20the\x20recorded\x20location,\x20action\x20canceled.');return;}const _0x283963=_0x48369b['getComponent']('inventory');if(!_0x283963||!_0x283963['container'])return;const _0x549b65=_0x283963['container'];let _0x55c5a7=![];for(let _0x5796f2=0x0;_0x5796f2<_0x549b65['size'];_0x5796f2++){if(!_0x549b65['getItem'](_0x5796f2)){_0x55c5a7=!![];break;}}if(!_0x55c5a7){_0x48369b['sendMessage']('§4You\x20don\x27t\x20have\x20enough\x20space\x20in\x20your\x20inventory\x20to\x20perform\x20the\x20downgrade.');return;}const _0xe8100b=_0x282bb5-0x1;const _0x19ebc9='mrleefy:'+_0x2da4f5+'spawner'+_0xe8100b;_0x3e67b8['setType'](_0x19ebc9);const _0x1828b9=spawnerDatabase['read'](_0x4e2171);if(_0x1828b9){_0x1828b9['typeId']=_0x19ebc9;_0x1828b9['lastAccessed']=Date['now']();spawnerDatabase['write'](_0x4e2171,_0x1828b9);}try{_0x48369b['runCommand']('execute\x20as\x20@e[type=mrleefy:spawnrule,x='+_0x3e67b8['x']+',y='+_0x3e67b8['y']+',z='+_0x3e67b8['z']+',dx=0.1,dy=0.1,dz=0.1]\x20run\x20tag\x20@s\x20add\x20desme');_0x48369b['runCommand']('kill\x20@e[type=mrleefy:spawnrule,tag=desme]');_0x48369b['runCommand']('summon\x20mrleefy:spawnrule\x20\x22'+_0x19ebc9+'\x22\x20'+_0x1305c1+'\x20'+_0x286bce+'\x20'+_0x15b1bd);}catch(_0x5ad620){console['error']('Error\x20updating\x20spawnrule\x20in\x20downgrade:',_0x5ad620);}try{_0x48369b['runCommand']('give\x20@s\x20mrleefy:'+_0x2da4f5+'spawner1\x201');}catch(_0x2e411a){console['error']('Error\x20giving\x20downgraded\x20spawner:',_0x2e411a);}_0x48369b['sendMessage']('§7Successfully\x20downgraded\x20to\x20level\x20§2§l'+_0xe8100b);try{_0x48369b['runCommand']('playsound\x20mob.irongolem.crack\x20@s');}catch(_0x2481fc){}try{_0x1fb7eb['spawnParticle']('minecraft:villager_angry',new Vector32(_0x3e67b8['x']+0.5,_0x3e67b8['y']+0.5,_0x3e67b8['z']+0.5),new MolangVariableMap());}catch(_0x2d75db){}}function removeSpawnruleAtLocation(_0x3ccc1f,_0x3872c0,_0x8d2710,_0x5e759c){try{const _0x568ae4=_0x5e759c['getEntities']({'type':'mrleefy:spawnrule','location':{'x':_0x3ccc1f,'y':_0x3872c0,'z':_0x8d2710},'maxDistance':0x1});_0x32490c['run'](()=>{for(const _0x10209a of _0x568ae4){if(_0x10209a?.['isValid']){try{_0x10209a['remove']();}catch(_0x1ca577){console['error']('Error\x20removing\x20spawnrule\x20entity:',_0x1ca577);}}}});}catch(_0xbe2a8b){console['error']('Error\x20finding\x20spawnrule\x20at\x20'+_0x3ccc1f+','+_0x3872c0+','+_0x8d2710+':',_0xbe2a8b);}}function enforcePlayerMemoryLimits(){const _0x40af70=Date['now']();if(activeForms['size']>PLAYER_MEMORY_LIMITS['ACTIVE_FORMS']){const _0x558768=Array['from'](activeForms['entries']());const _0x150462=_0x558768['slice'](0x0,Math['floor'](_0x558768['length']/0x2));_0x150462['forEach'](([_0x2761e9])=>activeForms['delete'](_0x2761e9));}const _0xcfbd8e=0x5*0x3c*0x3e8;for(const [_0x4d8cbd,_0x1edf20]of activeForms['entries']()){const _0x214385=_0x1edf20['player']||_0x1edf20;const _0x494e70=_0x1edf20['timestamp']||_0x40af70;if(!_0x214385||!_0x214385['isValid']||_0x40af70-_0x494e70>_0xcfbd8e){activeForms['delete'](_0x4d8cbd);}}if(messageTimes['size']>PLAYER_MEMORY_LIMITS['MESSAGE_TIMES']){const _0x49dc3d=_0x40af70-TIMING['MESSAGE_DELAY']*0x2;for(const [_0x23957e,_0xdaa1cc]of messageTimes['entries']()){if(_0xdaa1cc<_0x49dc3d){messageTimes['delete'](_0x23957e);}}if(messageTimes['size']>PLAYER_MEMORY_LIMITS['MESSAGE_TIMES']){const _0x37cc90=Array['from'](messageTimes['entries']());_0x37cc90['sort']((_0x3af541,_0x2d678b)=>_0x3af541[0x1]-_0x2d678b[0x1]);const _0x41766d=_0x37cc90['slice'](0x0,messageTimes['size']-PLAYER_MEMORY_LIMITS['MESSAGE_TIMES']);_0x41766d['forEach'](([_0x2b1c18])=>messageTimes['delete'](_0x2b1c18));}}if(typeof interactionTimestamps!=='undefined'&&interactionTimestamps['size']>PLAYER_MEMORY_LIMITS['INTERACTION_TIMESTAMPS']){const _0x305a8e=_0x40af70-INTERACTION_WINDOW_MILLIS*0x2;for(const [_0x2e4465,_0x383ca4]of interactionTimestamps['entries']()){if(Array['isArray'](_0x383ca4)){const _0x47e3f4=_0x383ca4['filter'](_0x5a2fb2=>_0x40af70-_0x5a2fb2<INTERACTION_WINDOW_MILLIS);if(_0x47e3f4['length']===0x0){interactionTimestamps['delete'](_0x2e4465);}else{interactionTimestamps['set'](_0x2e4465,_0x47e3f4);}}}}if(typeof globalCooldowns!=='undefined'&&globalCooldowns['size']>PLAYER_MEMORY_LIMITS['COOLDOWNS']){const _0x4a464c=_0x40af70-GLOBAL_COOLDOWN_MILLIS;for(const [_0x5a9a2d,_0x446cd2]of globalCooldowns['entries']()){if(_0x40af70-_0x446cd2>GLOBAL_COOLDOWN_MILLIS){globalCooldowns['delete'](_0x5a9a2d);}}if(globalCooldowns['size']>PLAYER_MEMORY_LIMITS['COOLDOWNS']){const _0x20de09=Array['from'](globalCooldowns['entries']());_0x20de09['sort']((_0x5c1d3c,_0xafbc11)=>_0x5c1d3c[0x1]-_0xafbc11[0x1]);const _0x4cd6ca=_0x20de09['slice'](0x0,globalCooldowns['size']-PLAYER_MEMORY_LIMITS['COOLDOWNS']);_0x4cd6ca['forEach'](([_0x5cb39b])=>globalCooldowns['delete'](_0x5cb39b));}}if(cooldowns['size']>PLAYER_MEMORY_LIMITS['COOLDOWNS']){const _0x40cc96=_0x40af70-cooldownTime;for(const [_0x52b4ea,_0x40ffbd]of cooldowns['entries']()){if(_0x40af70-_0x40ffbd>cooldownTime){cooldowns['delete'](_0x52b4ea);}}if(cooldowns['size']>PLAYER_MEMORY_LIMITS['COOLDOWNS']){const _0x67b255=Array['from'](cooldowns['entries']());_0x67b255['sort']((_0x133865,_0x209a28)=>_0x133865[0x1]-_0x209a28[0x1]);const _0x327a04=_0x67b255['slice'](0x0,cooldowns['size']-PLAYER_MEMORY_LIMITS['COOLDOWNS']);_0x327a04['forEach'](([_0x427ad1])=>cooldowns['delete'](_0x427ad1));}}}_0x32490c['runInterval'](()=>{try{enforcePlayerMemoryLimits();}catch(_0x186f44){console['error']('Player\x20memory\x20cleanup\x20error:',_0x186f44);}},PLAYER_CLEANUP_INTERVAL);function exit(_0x3d123a){return;}function updateSpawnerDatabaseOnInteraction(_0x581da3,_0x35fa8c,_0x309f22){try{const _0x511dc1=spawnerDatabase['read'](_0x581da3);if(!_0x511dc1){const _0x50b4ce={'typeId':_0x35fa8c,'placedBy':_0x309f22['name']||_0x309f22['nameTag']||'Unknown','placedAt':Date['now'](),'entitiesKilled':0x0,'lastAccessed':Date['now'](),'interactedAt':Date['now']()};spawnerDatabase['write'](_0x581da3,_0x50b4ce);}else{_0x511dc1['typeId']=_0x35fa8c;_0x511dc1['lastAccessed']=Date['now']();_0x511dc1['interactedAt']=_0x511dc1['interactedAt']||Date['now']();if(_0x511dc1['placedBy']==='Existing'){_0x511dc1['placedBy']=_0x309f22['name']||_0x309f22['nameTag']||'Unknown';_0x511dc1['placedAt']=Date['now']();}spawnerDatabase['write'](_0x581da3,_0x511dc1);}}catch(_0x5e9c4d){console['error']('Error\x20updating\x20spawner\x20database\x20on\x20interaction:\x20'+_0x5e9c4d);}}var SecurityService=class{constructor(){__publicField(this,'permissionLevels');__publicField(this,'commandCooldowns');__publicField(this,'suspiciousActivity');__publicField(this,'bannedCommands');__publicField(this,'ipWhitelist');__publicField(this,'sessionTokens');__publicField(this,'securityEvents');this['permissionLevels']={'USER':0x0,'ADMIN':0x1,'OWNER':0x2};this['commandCooldowns']=new Map();this['suspiciousActivity']=new Map();this['bannedCommands']=new Set(['execute','function','gamerule','setblock','fill','clone','summon','give','tp','teleport','kill','effect','enchant']);this['ipWhitelist']=new Set();this['sessionTokens']=new Map();this['securityEvents']=[];}['hasPermission'](_0xad03ff,_0x4bce5f=this['permissionLevels']['USER']){if(!_0xad03ff?.['isValid'])return![];try{if(_0xad03ff['hasTag'](UI['OWNER_PERMISSION_TAG'])){return!![];}if(_0x4bce5f<=this['permissionLevels']['ADMIN']){if(_0xad03ff['hasTag'](UI['ADMIN_PERMISSION_TAG'])){return!![];}}if(_0x4bce5f<=this['permissionLevels']['USER']){return!![];}return![];}catch(_0x271066){performanceMonitor['recordError']('permission_check',_0x271066['message']);return![];}}['hasTagPermission'](_0x2c0aea,_0x36b52a){if(!_0x2c0aea?.['isValid']||!_0x36b52a)return![];try{return _0x2c0aea['hasTag'](_0x36b52a);}catch(_0x158bb2){performanceMonitor['recordError']('tag_permission_check',_0x158bb2['message']);return![];}}['grantPermission'](_0x2fe293,_0x25cac3,_0x1298b9){if(!this['hasPermission'](_0x2fe293,this['permissionLevels']['OWNER'])){this['logSecurityEvent']('unauthorized_permission_grant',_0x2fe293,{'target':_0x25cac3?.['name'],'permission':_0x1298b9});return![];}if(!_0x25cac3?.['isValid']||!_0x1298b9)return![];try{_0x25cac3['addTag'](_0x1298b9);this['logSecurityEvent']('permission_granted',_0x2fe293,{'target':_0x25cac3['name'],'permission':_0x1298b9});return!![];}catch(_0x535386){performanceMonitor['recordError']('permission_grant',_0x535386['message']);return![];}}['revokePermission'](_0x1a8eb0,_0x552646,_0x3e1de2){if(!this['hasPermission'](_0x1a8eb0,this['permissionLevels']['OWNER'])){this['logSecurityEvent']('unauthorized_permission_revoke',_0x1a8eb0,{'target':_0x552646?.['name'],'permission':_0x3e1de2});return![];}if(!_0x552646?.['isValid']||!_0x3e1de2)return![];try{_0x552646['removeTag'](_0x3e1de2);this['logSecurityEvent']('permission_revoked',_0x1a8eb0,{'target':_0x552646['name'],'permission':_0x3e1de2});return!![];}catch(_0x38e158){performanceMonitor['recordError']('permission_revoke',_0x38e158['message']);return![];}}['validateCommand'](_0x3e4318,_0x5a5fc4,_0x42e25a=[]){const _0x472e62={'isValid':!![],'error':null,'warnings':[]};try{const _0x533b4e=_0x3e4318['name']+'_'+_0x5a5fc4;const _0x2af649=Date['now']();const _0x3e49a6=this['commandCooldowns']['get'](_0x533b4e);if(_0x3e49a6&&_0x2af649-_0x3e49a6<0x3e8){_0x472e62['isValid']=![];_0x472e62['error']='Command\x20cooldown\x20active.\x20Please\x20wait\x20before\x20using\x20this\x20command\x20again.';return _0x472e62;}if(this['bannedCommands']['has'](_0x5a5fc4['toLowerCase']())){if(!this['hasPermission'](_0x3e4318,this['permissionLevels']['OWNER'])){_0x472e62['isValid']=![];_0x472e62['error']='This\x20command\x20is\x20restricted.';this['logSecurityEvent']('banned_command_attempt',_0x3e4318,{'command':_0x5a5fc4});return _0x472e62;}}const _0x292827=this['validateCommandArguments'](_0x5a5fc4,_0x42e25a);if(!_0x292827['isValid']){_0x472e62['isValid']=![];_0x472e62['error']=_0x292827['error'];return _0x472e62;}const _0x33cf83=this['detectSuspiciousPatterns'](_0x42e25a);if(_0x33cf83['length']>0x0){_0x472e62['warnings']['push'](..._0x33cf83);this['logSecurityEvent']('suspicious_command_pattern',_0x3e4318,{'command':_0x5a5fc4,'args':_0x42e25a,'patterns':_0x33cf83});}if(_0x472e62['isValid']){this['commandCooldowns']['set'](_0x533b4e,_0x2af649);if(this['commandCooldowns']['size']>0x3e8){this['cleanupExpiredCooldowns'](_0x2af649);}}}catch(_0x53360b){performanceMonitor['recordError']('command_validation',_0x53360b['message']);_0x472e62['isValid']=![];_0x472e62['error']='Command\x20validation\x20failed\x20due\x20to\x20internal\x20error.';}return _0x472e62;}['validateCommandArguments'](_0x118369,_0x506924){const _0x3e5e7f={'isValid':!![],'error':null};for(let _0x2efa5d=0x0;_0x2efa5d<_0x506924['length'];_0x2efa5d++){const _0x2a7364=_0x506924[_0x2efa5d];if(_0x2a7364['includes']('&&')||_0x2a7364['includes']('||')||_0x2a7364['includes'](';')){_0x3e5e7f['isValid']=![];_0x3e5e7f['error']='Invalid\x20command\x20arguments\x20detected.';return _0x3e5e7f;}if(_0x2a7364['includes']('../')||_0x2a7364['includes']('..\x5c')){_0x3e5e7f['isValid']=![];_0x3e5e7f['error']='Invalid\x20file\x20path\x20detected.';return _0x3e5e7f;}if(_0x118369==='setlevel'&&_0x2efa5d===0x0){const _0x452b89=parseInt(_0x2a7364);if(isNaN(_0x452b89)||_0x452b89<VALIDATION['MIN_LEVEL']||_0x452b89>VALIDATION['MAX_LEVEL']){_0x3e5e7f['isValid']=![];_0x3e5e7f['error']='Level\x20must\x20be\x20between\x20'+VALIDATION['MIN_LEVEL']+'\x20and\x20'+VALIDATION['MAX_LEVEL']+'.';return _0x3e5e7f;}}}return _0x3e5e7f;}['detectSuspiciousPatterns'](_0x5559d7){const _0x2b14f5=[];const _0x345ed5=['javascript:','data:','vbscript:','onload=','onerror=','<script','</script>','eval(','exec(','system(','127.0.0.1','localhost','0.0.0.0'];_0x5559d7['forEach'](_0x4c2de2=>{_0x345ed5['forEach'](_0x2afa45=>{if(_0x4c2de2['toLowerCase']()['includes'](_0x2afa45)){_0x2b14f5['push']('Suspicious\x20pattern\x20detected:\x20'+_0x2afa45);}});});return _0x2b14f5;}['isRateLimited'](_0x4c8d1c,_0x109312,_0x24568f=0xa,_0x4478af=0xea60){const _0xd1f3ac=Date['now']();const _0x22930f=_0x4c8d1c['name']+'_'+_0x109312;if(!this['suspiciousActivity']['has'](_0x22930f)){this['suspiciousActivity']['set'](_0x22930f,[]);}const _0x236bf4=this['suspiciousActivity']['get'](_0x22930f);const _0x29c083=_0xd1f3ac-_0x4478af;const _0x4a403e=_0x236bf4['filter'](_0x1ba3f1=>_0x1ba3f1>_0x29c083);if(_0x4a403e['length']>=_0x24568f){this['logSecurityEvent']('rate_limit_exceeded',_0x4c8d1c,{'action':_0x109312,'maxActions':_0x24568f,'timeWindow':_0x4478af});return!![];}_0x4a403e['push'](_0xd1f3ac);this['suspiciousActivity']['set'](_0x22930f,_0x4a403e);return![];}['cleanupExpiredCooldowns'](_0x419365){const _0x2232a9=_0x419365-0xea60;for(const [_0x2bb8ec,_0x9e79a9]of this['commandCooldowns']['entries']()){if(_0x9e79a9<_0x2232a9){this['commandCooldowns']['delete'](_0x2bb8ec);}}}['logSecurityEvent'](_0x1dea4f,_0x2dd164,_0x51e3bf={}){const _0x39e209={'timestamp':Date['now'](),'eventType':_0x1dea4f,'playerId':_0x2dd164?.['id'],'playerName':_0x2dd164?.['name'],'details':_0x51e3bf,'severity':this['getEventSeverity'](_0x1dea4f)};const _0x5e4260='[SECURITY]\x20'+_0x1dea4f+':\x20Player\x20'+(_0x2dd164?.['name']||'Unknown')+'\x20-\x20'+JSON['stringify'](_0x51e3bf);if(_0x39e209['severity']==='high'){console['error'](_0x5e4260);}else if(_0x39e209['severity']==='medium'){console['warn'](_0x5e4260);}else{console['log'](_0x5e4260);}this['storeSecurityEvent'](_0x39e209);performanceMonitor['recordEvent']('securityEvents');}['getEventSeverity'](_0x521d78){const _0x5e5501=['unauthorized_permission_grant','unauthorized_permission_revoke','banned_command_attempt','rate_limit_exceeded'];const _0x2b4cfc=['suspicious_command_pattern','permission_granted','permission_revoked'];if(_0x5e5501['includes'](_0x521d78))return'high';if(_0x2b4cfc['includes'](_0x521d78))return'medium';return'low';}['storeSecurityEvent'](_0x22d309){if(!this['securityEvents']){this['securityEvents']=[];}this['securityEvents']['push'](_0x22d309);if(this['securityEvents']['length']>0x3e8){this['securityEvents']['shift']();}}['getSecurityEvents'](_0xd38778=0x32,_0x21109f=null){let _0xd4ed4d=this['securityEvents']||[];if(_0x21109f){_0xd4ed4d=_0xd4ed4d['filter'](_0x58b3dd=>_0x58b3dd['severity']===_0x21109f);}return _0xd4ed4d['slice'](-_0xd38778);}['getSecurityStats'](){const _0x10f881=this['securityEvents']||[];const _0x4cfc4c=Date['now']();const _0x326048=_0x4cfc4c-0x3c*0x3c*0x3e8;const _0x308dd9=_0x10f881['filter'](_0x40f013=>_0x40f013['timestamp']>_0x326048);const _0x47aee7={'totalEvents':_0x10f881['length'],'recentEvents':_0x308dd9['length'],'highSeverityEvents':_0x308dd9['filter'](_0x26d9b5=>_0x26d9b5['severity']==='high')['length'],'mediumSeverityEvents':_0x308dd9['filter'](_0x5eda0f=>_0x5eda0f['severity']==='medium')['length'],'lowSeverityEvents':_0x308dd9['filter'](_0x15d3db=>_0x15d3db['severity']==='low')['length'],'eventsPerHour':_0x308dd9['length'],'activeRateLimits':this['suspiciousActivity']['size'],'activeCooldowns':this['commandCooldowns']['size']};return _0x47aee7;}['clearSecurityData'](_0x560b95){if(!this['hasPermission'](_0x560b95,this['permissionLevels']['OWNER'])){this['logSecurityEvent']('unauthorized_security_clear',_0x560b95);return![];}this['suspiciousActivity']['clear']();this['commandCooldowns']['clear']();this['securityEvents']=[];this['logSecurityEvent']('security_data_cleared',_0x560b95);return!![];}};var securityService=new SecurityService();var aaDatabase=new Database('AAValues');var MAX_ALLOWED_SPEED=0x3c;var MAX_ALLOWED_STACK=0x1388;var defaultAAValues={'1-10':{'qty':0x1,'speed':0xf,'maxStack':0x64},'11-20':{'qty':0x2,'speed':0xc,'maxStack':0x12c},'21-30':{'qty':0x3,'speed':0x9,'maxStack':0x1f4},'31-31':{'qty':0x4,'speed':0x6,'maxStack':0x2bc},'32-32':{'qty':0x5,'speed':0x3,'maxStack':0x3e8}};var aaLookup=Array['from']({'length':0x21},()=>({'qty':0x0,'speed':0x0,'maxStack':0x64}));function rebuildAALookup(){try{for(let _0x2585d2=0x0;_0x2585d2<aaLookup['length'];_0x2585d2++){aaLookup[_0x2585d2]={'qty':0x0,'speed':0x0,'maxStack':0x64};}aaDatabase['forEach']((_0x3cda29,_0x4f1110)=>{if(!_0x3cda29)return;const {qty:qty=0x0,speed:speed=0x0,maxStack:maxStack=0x64}=_0x3cda29;const [_0x33117d,_0x3168b5]=_0x4f1110['split']('-')['map'](Number);if(!isNaN(_0x33117d)&&!isNaN(_0x3168b5)){for(let _0x4d4b04=_0x33117d;_0x4d4b04<=_0x3168b5&&_0x4d4b04<aaLookup['length'];_0x4d4b04++){aaLookup[_0x4d4b04]={'qty':qty,'speed':speed,'maxStack':maxStack};}}});}catch(_0x3418fc){console['error']('Failed\x20to\x20rebuild\x20AA\x20lookup:',_0x3418fc);Object['entries'](defaultAAValues)['forEach'](([_0x333b57,_0x4f5bc4])=>{const [_0x360864,_0x478dcb]=_0x333b57['split']('-')['map'](Number);if(!isNaN(_0x360864)&&!isNaN(_0x478dcb)){for(let _0x307da9=_0x360864;_0x307da9<=_0x478dcb&&_0x307da9<aaLookup['length'];_0x307da9++){aaLookup[_0x307da9]={..._0x4f5bc4};}}});}}_0xffb04f['run'](()=>{_0xffb04f['run'](()=>{try{if(aaDatabase['length']===0x0){Object['entries'](defaultAAValues)['forEach'](([_0xcb2f3b,_0x195d16])=>{try{aaDatabase['write'](_0xcb2f3b,_0x195d16);}catch(_0x4ac2b1){console['error']('Failed\x20to\x20write\x20default\x20AA\x20value\x20for\x20range\x20'+_0xcb2f3b+':',_0x4ac2b1);}});}}catch(_0x576f0d){console['error']('Failed\x20to\x20initialize\x20AA\x20database:',_0x576f0d);}rebuildAALookup();});});function getAAValueForLevel(_0x52df1c){return aaLookup[_0x52df1c]||{'qty':0x0,'speed':0x0,'maxStack':0x64};}_0x543fa6['afterEvents']['itemUse']['subscribe'](_0x1e5ec1=>{const {source:_0x1e0bec,itemStack:_0x21bd1e}=_0x1e5ec1;if(_0x21bd1e['typeId']==='minecraft:blaze_rod'&&_0x1e0bec['hasTag']('admin')){openAdminMenu(_0x1e0bec);}});function openAdminMenu(_0x6ee7ca){if(!_0x6ee7ca||!_0x6ee7ca['isValid']){console['error'](ERROR_MESSAGES['INVALID_PLAYER']);return;}if(!securityService['hasTagPermission'](_0x6ee7ca,UI['ADMIN_PERMISSION_TAG'])){_0x6ee7ca['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);securityService['logSecurityEvent']('unauthorized_admin_access',_0x6ee7ca,{'attemptedAction':'openAdminMenu'});return;}const _0x5d70c5=new _0x5a5ee7()['title']('Leefy\x20Spawner\x20Settings')['body']('§7Configure\x20spawner\x20behavior\x20and\x20performance\x20settings\x0a§c⚠\x20Performance\x20settings\x20require\x20server/world\x20restart')['button']('Spawner\x20Settings','textures/items/diamond')['button']('Entity\x20Loot\x20Tables','textures/blocks/chest_front')['button']('Stack\x20Radius','textures/items/snowball')['button']('Loot\x20Drop\x20Rules','textures/items/lever.png')['button']('Performance\x20Settings\x20§c(Requires\x20Restart)','textures/items/clock_item')['button']('Spawner\x20Statistics','textures/items/book_normal')['button']('Teleport\x20to\x20Spawner','textures/items/ender_pearl')['button']('Verify\x20&\x20Clean\x20Database','textures/items/book_normal')['button'](isLoggingEnabled()?'Disable\x20Logging':'Enable\x20Logging','textures/items/paper');_0x5d70c5['show'](_0x6ee7ca)['then'](_0x1b002d=>{if(_0x1b002d['canceled'])return;if(!securityService['hasTagPermission'](_0x6ee7ca,UI['ADMIN_PERMISSION_TAG'])){_0x6ee7ca['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);securityService['logSecurityEvent']('unauthorized_admin_action',_0x6ee7ca,{'attemptedAction':'admin_menu_selection_'+_0x1b002d['selection']});return;}const _0x4a2b73=securityService['validateCommand'](_0x6ee7ca,'admin_action',['selection_'+_0x1b002d['selection']]);if(!_0x4a2b73['isValid']){_0x6ee7ca['sendMessage']('§c'+_0x4a2b73['error']);return;}if(_0x4a2b73['warnings']['length']>0x0){_0x4a2b73['warnings']['forEach'](_0xe7bc32=>{console['warn']('Admin\x20action\x20warning\x20for\x20'+_0x6ee7ca['name']+':\x20'+_0xe7bc32);});}_0xffb04f['run'](()=>{switch(_0x1b002d['selection']){case 0x0:openAAConfigForm(_0x6ee7ca);break;case 0x1:openLootTableConfigForm(_0x6ee7ca);break;case 0x2:openRadiusConfigForm(_0x6ee7ca);break;case 0x3:openToggleLootDropForm(_0x6ee7ca);break;case 0x4:openPerformanceConfigForm(_0x6ee7ca);break;case 0x5:openSpawnerStatisticsForm(_0x6ee7ca);break;case 0x6:openSpawnerTeleportForm(_0x6ee7ca);break;case 0x7:verifyAndCleanSpawnerDatabase(_0x6ee7ca);break;case 0x8:toggleLogging(_0x6ee7ca);break;}});securityService['logSecurityEvent']('admin_action_executed',_0x6ee7ca,{'action':'selection_'+_0x1b002d['selection'],'warnings':_0x4a2b73['warnings']['length']});})['catch'](_0x1afc3e=>{console['error']('Error\x20in\x20openAdminMenu:\x20'+_0x1afc3e);_0x6ee7ca['sendMessage']('§cAn\x20error\x20occurred\x20while\x20opening\x20the\x20admin\x20menu.');performanceMonitor['recordError']('admin_menu_error',_0x1afc3e instanceof Error?_0x1afc3e['message']:String(_0x1afc3e));})['finally'](()=>{cooldowns['set'](_0x6ee7ca['name'],Date['now']());});}function openToggleLootDropForm(_0x4a3c4b){if(!_0x4a3c4b||!_0x4a3c4b['isValid'])return;if(!securityService['hasTagPermission'](_0x4a3c4b,UI['ADMIN_PERMISSION_TAG'])){_0x4a3c4b['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x554517=configDatabase2['read']('itemSpillCap')||0x5;const _0xcc5152=configDatabase2['read']('xpSpillCap')||0x3;const _0x4b2d1a=configDatabase2['read']('playerKillOnly')??![];new _0x25de0f()['title']('Loot\x20Drop\x20Rules')['toggle']('Player\x20Kills\x20Only\x20(Lag\x20Protection)',_0x4b2d1a)['textField']('Max\x20item\x20drops\x20near\x20stack:','Enter\x20integer\x20(>=1)',''+_0x554517)['textField']('Max\x20XP\x20orbs\x20near\x20stack:','Enter\x20integer\x20(>=1)',''+_0xcc5152)['show'](_0x4a3c4b)['then'](_0x4cbe01=>{if(_0x4cbe01['canceled']||!_0x4cbe01['formValues'])return;if(!securityService['hasTagPermission'](_0x4a3c4b,UI['ADMIN_PERMISSION_TAG'])){_0x4a3c4b['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}configDatabase2['write']('playerKillOnly',_0x4cbe01['formValues'][0x0]);const _0x2d3de6=parseInt(_0x4cbe01['formValues'][0x1]);if(!isNaN(_0x2d3de6)&&_0x2d3de6>=0x1)configDatabase2['write']('itemSpillCap',_0x2d3de6);const _0x2c5965=parseInt(_0x4cbe01['formValues'][0x2]);if(!isNaN(_0x2c5965)&&_0x2c5965>=0x1)configDatabase2['write']('xpSpillCap',_0x2c5965);_0x4a3c4b['sendMessage']('§aLoot\x20drop\x20rules\x20updated!');})['finally'](()=>{cooldowns['set'](_0x4a3c4b['name'],Date['now']());});}function openPerformanceConfigForm(_0x19b316){if(!_0x19b316||!_0x19b316['isValid'])return;if(!securityService['hasTagPermission'](_0x19b316,UI['ADMIN_PERMISSION_TAG'])){_0x19b316['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x731343=configDatabase2['read']('performanceActivationRadius')||0x32;const _0x241f7d=configDatabase2['read']('performanceMaxSpawns')||0x19;const _0x363d21=configDatabase2['read']('performanceRandomDelay')??!![];const _0x4c0f72=configDatabase2['read']('performanceSpawnInterval')||0x14;const _0x2c316f=new _0x25de0f()['title']('Performance\x20Settings')['slider']('§bPlayer\x20Activation\x20Radius\x20(blocks):§r\x0a§7Distance\x20players\x20must\x20be\x20within\x20to\x20activate\x20spawners.\x0a§7Lower\x20=\x20Better\x20performance\x20(spawners\x20pause\x20sooner)\x0a§eDefault:\x2050\x20blocks§r',0xa,0x80,0x2,_0x731343)['slider']('§bMax\x20Spawns\x20Per\x20Cycle:§r\x0a§7Maximum\x20entities\x20that\x20can\x20spawn\x20per\x20second.\x0a§7Lower\x20=\x20Smoother\x20performance,\x20slower\x20spawning\x0a§eDefault:\x2025\x20spawns/second§r',0x5,0x64,0x5,_0x241f7d)['toggle']('§bRandom\x20Initial\x20Spawn\x20Delays:§r\x0a§7Randomizes\x20first\x20spawn\x20time\x20(0-100%\x20of\x20interval).\x0a§7Prevents\x20all\x20spawners\x20from\x20syncing\x20up.\x0a§aRecommended:\x20Enabled§r',_0x363d21)['slider']('§bSpawn\x20Check\x20Interval\x20(ticks):§r\x0a§7How\x20often\x20to\x20check\x20spawners\x20(20\x20ticks\x20=\x201\x20second).\x0a§7Lower\x20=\x20More\x20responsive,\x20higher\x20CPU\x20usage\x0a§eDefault:\x2020\x20ticks§r',0xa,0x64,0x5,_0x4c0f72);_0x2c316f['show'](_0x19b316)['then'](_0x4219f2=>{if(_0x4219f2['canceled']||!_0x4219f2['formValues'])return;if(!securityService['hasTagPermission'](_0x19b316,UI['ADMIN_PERMISSION_TAG'])){_0x19b316['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x19c692=(_0x55bd0b,_0x2e17f4)=>{if(typeof _0x55bd0b==='number')return _0x55bd0b;const _0x530a96=String(_0x55bd0b)['trim']();if(_0x530a96==='')return _0x2e17f4;const _0x3c4a25=parseInt(_0x530a96);return isNaN(_0x3c4a25)?_0x2e17f4:_0x3c4a25;};const _0x2298b4=_0x19c692(_0x4219f2['formValues'][0x0],_0x731343);const _0x2c66bc=_0x19c692(_0x4219f2['formValues'][0x1],_0x241f7d);const _0x301980=_0x4219f2['formValues'][0x2];const _0x258e3d=_0x19c692(_0x4219f2['formValues'][0x3],_0x4c0f72);let _0x1595a6=![];let _0x3a9bf9=[];if(_0x2298b4>=0xa&&_0x2298b4<=0x80){configDatabase2['write']('performanceActivationRadius',_0x2298b4);_0x1595a6=!![];}else{_0x3a9bf9['push']('§eInvalid\x20activation\x20radius\x20-\x20must\x20be\x20between\x2010-128\x20blocks');}if(_0x2c66bc>=0x5&&_0x2c66bc<=0x64){configDatabase2['write']('performanceMaxSpawns',_0x2c66bc);_0x1595a6=!![];}else{_0x3a9bf9['push']('§eInvalid\x20max\x20spawns\x20-\x20must\x20be\x20between\x205-100');}configDatabase2['write']('performanceRandomDelay',_0x301980);_0x1595a6=!![];if(_0x258e3d>=0xa&&_0x258e3d<=0x64){configDatabase2['write']('performanceSpawnInterval',_0x258e3d);if(_0x258e3d<0x14){_0x3a9bf9['push']('§c⚠\x20Low\x20spawn\x20interval\x20may\x20increase\x20CPU\x20usage!');}_0x1595a6=!![];}else{_0x3a9bf9['push']('§eInvalid\x20spawn\x20interval\x20-\x20must\x20be\x20between\x2010-100\x20ticks');}if(_0x1595a6){_0x19b316['sendMessage']('§a✓\x20Performance\x20settings\x20saved\x20to\x20database!');_0x19b316['sendMessage']('§c§l⚠\x20REQUIRES\x20SERVER\x20RESTART\x20OR\x20WORLD\x20RESTART\x20⚠');_0x19b316['sendMessage']('§c(Settings\x20are\x20cached\x20at\x20startup\x20for\x20maximum\x20performance)');_0x19b316['sendMessage']('§e');_0x19b316['sendMessage']('§e»\x20Use\x20§f/reload\x20§eor\x20restart\x20world\x20to\x20apply\x20changes');}_0x3a9bf9['forEach'](_0x5c9e0a=>_0x19b316['sendMessage'](_0x5c9e0a));if(_0x3a9bf9['length']===0x0&&_0x1595a6){_0x19b316['sendMessage']('§7━━━━━━━━━━━━━━━━━━━━━━━━');_0x19b316['sendMessage']('§bSettings\x20Saved\x20(Pending\x20Restart):§r');_0x19b316['sendMessage']('§7Activation\x20Radius:\x20§e'+_0x2298b4+'\x20blocks');_0x19b316['sendMessage']('§7Max\x20Spawns:\x20§e'+_0x2c66bc+'/second');_0x19b316['sendMessage']('§7Random\x20Delays:\x20§e'+(_0x301980?'Enabled':'Disabled'));_0x19b316['sendMessage']('§7Check\x20Interval:\x20§e'+_0x258e3d+'\x20ticks');_0x19b316['sendMessage']('§7━━━━━━━━━━━━━━━━━━━━━━━━');_0x19b316['sendMessage']('§c§l»\x20RESTART\x20REQUIRED\x20TO\x20ACTIVATE\x20«');}})['catch'](_0x3b8be2=>{console['error']('Error\x20in\x20openPerformanceConfigForm:\x20'+_0x3b8be2);_0x19b316['sendMessage']('§cAn\x20error\x20occurred\x20while\x20updating\x20performance\x20settings.');})['finally'](()=>{cooldowns['set'](_0x19b316['name'],Date['now']());});}function openRadiusConfigForm(_0x5fda1b){if(!_0x5fda1b||!_0x5fda1b['isValid']){console['error']('Invalid\x20player\x20provided\x20to\x20openRadiusConfigForm');return;}const _0x3a40c0=configDatabase2['read']('stackRadius')||0x32;new _0x25de0f()['title']('Configure\x20Stack\x20Radius')['slider']('Stacking\x20Radius\x20(blocks):',0x1,0x64,0x1,_0x3a40c0)['show'](_0x5fda1b)['then'](_0x1c45f3=>{if(_0x1c45f3['canceled']||!_0x1c45f3['formValues'])return;if(!securityService['hasTagPermission'](_0x5fda1b,UI['ADMIN_PERMISSION_TAG'])){_0x5fda1b['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);securityService['logSecurityEvent']('unauthorized_config_change',_0x5fda1b,{'configType':'radius'});return;}const _0x5ea420=typeof _0x1c45f3['formValues'][0x0]==='number'?_0x1c45f3['formValues'][0x0]:parseInt(_0x1c45f3['formValues'][0x0]);if(!isNaN(_0x5ea420)&&_0x5ea420>0x0&&_0x5ea420<=0x64){configDatabase2['write']('stackRadius',_0x5ea420);_0x5fda1b['sendMessage']('§aStacking\x20radius\x20updated\x20to\x20'+_0x5ea420+'!');securityService['logSecurityEvent']('config_updated',_0x5fda1b,{'configType':'stackRadius','oldValue':UI['DEFAULT_STACK_RADIUS'],'newValue':_0x5ea420});}else{_0x5fda1b['sendMessage'](ERROR_MESSAGES['INVALID_RADIUS']);securityService['logSecurityEvent']('invalid_config_value',_0x5fda1b,{'configType':'stackRadius','attemptedValue':_0x1c45f3['formValues'][0x0]});}})['catch'](_0x55b778=>{console['error']('Error\x20in\x20openRadiusConfigForm:\x20'+_0x55b778);_0x5fda1b['sendMessage']('§cAn\x20error\x20occurred\x20while\x20updating\x20the\x20configuration.');performanceMonitor['recordError']('radius_config_error',_0x55b778 instanceof Error?_0x55b778['message']:String(_0x55b778));})['finally'](()=>{cooldowns['set'](_0x5fda1b['name'],Date['now']());});}function openLootTableConfigForm(_0x396a9b){if(!_0x396a9b||!_0x396a9b['isValid'])return;if(!securityService['hasTagPermission'](_0x396a9b,UI['ADMIN_PERMISSION_TAG'])){_0x396a9b['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x1fefe1=new _0x5a5ee7()['title']('Loot\x20Table\x20Configuration')['body']('Select\x20an\x20entity\x20to\x20configure\x20its\x20loot\x20table:');const _0x24922a=[...validMobs]['sort']((_0x15bae0,_0x278e9a)=>_0x15bae0['displayName']['localeCompare'](_0x278e9a['displayName']));_0x24922a['forEach'](_0x91116f=>{const _0x5cb7e0=getSpawnerIconPath(_0x91116f['typeId'],_0x91116f['displayName']);_0x1fefe1['button']('Spawner\x20'+_0x91116f['displayName'],_0x5cb7e0);});_0x1fefe1['show'](_0x396a9b)['then'](_0x413111=>{if(!securityService['hasTagPermission'](_0x396a9b,UI['ADMIN_PERMISSION_TAG'])){_0x396a9b['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}if(!_0x413111['canceled']&&_0x413111['selection']!==void 0x0)openEntityLootConfigForm(_0x396a9b,_0x24922a[_0x413111['selection']]['typeId']);})['finally'](()=>{cooldowns['set'](_0x396a9b['name'],Date['now']());});}function openEntityLootConfigForm(_0x5e0b87,_0x3d4dc8){if(!_0x5e0b87||!_0x5e0b87['isValid'])return;if(!securityService['hasTagPermission'](_0x5e0b87,UI['ADMIN_PERMISSION_TAG'])){_0x5e0b87['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x54b8ee=lootManagerInstance;const _0x3488b9=_0x54b8ee['entities'][_0x3d4dc8]||{};const _0x201b67=new _0x5a5ee7()['title'](_0x3d4dc8)['body']('Select\x20an\x20action:');Object['keys'](_0x3488b9)['forEach'](_0x20c564=>_0x201b67['button']('Edit\x20'+_0x20c564));_0x201b67['button']('Add\x20New\x20Item','textures/ui/plus.png');_0x201b67['button']('XP\x20Manager','textures/items/experience_bottle.png');_0x201b67['show'](_0x5e0b87)['then'](_0x395d3e=>{if(_0x395d3e['canceled']||_0x395d3e['selection']===void 0x0)return;if(!securityService['hasTagPermission'](_0x5e0b87,UI['ADMIN_PERMISSION_TAG'])){_0x5e0b87['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x24e7e3=Object['keys'](_0x3488b9)['length'];if(_0x395d3e['selection']<_0x24e7e3)openEditLootItemForm(_0x5e0b87,_0x3d4dc8,Object['keys'](_0x3488b9)[_0x395d3e['selection']]);else if(_0x395d3e['selection']===_0x24e7e3)openAddNewLootItemForm(_0x5e0b87,_0x3d4dc8);else if(_0x395d3e['selection']===_0x24e7e3+0x1)openXPDropManagerForm(_0x5e0b87,_0x3d4dc8);})['finally'](()=>{cooldowns['set'](_0x5e0b87['name'],Date['now']());});}function openXPDropManagerForm(_0x13fe34,_0x5886dc){if(!_0x13fe34||!_0x13fe34['isValid'])return;if(!securityService['hasTagPermission'](_0x13fe34,UI['ADMIN_PERMISSION_TAG'])){_0x13fe34['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x2bdf2a=xpDropDatabase['read'](_0x5886dc)||{};new _0x25de0f()['title']('XP\x20Manager:\x20'+_0x5886dc)['textField']('XP\x20Amount:','XP\x20to\x20drop\x20on\x20death',''+(_0x2bdf2a['amount']??0x1))['slider']('Drop\x20Chance\x20(%)',0x1,0x64,0x1,_0x2bdf2a['chance']??0x64)['show'](_0x13fe34)['then'](_0x462bd8=>{if(_0x462bd8['canceled']||!_0x462bd8['formValues'])return;if(!securityService['hasTagPermission'](_0x13fe34,UI['ADMIN_PERMISSION_TAG'])){_0x13fe34['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x13a7af=parseInt(_0x462bd8['formValues'][0x0]);const _0x5bb8ec=_0x462bd8['formValues'][0x1];if(!isNaN(_0x13a7af)&&_0x13a7af>=0x0){xpDropDatabase['write'](_0x5886dc,{'amount':_0x13a7af,'chance':_0x5bb8ec});_0x13fe34['sendMessage']('§aXP\x20drop\x20updated\x20for\x20'+_0x5886dc+'.');}else _0x13fe34['sendMessage']('§cInvalid\x20amount.');openEntityLootConfigForm(_0x13fe34,_0x5886dc);})['finally'](()=>{cooldowns['set'](_0x13fe34['name'],Date['now']());});}function openAddNewLootItemForm(_0x28fed5,_0x2bd9c7){if(!_0x28fed5||!_0x28fed5['isValid'])return;if(!securityService['hasTagPermission'](_0x28fed5,UI['ADMIN_PERMISSION_TAG'])){_0x28fed5['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x241f72=lootManagerInstance;const _0x35bca7=['None',...Object['keys'](_0x241f72['enchantmentCategories'])];new _0x25de0f()['title']('Add\x20Loot:\x20'+_0x2bd9c7)['textField']('Item\x20ID:','e.g.,\x20minecraft:diamond','')['textField']('Chance:','[0.01-100]','100')['toggle']('Enchantable?',![])['dropdown']('Enchantment\x20Category:',_0x35bca7,0x0)['textField']('Enchant\x20Chance:','[0-100]','50')['toggle']('Stackable?',!![])['toggle']('Random\x20Durability?',![])['show'](_0x28fed5)['then'](_0xdf754d=>{if(_0xdf754d['canceled']||!_0xdf754d['formValues'])return;if(!securityService['hasTagPermission'](_0x28fed5,UI['ADMIN_PERMISSION_TAG'])){_0x28fed5['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const [_0x364795,_0x5e2063,_0xf0f13d,_0xf45e34,_0x509a09,_0x42bcff,_0x3f380b]=_0xdf754d['formValues'];const _0x575bb4=parseFloat(_0x5e2063);if(!_0x364795||isNaN(_0x575bb4)){_0x28fed5['sendMessage']('§cInvalid\x20Item\x20ID\x20or\x20Chance.');return;}if(!_0x241f72['entities'][_0x2bd9c7])_0x241f72['entities'][_0x2bd9c7]={};_0x241f72['entities'][_0x2bd9c7][_0x364795]={'chance':_0x575bb4,'enchantments':_0xf0f13d&&_0x35bca7[_0xf45e34]!=='None'?{'chance':parseFloat(_0x509a09),'category':_0x35bca7[_0xf45e34]}:void 0x0,'stackable':_0x42bcff,'randomdurability':_0x3f380b};_0x241f72['saveLootTable'](_0x2bd9c7);_0x28fed5['sendMessage']('§aAdded\x20'+_0x364795+'\x20to\x20'+_0x2bd9c7+'\x27s\x20loot\x20table.');openEntityLootConfigForm(_0x28fed5,_0x2bd9c7);})['finally'](()=>{cooldowns['set'](_0x28fed5['name'],Date['now']());});}function openEditLootItemForm(_0x5267e0,_0x33d858,_0x375098){if(!_0x5267e0||!_0x5267e0['isValid'])return;if(!securityService['hasTagPermission'](_0x5267e0,UI['ADMIN_PERMISSION_TAG'])){_0x5267e0['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x5b22a6=lootManagerInstance;const _0x15b8c5=_0x5b22a6['entities'][_0x33d858][_0x375098];const _0x481059=['None',...Object['keys'](_0x5b22a6['enchantmentCategories'])];const _0xdaa2d9=_0x15b8c5['enchantments']?_0x481059['indexOf'](_0x15b8c5['enchantments']['category']):0x0;new _0x25de0f()['title']('Editing:\x20'+_0x375098)['textField']('Chance:','[0.01-100]',''+_0x15b8c5['chance'])['toggle']('Enchantable?',!!_0x15b8c5['enchantments'])['dropdown']('Category:',_0x481059,Math['max'](0x0,_0xdaa2d9))['textField']('Enchant\x20Chance:','[0-100]',''+(_0x15b8c5['enchantments']?.['chance']??0x32))['toggle']('Stackable?',_0x15b8c5['stackable']!==![])['toggle']('Random\x20Durability?',_0x15b8c5['randomdurability']===!![])['toggle']('§cDELETE\x20THIS\x20ITEM?§r',![])['show'](_0x5267e0)['then'](_0x3d5e36=>{if(_0x3d5e36['canceled']||!_0x3d5e36['formValues'])return;if(!securityService['hasTagPermission'](_0x5267e0,UI['ADMIN_PERMISSION_TAG'])){_0x5267e0['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const [_0x5e14a6,_0x5606fb,_0x439242,_0x14fb90,_0x5e3876,_0x131d3d,_0x2bc97a]=_0x3d5e36['formValues'];if(_0x2bc97a)delete _0x5b22a6['entities'][_0x33d858][_0x375098];else{const _0x135bf7=parseFloat(_0x5e14a6);if(isNaN(_0x135bf7)){_0x5267e0['sendMessage']('§cInvalid\x20Chance.');return;}_0x15b8c5['chance']=_0x135bf7;_0x15b8c5['enchantments']=_0x5606fb&&_0x481059[_0x439242]!=='None'?{'chance':parseFloat(_0x14fb90),'category':_0x481059[_0x439242]}:void 0x0;_0x15b8c5['stackable']=_0x5e3876;_0x15b8c5['randomdurability']=_0x131d3d;}_0x5b22a6['saveLootTable'](_0x33d858);_0x5267e0['sendMessage']('§aLoot\x20table\x20for\x20'+_0x33d858+'\x20updated.');openEntityLootConfigForm(_0x5267e0,_0x33d858);})['finally'](()=>{cooldowns['set'](_0x5267e0['name'],Date['now']());});}function openAAConfigForm(_0x2528a2){if(!_0x2528a2||!_0x2528a2['isValid']){console['error'](ERROR_MESSAGES['INVALID_PLAYER']);return;}if(!securityService['hasTagPermission'](_0x2528a2,UI['ADMIN_PERMISSION_TAG'])){_0x2528a2['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);securityService['logSecurityEvent']('unauthorized_aa_config',_0x2528a2);return;}const _0x5b953c=new _0x25de0f()['title']('Spawner\x20Settings');const _0x5b72cc=[];aaDatabase['forEach']((_0x5d6a4c,_0x14802e)=>_0x5b72cc['push']([_0x14802e,_0x5d6a4c]));_0x5b953c['textField']('Add\x20New\x20Range:','e.g.,\x201-10\x20or\x2033-33','');_0x5b953c['textField']('New\x20Range\x20-\x20Quantity:','e.g.,\x201','');_0x5b953c['textField']('New\x20Range\x20-\x20Speed\x20(sec):','e.g.,\x2010','');_0x5b953c['textField']('New\x20Range\x20-\x20Max\x20Stack:','e.g.,\x20100','');_0x5b72cc['forEach'](([_0x1057f4,{qty:_0x5588fa,speed:_0x5173a2,maxStack:_0x4820ef}])=>{_0x5b953c['textField']('Qty\x20for\x20'+_0x1057f4+':','Update',''+_0x5588fa);_0x5b953c['textField']('Speed\x20for\x20'+_0x1057f4+':','Update',''+_0x5173a2);_0x5b953c['textField']('Max\x20Stack\x20for\x20'+_0x1057f4+':','Update',''+_0x4820ef);_0x5b953c['toggle']('§cRemove\x20Range\x20'+_0x1057f4+'?§r',![]);});_0x5b953c['show'](_0x2528a2)['then'](_0x27aa57=>{if(_0x27aa57['canceled']||!_0x27aa57['formValues'])return;if(!securityService['hasTagPermission'](_0x2528a2,UI['ADMIN_PERMISSION_TAG'])){_0x2528a2['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x1ae8dc=_0x27aa57['formValues'];if(typeof _0x1ae8dc[0x0]==='string'&&_0x1ae8dc[0x0]['trim']()){let _0xe22d1e=_0x1ae8dc[0x0]['trim']();if(!_0xe22d1e['includes']('-'))_0xe22d1e=_0xe22d1e+'-'+_0xe22d1e;const _0x541e90=(_0xad508f,_0x3b950)=>{const _0x11a963=String(_0xad508f)['trim']();if(_0x11a963==='')return _0x3b950;const _0x4fb5e1=parseInt(_0x11a963);return isNaN(_0x4fb5e1)?_0x3b950:_0x4fb5e1;};aaDatabase['write'](_0xe22d1e,{'qty':Math['max'](0x1,_0x541e90(_0x1ae8dc[0x1],0x1)),'speed':Math['min'](MAX_ALLOWED_SPEED,Math['max'](0x1,_0x541e90(_0x1ae8dc[0x2],0xa))),'maxStack':Math['min'](MAX_ALLOWED_STACK,Math['max'](0x1,_0x541e90(_0x1ae8dc[0x3],0x64)))});}let _0x37d775=0x4;_0x5b72cc['forEach'](([_0x4cf2ce,_0x4d2a75])=>{if(_0x1ae8dc[_0x37d775+0x3]){aaDatabase['delete'](_0x4cf2ce);}else{const _0x3d00ac=_0x4d2a75?.['qty']??0x1;const _0xa2c424=_0x4d2a75?.['speed']??0xa;const _0x2d388f=_0x4d2a75?.['maxStack']??0x64;const _0x1fe90f=(_0x2f0639,_0x3eec56)=>{const _0x5ee65c=String(_0x2f0639)['trim']();if(_0x5ee65c==='')return _0x3eec56;const _0x2d4dce=parseInt(_0x5ee65c);return isNaN(_0x2d4dce)?_0x3eec56:_0x2d4dce;};aaDatabase['write'](_0x4cf2ce,{'qty':Math['max'](0x1,_0x1fe90f(_0x1ae8dc[_0x37d775],_0x3d00ac)),'speed':Math['min'](MAX_ALLOWED_SPEED,Math['max'](0x1,_0x1fe90f(_0x1ae8dc[_0x37d775+0x1],_0xa2c424))),'maxStack':Math['min'](MAX_ALLOWED_STACK,Math['max'](0x1,_0x1fe90f(_0x1ae8dc[_0x37d775+0x2],_0x2d388f)))});}_0x37d775+=0x4;});rebuildAALookup();clearSpawnerParseCache();_0x2528a2['sendMessage']('§aSpawner\x20settings\x20updated!');})['finally'](()=>{cooldowns['set'](_0x2528a2['name'],Date['now']());});}function toggleLogging(_0x272b3d){try{if(!_0x272b3d||!_0x272b3d['isValid']){console['error']('Invalid\x20player\x20provided\x20to\x20toggleLogging');return;}if(!securityService['hasTagPermission'](_0x272b3d,UI['ADMIN_PERMISSION_TAG'])){_0x272b3d['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}if(isLoggingEnabled()){disableLogging();_0x272b3d['sendMessage']('§cLogging\x20has\x20been\x20disabled\x20for\x20all\x20spawner\x20activities.');}else{enableLogging();_0x272b3d['sendMessage']('§aLogging\x20has\x20been\x20enabled\x20for\x20all\x20spawner\x20activities.');}_0xffb04f['run'](()=>openAdminMenu(_0x272b3d));}catch(_0x20d734){console['error']('Error\x20in\x20toggleLogging:\x20'+_0x20d734);_0x272b3d['sendMessage']('§cAn\x20error\x20occurred\x20while\x20toggling\x20logging.');}}function openSpawnerStatisticsForm(_0x12a421){try{if(!_0x12a421||!_0x12a421['isValid']){console['error']('Invalid\x20player\x20provided\x20to\x20openSpawnerStatisticsForm');return;}if(!securityService['hasTagPermission'](_0x12a421,UI['ADMIN_PERMISSION_TAG'])){_0x12a421['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}debugLog2('[MOBSTACKER]\x20Loading\x20database\x20stats\x20to\x20merge\x20with\x20local\x20data');loadSpawnerStatistics();debugLog2('Stats\x20available:\x20'+spawnerStatistics['entitiesKilled']['size']+'\x20entities,\x20'+spawnerStatistics['playerStats']['size']+'\x20players');calculateSpawnerTotals();const _0x60d954=Array['from'](spawnerStatistics['entitiesKilled']['values']())['reduce']((_0x9813cf,_0x3ff0ba)=>_0x9813cf+_0x3ff0ba,0x0);const _0x20b820=_0x543fa6['getAllPlayers']()['length'];const _0x265480=spawnerStatistics['playerStats']['size'];const _0x251fa4=_0x60d954['toLocaleString']();const _0x21be64=Math['floor']((Date['now']()-(performanceMetrics['lastReset']||Date['now']()))/0x3e8/0x3c);const _0x1851c7=Math['floor'](_0x21be64/0x3c);const _0x40f0a2=_0x1851c7>0x0?_0x1851c7+'h\x20'+_0x21be64%0x3c+'m':_0x21be64+'m';const _0x59b087=spawnerStatistics['totalSpawners']>0x0?Math['min'](0x64,Math['max'](0x0,spawnerStatistics['totalEntities']/spawnerStatistics['totalSpawners']*0x19))['toFixed'](0x1):'0';const _0x1a3d8b=0x32;const _0x2e20f2=performanceMetrics['averageProcessingTime']>0x0?Math['min'](0x64,performanceMetrics['averageProcessingTime']/_0x1a3d8b*0x64)['toFixed'](0x1):'0';const _0xa40d0c=getMemoryUsage();let _0x5b11cf;if(_0xa40d0c<0x32){_0x5b11cf='Low';}else if(_0xa40d0c<0x96){_0x5b11cf='Medium';}else if(_0xa40d0c<0x12c){_0x5b11cf='High';}else{_0x5b11cf='Very\x20High';}const _0x1b78f6=Array['from'](spawnerStatistics['entitiesKilled']['entries']())['sort']((_0x568657,_0x555422)=>_0x555422[0x1]-_0x568657[0x1])['slice'](0x0,0xa);const _0x25dc71=Array['from'](spawnerStatistics['playerStats']['entries']())['sort']((_0x1f8dd6,_0x29bf8b)=>(_0x29bf8b[0x1]['entitiesKilled']||0x0)-(_0x1f8dd6[0x1]['entitiesKilled']||0x0))['slice'](0x0,0xa);const _0x5be7c3=spawnerDatabase['length'];const _0x44225b=spawnerStatistics['totalSpawners'];let _0x95340b='§6§lSERVER\x20STATISTICS§r\x0a\x0a';_0x95340b+='§bSpawner\x20Blocks\x20Placed\x20(Total):\x20§f'+_0x5be7c3['toLocaleString']()+'\x0a';_0x95340b+='§bLoaded/Ticking\x20Spawners:\x20§f'+_0x44225b['toLocaleString']()+'\x0a';_0x95340b+='§bLoaded\x20Mob\x20Stacks\x20(Physical):\x20§f'+spawnerStatistics['totalEntities']['toLocaleString']()+'\x0a';_0x95340b+='§bLoaded\x20Mobs\x20(Total\x20inside\x20Stacks):\x20§f'+spawnerStatistics['totalVirtualEntities']['toLocaleString']()+'\x0a';_0x95340b+='§bOnline\x20Players:\x20§f'+_0x20b820+'\x0a';_0x95340b+='§bPlayers\x20with\x20Kill\x20History:\x20§f'+_0x265480+'\x0a';_0x95340b+='§bActive\x20Spawner\x20Chunks:\x20§f'+ACTIVE_CHUNKS['size']+'\x0a';_0x95340b+='§bServer\x20Load\x20(Entity\x20Density):\x20§f'+_0x59b087+'%\x20§7(Target\x20<\x204\x20mobs/spawner)\x0a';_0x95340b+='§bServer\x20Uptime:\x20§f'+_0x40f0a2+'\x0a';_0x95340b+='§bMemory\x20Usage\x20(Internal\x20Units):\x20§f'+_0x5b11cf+'\x20('+_0xa40d0c['toLocaleString']()+'\x20/\x20200\x20warning)\x0a';_0x95340b+='§bTick\x20Usage\x20(CPU\x20load):\x20§f'+_0x2e20f2+'%\x20('+performanceMetrics['averageProcessingTime']['toFixed'](0x2)+'ms\x20of\x2050ms\x20tick)\x0a';_0x95340b+='§bTotal\x20Kills:\x20§f'+_0x251fa4+'\x0a\x0a';_0x95340b+='§6§lTOP\x2010\x20MOST\x20KILLED\x20MOBS§r\x0a';if(_0x1b78f6['length']>0x0){_0x1b78f6['forEach']((_0xa73f0b,_0x249af0)=>{const _0x400bd4=getMobDisplayName(_0xa73f0b[0x0])||'Unknown';const _0x5f5c1b=_0x249af0+0x1;_0x95340b+='§7'+_0x5f5c1b+'.\x20§f'+_0x400bd4+'\x20§7('+_0xa73f0b[0x1]['toLocaleString']()+'\x20kills)\x0a';});}else{_0x95340b+='§7No\x20kills\x20recorded\x20yet\x0a';}_0x95340b+='\x0a';_0x95340b+='§6§lTOP\x2010\x20KILLERS§r\x0a';if(_0x25dc71['length']>0x0){_0x25dc71['forEach']((_0x2389d3,_0x90a14e)=>{const _0x455bb8=_0x90a14e+0x1;const _0x1b20c4=_0x2389d3[0x1]['entitiesKilled']?.['toLocaleString']()||0x0;_0x95340b+='§7'+_0x455bb8+'.\x20§f'+_0x2389d3[0x0]+'\x20§7('+_0x1b20c4+'\x20total\x20kills)\x0a';const _0x33c338=getPlayerTopKills(_0x2389d3[0x1],0x3);_0x33c338['forEach'](_0x2b595a=>{_0x95340b+='\x20\x20\x20§8-\x20§7'+_0x2b595a['displayName']+':\x20'+_0x2b595a['count']['toLocaleString']()+'\x0a';});_0x95340b+='\x0a';});}else{_0x95340b+='§7No\x20player\x20kills\x20recorded\x20yet\x0a';}const _0x2459bc=new _0x5a5ee7()['title']('§8Spawner\x20Server\x20Statistics')['body'](_0x95340b)['button']('§8Close','textures/ui/cancel')['button']('§bView\x20Player\x20Stats','textures/items/name_tag')['button']('§cReset\x20All\x20Statistics','textures/ui/realms_red_x');_0x2459bc['show'](_0x12a421)['then'](_0x14d5a5=>{if(!securityService['hasTagPermission'](_0x12a421,UI['ADMIN_PERMISSION_TAG'])){_0x12a421['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}if(_0x14d5a5['canceled']||_0x14d5a5['selection']===0x0)return;if(_0x14d5a5['selection']===0x1){openPlayerStatsSelectionForm(_0x12a421);return;}if(_0x14d5a5['selection']===0x2){const _0x2d3c88=new _0x25de0f()['title']('Confirm\x20Reset')['textField']('Confirm','Type\x20\x27RESET\x27\x20to\x20confirm',{'defaultValue':''})['submitButton']('CONFIRM');_0x2d3c88['show'](_0x12a421)['then'](_0x25bb0a=>{if(!securityService['hasTagPermission'](_0x12a421,UI['ADMIN_PERMISSION_TAG'])){_0x12a421['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}if(_0x25bb0a['canceled']||!_0x25bb0a['formValues'])return;const _0x4e4e8d=_0x25bb0a['formValues'][0x0]?.['toUpperCase']()['trim']();if(_0x4e4e8d==='RESET'){resetSpawnerStatistics();_0x12a421['sendMessage']('§a✓\x20All\x20statistics\x20have\x20been\x20reset\x20successfully!');}else{_0x12a421['sendMessage']('§cReset\x20cancelled\x20-\x20confirmation\x20code\x20was\x20incorrect.');}})['catch'](_0x5eeed7=>{console['error']('Error\x20in\x20spawner\x20stats\x20reset\x20confirmation:\x20'+_0x5eeed7);});}})['catch'](_0x4b2288=>{console['error']('Error\x20in\x20openSpawnerStatisticsForm:\x20'+_0x4b2288);_0x12a421['sendMessage']('§cAn\x20error\x20occurred\x20while\x20showing\x20statistics.');});}catch(_0x3acf25){console['error']('Critical\x20error\x20in\x20openSpawnerStatisticsForm:\x20'+_0x3acf25);_0x12a421['sendMessage']('§cA\x20critical\x20error\x20occurred.\x20Please\x20try\x20again.');}}function openSpawnerTeleportForm(_0x1db51b){try{if(!_0x1db51b||!_0x1db51b['isValid']){console['error']('Invalid\x20player\x20provided\x20to\x20openSpawnerTeleportForm');return;}if(!securityService['hasTagPermission'](_0x1db51b,UI['ADMIN_PERMISSION_TAG'])){_0x1db51b['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x3e82f9=new Map();const _0x31be32={};const _0x378195=spawnerDatabase['keys']();for(const _0x194143 of _0x378195){const _0x24014d=spawnerDatabase['read'](_0x194143);if(_0x24014d&&_0x24014d['placedBy']){const _0x1b94a8=_0x24014d['placedBy'];if(!_0x3e82f9['has'](_0x1b94a8)){_0x3e82f9['set'](_0x1b94a8,[]);}const _0x699f8d={'location':_0x194143,'typeId':_0x24014d['typeId'],'placedAt':_0x24014d['placedAt']};_0x3e82f9['get'](_0x1b94a8)['push'](_0x699f8d);_0x31be32[_0x194143]=_0x24014d;}}if(_0x3e82f9['size']===0x0){_0x1db51b['sendMessage']('§cNo\x20active\x20spawners\x20found\x20in\x20the\x20database.');return;}const _0x2f756d=Array['from'](_0x3e82f9['values']())['reduce']((_0x45afb2,_0x375552)=>_0x45afb2+_0x375552['length'],0x0);const _0x27721c=Array['from'](_0x3e82f9['entries']())['sort']((_0x213f67,_0x45b3e2)=>_0x45b3e2[0x1]['length']-_0x213f67[0x1]['length']);const _0x3f14a0=new _0x5a5ee7()['title']('Spawner\x20Teleport\x20System')['body']('Database\x20size:\x20'+_0x2f756d+'\x20spawners\x20across\x20'+_0x3e82f9['size']+'\x20players.\x20Select\x20a\x20player\x20to\x20view\x20their\x20spawners:');_0x3f14a0['button']('🔍\x20Search\x20by\x20Location','textures/ui/magnifying_glass');_0x27721c['forEach'](([_0x5ee63d,_0x1d65a4])=>{_0x3f14a0['button']('👤\x20'+_0x5ee63d+'\x20('+_0x1d65a4['length']+'\x20spawners)','textures/items/name_tag');});_0x3f14a0['show'](_0x1db51b)['then'](_0x4d306a=>{if(!securityService['hasTagPermission'](_0x1db51b,UI['ADMIN_PERMISSION_TAG'])){_0x1db51b['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}if(_0x4d306a['canceled']||_0x4d306a['selection']===void 0x0)return;if(_0x4d306a['selection']===0x0){openLocationSearchForm(_0x1db51b,_0x31be32);return;}const _0x293632=_0x27721c[_0x4d306a['selection']-0x1];if(_0x293632){const [_0x12b3d9,_0x248f5f]=_0x293632;openSpawnerSelectionForm(_0x1db51b,_0x12b3d9,_0x248f5f);}})['catch'](_0x3e2b33=>{console['error']('Error\x20in\x20openSpawnerTeleportForm:\x20'+_0x3e2b33);_0x1db51b['sendMessage']('§cAn\x20error\x20occurred\x20while\x20showing\x20the\x20spawner\x20teleport\x20form.');});}catch(_0x37ee0b){console['error']('Critical\x20error\x20in\x20openSpawnerTeleportForm:\x20'+_0x37ee0b);_0x1db51b['sendMessage']('§cA\x20critical\x20error\x20occurred.\x20Please\x20try\x20again.');}}function openSpawnerSelectionForm(_0x337d70,_0x52f546,_0x1dc9ad){try{if(!_0x337d70||!_0x337d70['isValid'])return;if(!securityService['hasTagPermission'](_0x337d70,UI['ADMIN_PERMISSION_TAG'])){_0x337d70['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0xec38a6=_0x1dc9ad['filter'](_0x442c19=>_0x442c19!==void 0x0&&_0x442c19!==null);const _0x2f582d=_0xec38a6['map'](_0x188382=>{let _0x5d4c65=0x0,_0x57d05a=0x0,_0x145ac8=0x0;try{if(_0x188382['location']&&typeof _0x188382['location']==='string'){const _0x6abaa2=_0x188382['location']['split'](',')['map'](_0x358d91=>parseFloat(_0x358d91['trim']()));if(_0x6abaa2['length']>=0x3&&_0x6abaa2['every'](_0x1a702e=>!isNaN(_0x1a702e))){[_0x5d4c65,_0x57d05a,_0x145ac8]=_0x6abaa2;}}}catch(_0x5d9afb){debugLog2('Error\x20parsing\x20location\x20for\x20spawner:\x20'+_0x188382['location']+',\x20error:\x20'+_0x5d9afb);}const _0x32106e=_0x188382['typeId']||'unknown_spawner';const _0x5a2592=_0x32106e['match'](/spawner(\d+)/);const _0x57ea02=_0x5a2592?parseInt(_0x5a2592[0x1]):0x1;const _0x428c84=_0x32106e['replace']('mrleefy:','')['replace'](/spawner\d+/,'')['replace'](/_/g,'');const _0x41cd43=getMobDisplayName('mrleefy:'+_0x428c84+'still')||'Unknown';const _0xfbb017=getEntitiesInfoNearSpawner(_0x5d4c65,_0x57d05a,_0x145ac8);return{..._0x188382,'displayName':_0x41cd43,'level':_0x57ea02,'physicalEntities':_0xfbb017['physicalCount'],'virtualEntities':_0xfbb017['virtualCount'],'x':_0x5d4c65,'y':_0x57d05a,'z':_0x145ac8};});const _0x4ff2e9=_0x2f582d['reduce']((_0x548320,_0x13d9a9)=>_0x548320+(_0x13d9a9['physicalEntities']||0x0),0x0);const _0x4036ce=_0x2f582d['reduce']((_0x5d15ec,_0x2acaa6)=>_0x5d15ec+(_0x2acaa6['virtualEntities']||0x0),0x0);const _0x1399c8=_0x2f582d['length']>0x0?_0x2f582d['reduce']((_0x2f0372,_0x188825)=>_0x2f0372+(_0x188825['level']||0x1),0x0)/_0x2f582d['length']:0x0;const _0x31ba1c=new _0x5a5ee7()['title'](_0x52f546+'\x27s\x20Spawners')['body']('Total:\x20'+_0x2f582d['length']+'\x20spawners\x20|\x20Active:\x20'+_0x4ff2e9+'\x20stacks\x20('+_0x4036ce+'\x20mobs)\x20|\x20Avg\x20Level:\x20'+_0x1399c8['toFixed'](0x1));_0x2f582d['forEach'](_0x4bec15=>{const _0x5abb16=_0x4bec15['physicalEntities']>0x0?'§a[Active:\x20'+_0x4bec15['physicalEntities']+'\x20stack\x20('+_0x4bec15['virtualEntities']+'\x20mobs)]':'§8[Idle]';const _0x2689fa=getSpawnerIconPath(_0x4bec15['typeId'],_0x4bec15['displayName']);_0x31ba1c['button'](_0x5abb16+'\x20§7Lvl\x20'+_0x4bec15['level']+'\x20§f'+_0x4bec15['displayName']+'\x0a§8Coord:\x20'+_0x4bec15['x']+',\x20'+_0x4bec15['y']+',\x20'+_0x4bec15['z'],_0x2689fa);});_0x31ba1c['button']('§6📊\x20View\x20Player\x20Statistics','textures/ui/book_normal');_0x31ba1c['show'](_0x337d70)['then'](_0x29863f=>{if(!securityService['hasTagPermission'](_0x337d70,UI['ADMIN_PERMISSION_TAG'])){_0x337d70['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}if(_0x29863f['canceled']||_0x29863f['selection']===void 0x0)return;if(_0x29863f['selection']===_0x2f582d['length']){openSpawnerInfoForm(_0x337d70,_0x52f546,_0x2f582d);return;}const _0xd1744c=_0x2f582d[_0x29863f['selection']];if(_0xd1744c){teleportToSpawner(_0x337d70,_0xd1744c['x'],_0xd1744c['y'],_0xd1744c['z']);}})['catch'](_0x530900=>{console['error']('Error\x20in\x20openSpawnerSelectionForm:\x20'+_0x530900);_0x337d70['sendMessage']('§cAn\x20error\x20occurred\x20while\x20opening\x20selection\x20form.');});}catch(_0x4b6bd7){console['error']('Critical\x20error\x20in\x20openSpawnerSelectionForm:\x20'+_0x4b6bd7);_0x337d70['sendMessage']('§cA\x20critical\x20error\x20occurred.\x20Please\x20try\x20again.');}}function teleportToSpawner(_0x5e5948,_0x240121,_0x25af22,_0xbe6776){try{if(!_0x5e5948||!_0x5e5948['isValid'])return;_0x5e5948['sendMessage']('§aTeleporting\x20to\x20spawner\x20at\x20'+_0x240121+',\x20'+_0x25af22+',\x20'+_0xbe6776+'...');_0xffb04f['run'](()=>{try{const _0x554c66=_0x5e5948['dimension'];_0x5e5948['teleport']({'x':_0x240121+0.5,'y':_0x25af22+1.5,'z':_0xbe6776+0.5},{'dimension':_0x554c66});}catch(_0x59c849){console['error']('Teleport\x20logic\x20failed:\x20'+_0x59c849);_0x5e5948['sendMessage']('§cTeleport\x20failed.\x20Check\x20if\x20coordinate\x20is\x20in\x20a\x20loaded\x20area\x20or\x20try\x20again.');}});}catch(_0x364912){console['error']('Error\x20in\x20teleportToSpawner:\x20'+_0x364912);_0x5e5948['sendMessage']('§cA\x20critical\x20error\x20occurred\x20during\x20teleportation.');}}function extractStackSize(_0x38fb68){if(!_0x38fb68)return 0x1;const _0x28934e=_0x38fb68['match'](/x(\d+)/);return _0x28934e?parseInt(_0x28934e[0x1],0xa):0x1;}function getEntitiesInfoNearSpawner(_0x6bae08,_0x3600cc,_0xf81fde){try{const _0x26a038=_0x543fa6['getDimension']('overworld');const _0x10d3d0={'x':_0x6bae08,'y':_0x3600cc,'z':_0xf81fde};const _0x4940e3=_0x26a038['getEntities']({'location':_0x10d3d0,'maxDistance':0xa});let _0x2b7ceb=0x0;let _0x2c293a=0x0;_0x4940e3['forEach'](_0xcf504e=>{if(_0xcf504e?.['isValid']&&_0xcf504e['typeId']['startsWith']('mrleefy:')){if(_0xcf504e['nameTag']&&_0xcf504e['nameTag']['includes']('x')){_0x2b7ceb++;_0x2c293a+=extractStackSize(_0xcf504e['nameTag']);}}});return{'physicalCount':_0x2b7ceb,'virtualCount':_0x2c293a};}catch(_0x251f91){return{'physicalCount':0x0,'virtualCount':0x0};}}function openLocationSearchForm(_0x2a02c9,_0x1e8ded){try{if(!_0x2a02c9||!_0x2a02c9['isValid'])return;if(!securityService['hasTagPermission'](_0x2a02c9,UI['ADMIN_PERMISSION_TAG'])){_0x2a02c9['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x112e8c=_0x2a02c9['location'];const _0x9bde02=Math['round'](_0x112e8c['x']);const _0x20cc74=Math['round'](_0x112e8c['z']);const _0x554698=new _0x25de0f()['title']('Search\x20Spawners\x20by\x20Location')['toggle']('Use\x20current\x20location',!![])['textField']('X\x20Coordinate','Enter\x20X\x20coordinate',_0x9bde02['toString']())['textField']('Z\x20Coordinate','Enter\x20Z\x20coordinate',_0x20cc74['toString']())['slider']('Search\x20Radius',0xa,0x1f4,0xa,0x32)['toggle']('Include\x20inactive\x20spawners',!![]);_0x554698['show'](_0x2a02c9)['then'](_0x1aacb4=>{if(!securityService['hasTagPermission'](_0x2a02c9,UI['ADMIN_PERMISSION_TAG'])){_0x2a02c9['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}if(_0x1aacb4['canceled']||!_0x1aacb4['formValues'])return;const _0x4119ac=_0x1aacb4['formValues'][0x0];const _0x3537da=_0x1aacb4['formValues'][0x1];const _0x2ec883=_0x1aacb4['formValues'][0x2];const _0x3702f4=_0x1aacb4['formValues'][0x3];const _0x410a40=_0x1aacb4['formValues'][0x4];const _0x2c22e2=_0x4119ac?_0x9bde02:parseInt(_0x3537da);const _0x20e89d=_0x4119ac?_0x20cc74:parseInt(_0x2ec883);if(isNaN(_0x2c22e2)||isNaN(_0x20e89d)){_0x2a02c9['sendMessage']('§cInvalid\x20coordinates\x20entered.');return;}const _0x5ad356=[];Object['entries'](_0x1e8ded)['forEach'](([_0x264c98,_0x3e8100])=>{try{const [_0x4b916d,_0x4a35c8,_0x5500b7]=_0x264c98['split'](',')['map'](_0x590b2e=>parseFloat(_0x590b2e['trim']()));const _0x3229ce=Math['sqrt'](Math['pow'](_0x4b916d-_0x2c22e2,0x2)+Math['pow'](_0x5500b7-_0x20e89d,0x2));if(_0x3229ce<=_0x3702f4){const _0x26380f=getEntitiesInfoNearSpawner(_0x4b916d,_0x4a35c8,_0x5500b7);if(_0x26380f['physicalCount']>0x0||_0x410a40){_0x5ad356['push']({'coordinates':_0x264c98,'data':_0x3e8100,'distance':_0x3229ce,'physicalCount':_0x26380f['physicalCount'],'virtualCount':_0x26380f['virtualCount'],'x':_0x4b916d,'y':_0x4a35c8,'z':_0x5500b7});}}}catch(_0x293075){console['error']('Error\x20matching\x20distance\x20search\x20coords:',_0x293075);}});_0x5ad356['sort']((_0x1e5f82,_0x152ca5)=>_0x1e5f82['distance']-_0x152ca5['distance']);openLocationResultsForm(_0x2a02c9,_0x5ad356,_0x2c22e2,_0x20e89d,_0x3702f4);})['catch'](_0x3a3953=>{console['error']('Error\x20in\x20openLocationSearchForm:\x20'+_0x3a3953);_0x2a02c9['sendMessage']('§cAn\x20error\x20occurred\x20during\x20search.');});}catch(_0x1dcd19){console['error']('Critical\x20error\x20in\x20openLocationSearchForm:\x20'+_0x1dcd19);_0x2a02c9['sendMessage']('§cA\x20critical\x20error\x20occurred.\x20Please\x20try\x20again.');}}function openLocationResultsForm(_0x558b42,_0x18ed53,_0x428bb7,_0xba2aa,_0x4e6f44){try{if(!_0x558b42||!_0x558b42['isValid'])return;if(!securityService['hasTagPermission'](_0x558b42,UI['ADMIN_PERMISSION_TAG'])){_0x558b42['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x1ba8af=[];const _0x50968f=new _0x5a5ee7()['title']('Search\x20Results')['body']('Found\x20'+_0x18ed53['length']+'\x20spawners\x20within\x20'+_0x4e6f44+'\x20blocks\x20of\x20'+_0x428bb7+',\x20'+_0xba2aa+':');_0x18ed53['forEach'](_0x4a73e7=>{const _0x287d35=_0x4a73e7['data'];const _0x12747b=_0x4a73e7['physicalCount']>0x0?'§a[Active:\x20'+_0x4a73e7['physicalCount']+'\x20stack\x20('+_0x4a73e7['virtualCount']+'\x20mobs)]':'§8[Idle]';const _0x1b1afd=_0x287d35['typeId']||'unknown';const _0x483ce2=_0x1b1afd['match'](/spawner(\d+)/);const _0x20342d=_0x483ce2?_0x483ce2[0x1]:'1';const _0x3e1814=_0x1b1afd['replace']('mrleefy:','')['replace'](/spawner\d+/,'')['replace'](/_/g,'');const _0x1f4aa8=getMobDisplayName('mrleefy:'+_0x3e1814+'still')||'Unknown';const _0x1984c1=getSpawnerIconPath(_0x1b1afd,_0x1f4aa8);_0x50968f['button'](_0x12747b+'\x20§7Lvl\x20'+_0x20342d+'\x20§f'+_0x1f4aa8+'\x0a§7Player:\x20'+(_0x287d35['placedBy']||'Unknown')+'\x20('+Math['round'](_0x4a73e7['distance'])+'m\x20away)',_0x1984c1);_0x1ba8af['push'](_0x4a73e7);});_0x50968f['show'](_0x558b42)['then'](_0x1188fc=>{if(!securityService['hasTagPermission'](_0x558b42,UI['ADMIN_PERMISSION_TAG'])){_0x558b42['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}if(_0x1188fc['canceled']||_0x1188fc['selection']===void 0x0)return;const _0x2d9046=_0x1ba8af[_0x1188fc['selection']];if(_0x2d9046){teleportToSpawner(_0x558b42,_0x2d9046['x'],_0x2d9046['y'],_0x2d9046['z']);}})['catch'](_0x2779ac=>{console['error']('Error\x20in\x20openLocationResultsForm:\x20'+_0x2779ac);_0x558b42['sendMessage']('§cAn\x20error\x20occurred\x20while\x20selecting\x20spawner\x20from\x20search\x20results.');});}catch(_0x29f158){console['error']('Critical\x20error\x20in\x20openLocationResultsForm:\x20'+_0x29f158);_0x558b42['sendMessage']('§cA\x20critical\x20error\x20occurred.\x20Please\x20try\x20again.');}}function getMobDisplayName(_0x15e62f){const _0x6d99bc=validMobs['find'](_0xf49c=>_0xf49c['typeId']===_0x15e62f);if(_0x6d99bc){return _0x6d99bc['displayName'];}const _0xc972de=_0x15e62f['replace']('mrleefy:','')['replace']('still','');return _0xc972de['charAt'](0x0)['toUpperCase']()+_0xc972de['slice'](0x1);}function getSpawnerIconPath(_0x566f14,_0xa3040a){const _0x4bd51c=_0x566f14['replace'](/\d+$/,'');const _0x32d035={'mrleefy:coalcrawlerspawner':'textures/blocks/iron','mrleefy:ironcrawlerspawner':'textures/blocks/ironcrawlerspawner','mrleefy:goldcrawlerspawner':'textures/blocks/goldcrawlerspawner','mrleefy:diamondcrawlerspawner':'textures/blocks/diamondcrawlerspawner','mrleefy:glowstonecrawlerspawner':'textures/blocks/gold','mrleefy:obsidiancrawlerspawner':'textures/blocks/diamond','mrleefy:icecrawlerspawner':'textures/blocks/emerald','mrleefy:spongecrawlerspawner':'textures/blocks/netherite','mrleefy:lapiscrawlerspawner':'textures/blocks/lapis','mrleefy:redstonecrawlerspawner':'textures/blocks/redstone','mrleefy:coppercrawlerspawner':'textures/blocks/copper','mrleefy:quartzcrawlerspawner':'textures/blocks/quartz','mrleefy:amethystcrawlerspawner':'textures/blocks/amethyst','mrleefy:coalcrawlerstill':'textures/blocks/iron','mrleefy:ironcrawlerstill':'textures/blocks/ironcrawlerspawner','mrleefy:goldcrawlerstill':'textures/blocks/goldcrawlerspawner','mrleefy:diamondcrawlerstill':'textures/blocks/diamondcrawlerspawner','mrleefy:glowstonecrawlerstill':'textures/blocks/gold','mrleefy:obsidiancrawlerstill':'textures/blocks/diamond','mrleefy:icecrawlerstill':'textures/blocks/emerald','mrleefy:spongecrawlerstill':'textures/blocks/netherite','mrleefy:lapiscrawlerstill':'textures/blocks/lapis','mrleefy:redstonecrawlerstill':'textures/blocks/redstone','mrleefy:coppercrawlerstill':'textures/blocks/copper','mrleefy:quartzcrawlerstill':'textures/blocks/quartz','mrleefy:amethystcrawlerstill':'textures/blocks/amethyst'};if(_0x32d035[_0x4bd51c]){return _0x32d035[_0x4bd51c]+'.png';}let _0x36b444=_0xa3040a['toLowerCase']()['replace'](/ /g,'_');if(_0x36b444==='wither_skeleton')_0x36b444='witherskeleton';return'textures/blocks/icons/'+_0x36b444+'.png';}function verifyAndCleanSpawnerDatabase(_0x39c35d){try{if(!_0x39c35d||!_0x39c35d['isValid']){console['error']('Invalid\x20player\x20provided\x20to\x20verifyAndCleanSpawnerDatabase');return;}if(!securityService['hasTagPermission'](_0x39c35d,UI['ADMIN_PERMISSION_TAG'])){_0x39c35d['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x3778b9=new MessageFormData()['title']('§4§lDatabase\x20Cleanup\x20Warning')['body']('§c§lWARNING:§r\x0a\x0aThis\x20operation\x20will\x20verify\x20all\x20spawners\x20stored\x20in\x20the\x20database\x20by\x20temporarily\x20loading\x20their\x20chunks\x20via\x20ticking\x20areas.\x0a\x0a§eWhat\x20it\x20does:§r\x0a•\x20Checks\x20if\x20a\x20spawner\x20block\x20actually\x20exists\x20at\x20each\x20stored\x20location.\x0a•\x20Deletes\x20old\x20spawner\x20coordinates\x20from\x20the\x20database\x20if\x20the\x20block\x20is\x20gone.\x0a•\x20Removes\x20any\x20orphaned/stuck\x20stacked\x20entities\x20at\x20those\x20locations.\x0a\x0a§cThis\x20may\x20cause\x20temporary\x20server\x20lag\x20during\x20the\x20scan.§r\x0a\x0aAre\x20you\x20sure\x20you\x20want\x20to\x20proceed?')['button1']('§aYes,\x20Start\x20Scan')['button2']('§cNo,\x20Cancel');_0x3778b9['show'](_0x39c35d)['then'](_0x4a925d=>{if(_0x4a925d['canceled']||_0x4a925d['selection']!==0x0){_0x39c35d['sendMessage']('§eDatabase\x20cleanup\x20cancelled.');return;}_0x39c35d['sendMessage']('§aStarting\x20database\x20verification\x20and\x20cleanup...');_0x39c35d['sendMessage']('§7This\x20process\x20runs\x20in\x20batches\x20to\x20prevent\x20lag.');const _0x1a8ff8=_0x543fa6['getDimension']('overworld');const _0x2a1656=spawnerDatabase['keys']();const _0x5a596f=_0x2a1656['length'];let _0x385bb2=0x0;let _0x4eefbc=0x0;let _0xa62dbf=0x0;let _0x48103b=0x0;let _0x2a7216=0x0;const _0x2f0fb9=0x5;const _0x344ee8=()=>{const _0x5f5a72=Math['min'](_0x385bb2+_0x2f0fb9,_0x5a596f);for(let _0x4ebead=_0x385bb2;_0x4ebead<_0x5f5a72;_0x4ebead++){const _0xa3d53=_0x2a1656[_0x4ebead];try{const [_0x31aff9,_0x1c6f28,_0x58b685]=_0xa3d53['split'](',')['map'](_0x408b03=>parseFloat(_0x408b03['trim']()));const _0x16f2bc='db_verify_'+_0x31aff9+'_'+_0x1c6f28+'_'+_0x58b685;_0x39c35d['runCommand']('tickingarea\x20add\x20'+(_0x31aff9-0x2)+'\x20'+(_0x1c6f28-0x2)+'\x20'+(_0x58b685-0x2)+'\x20'+(_0x31aff9+0x2)+'\x20'+(_0x1c6f28+0x2)+'\x20'+(_0x58b685+0x2)+'\x20'+_0x16f2bc+'\x20true');_0xffb04f['runTimeout'](()=>{try{const _0x1a2331=_0x1a8ff8['getBlock']({'x':_0x31aff9,'y':_0x1c6f28,'z':_0x58b685});if(!_0x1a2331||!(_0x1a2331['typeId']['startsWith']('mrleefy:')&&_0x1a2331['typeId']['includes']('spawner')&&!_0x1a2331['typeId']['endsWith']('_display'))){spawnerDatabase['delete'](_0xa3d53);_0xa62dbf++;debugLog2('[CLEANUP]\x20Deleted\x20stale\x20spawner\x20coordinates\x20from\x20DB:\x20'+_0xa3d53);const _0x58c666=_0x1a8ff8['getEntities']({'location':{'x':_0x31aff9,'y':_0x1c6f28,'z':_0x58b685},'maxDistance':0x8});_0x58c666['forEach'](_0x2d5b78=>{if(_0x2d5b78?.['isValid']&&_0x2d5b78['typeId']['startsWith']('mrleefy:')&&_0x2d5b78['typeId']['endsWith']('still')){_0x2d5b78['remove']();_0x48103b++;debugLog2('[CLEANUP]\x20Removed\x20orphaned\x20spawnrule\x20entity:\x20'+_0x2d5b78['typeId']+'\x20at\x20'+_0xa3d53);}});}else{_0x4eefbc++;}try{_0x39c35d['runCommand']('tickingarea\x20remove\x20'+_0x16f2bc);}catch(_0x2914df){}}catch(_0x422234){console['error']('Error\x20checking\x20block\x20at\x20'+_0xa3d53+':',_0x422234);try{_0x39c35d['runCommand']('tickingarea\x20remove\x20'+_0x16f2bc);}catch(_0x1c901e){}}_0x2a7216++;if(_0x2a7216%0xa===0x0||_0x2a7216===_0x5a596f){_0x39c35d['sendMessage']('§7Progress:\x20'+_0x2a7216+'/'+_0x5a596f+'\x20spawners\x20checked...');}if(_0x385bb2+_0x2f0fb9<_0x5a596f){_0x385bb2+=_0x2f0fb9;_0xffb04f['runTimeout'](()=>{_0x344ee8();},0x14);}else if(_0x2a7216===_0x5a596f){reportVerificationResults(_0x39c35d,_0x4eefbc,_0xa62dbf,_0x48103b);}},0x2);}catch(_0x5c708d){console['error']('Error\x20processing\x20spawner\x20at\x20'+_0xa3d53+':',_0x5c708d);_0x2a7216++;}}};if(_0x5a596f>0x0){_0x344ee8();}else{_0x39c35d['sendMessage']('§eNo\x20spawners\x20found\x20in\x20database.');}})['catch'](_0xaf4c82=>{console['error']('Error\x20in\x20cleanup\x20confirmation\x20form:\x20'+_0xaf4c82);});}catch(_0x259bdf){console['error']('Error\x20in\x20verifyAndCleanSpawnerDatabase:\x20'+_0x259bdf);_0x39c35d['sendMessage']('§cAn\x20error\x20occurred\x20while\x20verifying\x20the\x20database.');}}function reportVerificationResults(_0x157b02,_0x249a18,_0x55fcc1,_0x3391fc){try{_0x157b02['sendMessage']('§a✓\x20Database\x20verification\x20complete!');_0x157b02['sendMessage']('§7Verified:\x20§a'+_0x249a18+'\x20§7spawners');if(_0x55fcc1>0x0){_0x157b02['sendMessage']('§7Removed:\x20§c'+_0x55fcc1+'\x20§7stale\x20database\x20entries');}if(_0x3391fc>0x0){_0x157b02['sendMessage']('§7Cleaned:\x20§c'+_0x3391fc+'\x20§7orphaned\x20spawnrule\x20entities');}if(_0x55fcc1===0x0&&_0x3391fc===0x0){_0x157b02['sendMessage']('§aDatabase\x20is\x20clean\x20-\x20no\x20issues\x20found!');}}catch(_0x33ed6a){console['error']('Error\x20reporting\x20verification\x20results:\x20'+_0x33ed6a);}}function openPlayerStatsSelectionForm(_0x4c1888){try{if(!securityService['hasTagPermission'](_0x4c1888,UI['ADMIN_PERMISSION_TAG'])){_0x4c1888['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x5a2d66=new Map();const _0x978acf=spawnerDatabase['keys']();for(const _0x5de846 of _0x978acf){const _0x303f17=spawnerDatabase['read'](_0x5de846);if(_0x303f17&&_0x303f17['placedBy']){const _0x59a052=_0x303f17['placedBy'];if(!_0x5a2d66['has'](_0x59a052)){_0x5a2d66['set'](_0x59a052,[]);}_0x5a2d66['get'](_0x59a052)['push']({'location':_0x5de846,'typeId':_0x303f17['typeId'],'placedAt':_0x303f17['placedAt'],'entitiesKilled':_0x303f17['entitiesKilled']||0x0});}}if(_0x5a2d66['size']===0x0){_0x4c1888['sendMessage']('§cNo\x20spawner\x20data\x20found\x20in\x20the\x20database.');return;}const _0x1f400f=Array['from'](_0x5a2d66['entries']())['sort']((_0x402613,_0x4d050c)=>_0x4d050c[0x1]['length']-_0x402613[0x1]['length']);const _0x37e62f=new _0x5a5ee7()['title']('Select\x20Player\x20for\x20Detailed\x20Stats')['body']('Found\x20'+_0x5a2d66['size']+'\x20players\x20with\x20spawners.\x20Select\x20a\x20player\x20to\x20view\x20their\x20detailed\x20spawner\x20information:');for(const [_0x4cf8e8,_0x2b09f1]of _0x1f400f){let _0x2223ce=0x0;let _0x1283d9=0x0;_0x2b09f1['forEach'](_0x22c820=>{const [_0x523342,_0x69392f,_0x2765f2]=_0x22c820['location']['split'](',')['map'](Number);const _0x428163=getEntitiesInfoNearSpawner(_0x523342,_0x69392f,_0x2765f2);_0x2223ce+=_0x428163['physicalCount'];_0x1283d9+=_0x428163['virtualCount'];});const _0x14e302=_0x2b09f1['reduce']((_0x36d338,_0x586a79)=>{const _0x3b5ffc=_0x586a79['typeId']['match'](/spawner(\d+)/);return _0x36d338+(_0x3b5ffc?parseInt(_0x3b5ffc[0x1]):0x1);},0x0)/_0x2b09f1['length'];_0x37e62f['button']('§e'+_0x4cf8e8+'\x0a§8'+_0x2b09f1['length']+'\x20spawners\x20•\x20'+_0x2223ce+'\x20stacks\x20('+_0x1283d9+'\x20mobs)\x20•\x20Avg\x20Level\x20'+_0x14e302['toFixed'](0x1),'textures/items/name_tag');}_0x37e62f['show'](_0x4c1888)['then'](_0x31109b=>{if(_0x31109b['canceled']||_0x31109b['selection']===void 0x0)return;if(!securityService['hasTagPermission'](_0x4c1888,UI['ADMIN_PERMISSION_TAG'])){_0x4c1888['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x2191ee=_0x1f400f[_0x31109b['selection']];if(_0x2191ee){const [_0x131a37,_0x5d7177]=_0x2191ee;const _0x1792ae=_0x5d7177['map'](_0x38fd85=>{let _0x956242=0x0,_0x1827c1=0x0,_0x59a822=0x0;try{if(_0x38fd85['location']&&typeof _0x38fd85['location']==='string'){const _0x2f31d0=_0x38fd85['location']['split'](',')['map'](_0x3474e7=>parseFloat(_0x3474e7['trim']()));if(_0x2f31d0['length']>=0x3&&_0x2f31d0['every'](_0x4a2a08=>!isNaN(_0x4a2a08))){[_0x956242,_0x1827c1,_0x59a822]=_0x2f31d0;}}}catch(_0x1d32da){debugLog2('Error\x20parsing\x20location\x20for\x20spawner:\x20'+_0x38fd85['location']+',\x20error:\x20'+_0x1d32da);}const _0x2536f8=_0x38fd85['typeId']||'unknown_spawner';const _0x4ee711=_0x2536f8['match'](/spawner(\d+)/);const _0x314b89=_0x4ee711?parseInt(_0x4ee711[0x1]):0x1;const _0x462689=_0x2536f8['replace']('mrleefy:','')['replace'](/spawner\d+/,'')['replace'](/_/g,'');const _0x1cba67=getMobDisplayName('mrleefy:'+_0x462689+'still')||'Unknown';const _0x2c94da=getEntitiesInfoNearSpawner(_0x956242,_0x1827c1,_0x59a822);return{..._0x38fd85,'displayName':_0x1cba67,'level':_0x314b89,'physicalEntities':_0x2c94da['physicalCount'],'virtualEntities':_0x2c94da['virtualCount'],'x':_0x956242,'y':_0x1827c1,'z':_0x59a822};});openSpawnerInfoForm(_0x4c1888,_0x131a37,_0x1792ae);}})['catch'](_0x22f422=>{console['error']('Error\x20in\x20openPlayerStatsSelectionForm:\x20'+_0x22f422);_0x4c1888['sendMessage']('§cAn\x20error\x20occurred\x20while\x20showing\x20player\x20selection.');});}catch(_0x3e566a){console['error']('Critical\x20error\x20in\x20openPlayerStatsSelectionForm:\x20'+_0x3e566a);_0x4c1888['sendMessage']('§cA\x20critical\x20error\x20occurred.\x20Please\x20try\x20again.');}}function openSpawnerInfoForm(_0x54a39e,_0x3009b5,_0x5c2770){try{if(!_0x54a39e||!_0x54a39e['isValid'])return;if(!securityService['hasTagPermission'](_0x54a39e,UI['ADMIN_PERMISSION_TAG'])){_0x54a39e['sendMessage'](ERROR_MESSAGES['NO_PERMISSION']);return;}const _0x678881=_0x5c2770['length'];const _0x58bef0=_0x5c2770['reduce']((_0x51789e,_0x5e5854)=>_0x51789e+_0x5e5854['physicalEntities'],0x0);const _0x16f656=_0x5c2770['reduce']((_0x5a7b43,_0x449cca)=>_0x5a7b43+_0x449cca['virtualEntities'],0x0);const _0x570758=_0x678881>0x0?_0x5c2770['reduce']((_0x1a3bd8,_0x330be1)=>_0x1a3bd8+_0x330be1['level'],0x0)/_0x678881:0x0;const _0x2e97c4=_0x5c2770['filter'](_0x7b41f8=>_0x7b41f8['physicalEntities']>0x0)['length'];const _0xd319ad=_0x5c2770['reduce']((_0x1b39fb,_0xa89083)=>_0x1b39fb+(_0xa89083['entitiesKilled']||0x0),0x0);const _0x2e2e5f={};_0x5c2770['forEach'](_0x5e5b75=>{const _0x145597=_0x5e5b75['displayName'];_0x2e2e5f[_0x145597]=(_0x2e2e5f[_0x145597]||0x0)+0x1;});const _0x2a55be=Object['entries'](_0x2e2e5f)['sort']((_0x2c3027,_0x40c865)=>_0x40c865[0x1]-_0x2c3027[0x1])[0x0];let _0x209d3a='**'+_0x3009b5+'\x27s\x20Spawner\x20Overview**\x0a\x0a';_0x209d3a+='**Summary:**\x0a';_0x209d3a+='•\x20Total\x20Spawners:\x20'+_0x678881+'\x0a';_0x209d3a+='•\x20Active\x20Spawners:\x20'+_0x2e97c4+'/'+_0x678881+'\x20('+(_0x678881>0x0?(_0x2e97c4/_0x678881*0x64)['toFixed'](0x1):'0.0')+'%)\x0a';_0x209d3a+='•\x20Total\x20Mob\x20Stacks\x20Nearby:\x20'+_0x58bef0+'\x20(Physical\x20entities\x20alive)\x0a';_0x209d3a+='•\x20Total\x20Mobs\x20inside\x20Stacks:\x20'+_0x16f656+'\x20(Sum\x20of\x20stack\x20sizes)\x0a';_0x209d3a+='•\x20Average\x20Level:\x20'+_0x570758['toFixed'](0x1)+'\x0a';_0x209d3a+='•\x20Total\x20Kills:\x20'+_0xd319ad+'\x0a\x0a';_0x209d3a+='**Spawner\x20Types:**\x0a';Object['entries'](_0x2e2e5f)['sort']((_0x3bf4a5,_0xcbe99)=>_0xcbe99[0x1]-_0x3bf4a5[0x1])['forEach'](([_0x3141bd,_0x373c38])=>{_0x209d3a+='•\x20'+_0x3141bd+':\x20'+_0x373c38+'\x0a';});_0x209d3a+='\x0aTop\x20Performer:\x20'+(_0x2a55be?_0x2a55be[0x0]+'\x20('+_0x2a55be[0x1]+'\x20spawners)':'None')+'\x0a\x0a';_0x209d3a+='Individual\x20Spawner\x20Details:\x0a';_0x5c2770['sort']((_0x4a9642,_0x234f1f)=>_0x234f1f['physicalEntities']-_0x4a9642['physicalEntities'])['slice'](0x0,0x5)['forEach']((_0x538eaa,_0x43a262)=>{const _0x5c0ec2=_0x538eaa['physicalEntities']>0x0?'[ACTIVE]':'[IDLE]';const _0x5e1316=_0x538eaa['hasOwnProperty']('placedAt')&&_0x538eaa['placedAt']?new Date(_0x538eaa['placedAt'])['toLocaleDateString']():'Unknown';_0x209d3a+=_0x43a262+0x1+'.\x20'+_0x5c0ec2+'\x20'+_0x538eaa['displayName']+'\x20Level\x20'+_0x538eaa['level']+'\x20Cord:\x20'+_0x538eaa['x']+',\x20'+_0x538eaa['y']+',\x20'+_0x538eaa['z']+'\x0a';_0x209d3a+='\x20\x20\x20'+_0x538eaa['physicalEntities']+'\x20stacks\x20('+_0x538eaa['virtualEntities']+'\x20mobs)\x20•\x20'+(_0x538eaa['entitiesKilled']||0x0)+'\x20kills\x20•\x20Placed:\x20'+_0x5e1316+'\x0a';});const _0x439e5d=new _0x5a5ee7()['title'](_0x3009b5+'\x27s\x20Spawner\x20Information')['body'](_0x209d3a)['button']('§cClose');_0x439e5d['show'](_0x54a39e)['then'](_0x19ab53=>{})['catch'](_0x1ee24e=>{console['error']('Error\x20in\x20openSpawnerInfoForm:\x20'+_0x1ee24e);_0x54a39e['sendMessage']('§cAn\x20error\x20occurred\x20while\x20showing\x20spawner\x20information.');});}catch(_0x27bd20){console['error']('Critical\x20error\x20in\x20openSpawnerInfoForm:\x20'+_0x27bd20);_0x54a39e['sendMessage']('§cA\x20critical\x20error\x20occurred.\x20Please\x20try\x20again.');}}var performanceMetrics={'stackingOperations':0x0,'entitySpawns':0x0,'entityRemovals':0x0,'averageProcessingTime':0x0,'lastReset':Date['now'](),'peakMemoryUsage':0x0,'warningCount':0x0,'criticalCount':0x0};var spawnerStatistics={'totalSpawners':0x0,'totalEntities':0x0,'totalVirtualEntities':0x0,'entitiesKilled':new Map(),'spawnerUptime':new Map(),'playerStats':new Map(),'lastStatsUpdate':Date['now']()};var STATS_MEMORY_LIMITS={'MAX_ENTITY_TYPES':0x3e8,'MAX_PLAYER_ENTRIES':0x1f4,'MAX_SPAWNER_ENTRIES':0x7d0,'STATS_CLEANUP_INTERVAL':0x36ee80,'PLAYER_INACTIVITY_THRESHOLD':0x1e*0x18*0x3c*0x3c*0x3e8};var LOGGING_ENABLED=![];var originalConsoleLog=console['log'];var originalConsoleError=console['error'];console['log']=function(..._0x543f6f){if(LOGGING_ENABLED){originalConsoleLog['apply'](console,_0x543f6f);}};console['error']=function(..._0x230006){if(LOGGING_ENABLED){originalConsoleError['apply'](console,_0x230006);}};function debugLog2(_0x5d035e,..._0x188d5b){if(LOGGING_ENABLED){console['log']('[DEBUG]\x20'+_0x5d035e,..._0x188d5b);}}function enableLogging(){LOGGING_ENABLED=!![];originalConsoleLog('[MOBSTACKER]\x20Logging\x20enabled');}function disableLogging(){originalConsoleLog('[MOBSTACKER]\x20Logging\x20disabled');LOGGING_ENABLED=![];}function isLoggingEnabled(){return LOGGING_ENABLED;}var entitySpawnerMap=new Map();function cleanupStatistics(){const _0x1e1517=Date['now']();if(spawnerStatistics['entitiesKilled']['size']>STATS_MEMORY_LIMITS['MAX_ENTITY_TYPES']){const _0x40b24a=Array['from'](spawnerStatistics['entitiesKilled']['entries']());_0x40b24a['sort']((_0x35f97a,_0xfe92a0)=>_0xfe92a0[0x1]-_0x35f97a[0x1]);spawnerStatistics['entitiesKilled']['clear']();_0x40b24a['slice'](0x0,STATS_MEMORY_LIMITS['MAX_ENTITY_TYPES'])['forEach'](([_0xc2efd5,_0x540fe9])=>{spawnerStatistics['entitiesKilled']['set'](_0xc2efd5,_0x540fe9);});}if(spawnerStatistics['spawnerUptime']['size']>STATS_MEMORY_LIMITS['MAX_SPAWNER_ENTRIES']){const _0x4491bd=Array['from'](spawnerStatistics['spawnerUptime']['entries']());_0x4491bd['sort']((_0x2a2e74,_0x19c487)=>_0x19c487[0x1]-_0x2a2e74[0x1]);spawnerStatistics['spawnerUptime']['clear']();_0x4491bd['slice'](0x0,STATS_MEMORY_LIMITS['MAX_SPAWNER_ENTRIES'])['forEach'](([_0x3562de,_0x386c2b])=>{spawnerStatistics['spawnerUptime']['set'](_0x3562de,_0x386c2b);});}if(spawnerStatistics['playerStats']['size']>STATS_MEMORY_LIMITS['MAX_PLAYER_ENTRIES']){const _0x15a051=_0x1e1517-STATS_MEMORY_LIMITS['PLAYER_INACTIVITY_THRESHOLD'];for(const [_0x256139,_0xcc7bcc]of spawnerStatistics['playerStats']['entries']()){if(_0xcc7bcc['lastActivity']&&_0xcc7bcc['lastActivity']<_0x15a051){spawnerStatistics['playerStats']['delete'](_0x256139);}}}debugLog2('Statistics\x20cleanup:\x20entities='+spawnerStatistics['entitiesKilled']['size']+',\x20players='+spawnerStatistics['playerStats']['size']+',\x20spawners='+spawnerStatistics['spawnerUptime']['size']);}function updateSpawnerStatisticsDirect(_0x52ce80,_0x52e9e4,_0x2874bc){const _0x411bb0=spawnerStatistics['entitiesKilled']['get'](_0x52ce80)||0x0;spawnerStatistics['entitiesKilled']['set'](_0x52ce80,_0x411bb0+0x1);const _0x11a596=spawnerStatistics['spawnerUptime']['get'](_0x52e9e4)||0x0;spawnerStatistics['spawnerUptime']['set'](_0x52e9e4,_0x11a596+0x1);updateSpawnerMetadata(_0x52e9e4,_0x52ce80,_0x2874bc);if(_0x2874bc){const _0x350b29=_0x2874bc['name']||_0x2874bc['nameTag']||'Unknown';const _0x326029=spawnerStatistics['playerStats']['get'](_0x350b29)||{'entitiesKilled':0x0,'spawnersPlaced':0x0,'killsByType':{},'lastActivity':Date['now']()};_0x326029['entitiesKilled']++;_0x326029['lastActivity']=Date['now']();_0x326029['killsByType'][_0x52ce80]=(_0x326029['killsByType'][_0x52ce80]||0x0)+0x1;spawnerStatistics['playerStats']['set'](_0x350b29,_0x326029);}}var pendingSpawnerMetadata=new Map();function updateSpawnerMetadata(_0x45015d,_0x59890b,_0x49fd5b){try{let _0x4d4a91=pendingSpawnerMetadata['get'](_0x45015d);if(!_0x4d4a91){_0x4d4a91={'entityTypeId':_0x59890b,'kills':0x0,'playersKilled':{},'lastKill':Date['now']()};pendingSpawnerMetadata['set'](_0x45015d,_0x4d4a91);}_0x4d4a91['kills']++;_0x4d4a91['lastKill']=Date['now']();if(_0x49fd5b){const _0x2f60e1=_0x49fd5b['name']||_0x49fd5b['nameTag']||'Unknown';_0x4d4a91['playersKilled'][_0x2f60e1]=(_0x4d4a91['playersKilled'][_0x2f60e1]||0x0)+0x1;}}catch(_0x3a3b39){console['error']('Error\x20buffering\x20spawner\x20metadata\x20for\x20'+_0x45015d+':',_0x3a3b39);}}function flushPendingSpawnerMetadata(){if(pendingSpawnerMetadata['size']===0x0)return;for(const [_0x3678c8,_0x4247f4]of pendingSpawnerMetadata['entries']()){try{const _0x3d967f=spawnerDatabase2['read'](_0x3678c8)||{'entitiesKilled':0x0,'killsByType':{},'playersKilled':{},'lastKill':0x0,'lastAccessed':0x0};_0x3d967f['entitiesKilled']+=_0x4247f4['kills'];_0x3d967f['lastKill']=_0x4247f4['lastKill'];_0x3d967f['lastAccessed']=Date['now']();if(!_0x3d967f['killsByType']){_0x3d967f['killsByType']={};}_0x3d967f['killsByType'][_0x4247f4['entityTypeId']]=(_0x3d967f['killsByType'][_0x4247f4['entityTypeId']]||0x0)+_0x4247f4['kills'];if(!_0x3d967f['playersKilled']){_0x3d967f['playersKilled']={};}for(const [_0x901960,_0x22b413]of Object['entries'](_0x4247f4['playersKilled'])){_0x3d967f['playersKilled'][_0x901960]=(_0x3d967f['playersKilled'][_0x901960]||0x0)+_0x22b413;}spawnerDatabase2['write'](_0x3678c8,_0x3d967f);}catch(_0x37b266){console['error']('Error\x20saving\x20spawner\x20metadata\x20for\x20'+_0x3678c8+':',_0x37b266);}}pendingSpawnerMetadata['clear']();debugLog2('[MOBSTACKER]\x20Flushed\x20pending\x20spawner\x20metadata\x20to\x20database');}_0x1dc4ce['runInterval'](()=>{try{cleanupStatistics();flushPendingSpawnerMetadata();saveSpawnerStatistics();}catch(_0x457118){console['error']('Error\x20in\x20persistent\x20statistics\x20sync:',_0x457118);}},0x1e*0x14);function saveSpawnerStatistics(){try{const _0x27f003=spawnerStatistics['entitiesKilled']instanceof Map?Array['from'](spawnerStatistics['entitiesKilled']['entries']()):[];const _0x34d392=spawnerStatistics['spawnerUptime']instanceof Map?Array['from'](spawnerStatistics['spawnerUptime']['entries']()):[];const _0x1bf881=spawnerStatistics['playerStats']instanceof Map?Array['from'](spawnerStatistics['playerStats']['entries']()):[];const _0x31ba17={'entitiesKilled':_0x27f003,'spawnerUptime':_0x34d392,'playerStats':_0x1bf881,'lastStatsUpdate':spawnerStatistics['lastStatsUpdate']};configDatabase2['write']('spawnerStatistics',_0x31ba17);}catch(_0x29f870){console['error']('Failed\x20to\x20save\x20spawner\x20statistics:',_0x29f870);}}function loadSpawnerStatistics(){try{const _0x273351=configDatabase2['read']('spawnerStatistics');if(_0x273351){if(_0x273351['entitiesKilled']&&Array['isArray'](_0x273351['entitiesKilled'])){spawnerStatistics['entitiesKilled']=new Map(_0x273351['entitiesKilled']);}else if(_0x273351['entitiesKilled']&&typeof _0x273351['entitiesKilled']==='object'){spawnerStatistics['entitiesKilled']=new Map(Object['entries'](_0x273351['entitiesKilled']));}else{spawnerStatistics['entitiesKilled']=new Map();}if(_0x273351['spawnerUptime']&&Array['isArray'](_0x273351['spawnerUptime'])){spawnerStatistics['spawnerUptime']=new Map(_0x273351['spawnerUptime']);}else if(_0x273351['spawnerUptime']&&typeof _0x273351['spawnerUptime']==='object'){spawnerStatistics['spawnerUptime']=new Map(Object['entries'](_0x273351['spawnerUptime']));}else{spawnerStatistics['spawnerUptime']=new Map();}if(_0x273351['playerStats']&&Array['isArray'](_0x273351['playerStats'])){spawnerStatistics['playerStats']=new Map(_0x273351['playerStats']);}else if(_0x273351['playerStats']&&typeof _0x273351['playerStats']==='object'){spawnerStatistics['playerStats']=new Map(Object['entries'](_0x273351['playerStats']));}else{spawnerStatistics['playerStats']=new Map();}spawnerStatistics['lastStatsUpdate']=_0x273351['lastStatsUpdate']||Date['now']();}else{if(!(spawnerStatistics['entitiesKilled']instanceof Map))spawnerStatistics['entitiesKilled']=new Map();if(!(spawnerStatistics['spawnerUptime']instanceof Map))spawnerStatistics['spawnerUptime']=new Map();if(!(spawnerStatistics['playerStats']instanceof Map))spawnerStatistics['playerStats']=new Map();}}catch(_0x483e89){console['error']('Failed\x20to\x20load\x20spawner\x20statistics:',_0x483e89);if(!(spawnerStatistics['entitiesKilled']instanceof Map))spawnerStatistics['entitiesKilled']=new Map();if(!(spawnerStatistics['spawnerUptime']instanceof Map))spawnerStatistics['spawnerUptime']=new Map();if(!(spawnerStatistics['playerStats']instanceof Map))spawnerStatistics['playerStats']=new Map();}}function resetSpawnerStatistics(){try{if(!(spawnerStatistics['entitiesKilled']instanceof Map)){spawnerStatistics['entitiesKilled']=new Map();}else{spawnerStatistics['entitiesKilled']['clear']();}if(!(spawnerStatistics['spawnerUptime']instanceof Map)){spawnerStatistics['spawnerUptime']=new Map();}else{spawnerStatistics['spawnerUptime']['clear']();}if(!(spawnerStatistics['playerStats']instanceof Map)){spawnerStatistics['playerStats']=new Map();}else{spawnerStatistics['playerStats']['clear']();}spawnerStatistics['totalSpawners']=0x0;spawnerStatistics['totalEntities']=0x0;spawnerStatistics['lastStatsUpdate']=Date['now']();saveSpawnerStatistics();}catch(_0x58576f){console['error']('Failed\x20to\x20reset\x20spawner\x20statistics:',_0x58576f);}}function getPlayerTopKills(_0x1fe96d,_0x53371e=0x3){if(!_0x1fe96d||!_0x1fe96d['killsByType'])return[];return Object['entries'](_0x1fe96d['killsByType'])['sort']((_0x15e7bc,_0x4ac764)=>_0x4ac764[0x1]-_0x15e7bc[0x1])['slice'](0x0,_0x53371e)['map'](([_0x190ac1,_0x563e6d])=>({'displayName':mobDisplayNameMap['get'](_0x190ac1)||_0x190ac1['replace']('mrleefy:',''),'count':_0x563e6d}));}function calculateSpawnerTotals(){const _0x7ae219=['overworld','nether','the_end'];let _0x4db891=0x0;let _0xfb023a=0x0;let _0x4e1f35=0x0;const _0x12eaea=['mrleefy:blazestill','mrleefy:cowstill','mrleefy:sheepstill','mrleefy:pigstill','mrleefy:chickenstill','mrleefy:emeraldgolemstill','mrleefy:netheritegolemstill','mrleefy:irongolemstill','mrleefy:diamondgolemstill','mrleefy:goldgolemstill','mrleefy:endermanstill','mrleefy:creeperstill','mrleefy:magmacubestill','mrleefy:guardianstill','mrleefy:witherskeletonstill','mrleefy:zombiestill','mrleefy:witherstill','mrleefy:spiderstill','mrleefy:slimestill','mrleefy:vindicatorstill','mrleefy:skeletonstill','mrleefy:shulkerstill','mrleefy:breezestill','mrleefy:piglinbrutestill','mrleefy:wardenstill','mrleefy:ravagerstill','mrleefy:coalcrawlerstill','mrleefy:glowstonecrawlerstill','mrleefy:obsidiancrawlerstill','mrleefy:icecrawlerstill','mrleefy:spongecrawlerstill','mrleefy:lapiscrawlerstill','mrleefy:redstonecrawlerstill','mrleefy:coppercrawlerstill','mrleefy:quartzcrawlerstill','mrleefy:amethystcrawlerstill'];for(const _0x31275c of _0x7ae219){try{const _0x377416=_0x4e4c68['getDimension'](_0x31275c);if(_0x377416){const _0x404171=_0x377416['getEntities']({'type':ENTITIES['SPAWNRULE_ENTITY_TYPE']});_0x4db891+=_0x404171['length'];for(const _0x3b51b6 of _0x12eaea){const _0x4d731a=_0x377416['getEntities']({'type':_0x3b51b6});_0x4d731a['forEach'](_0x3eaced=>{if(_0x3eaced?.['isValid']){_0xfb023a++;if(_0x3eaced['nameTag']&&_0x3eaced['nameTag']['includes']('x')){const _0x8afbb4=_0x3eaced['nameTag']['match'](/x(\d+)/);const _0x1446a0=_0x8afbb4?parseInt(_0x8afbb4[0x1],0xa):0x1;_0x4e1f35+=_0x1446a0;}else{_0x4e1f35+=0x1;}}});}}}catch(_0x5d7dc){}}spawnerStatistics['totalSpawners']=_0x4db891;spawnerStatistics['totalEntities']=_0xfb023a;spawnerStatistics['totalVirtualEntities']=_0x4e1f35;spawnerStatistics['lastStatsUpdate']=Date['now']();}var PERFORMANCE_THRESHOLDS={'MAX_PROCESSING_TIME':0x32,'MAX_ENTITIES_PER_TICK':0x64,'MEMORY_WARNING':0xc8,'MEMORY_CRITICAL':0x190,'SPAWN_TIME_WARNING':0xa,'CLEANUP_TIME_WARNING':0x5};function getMemoryUsage(){const _0x259b46=ACTIVE_CHUNKS['size']*0xa;const _0x13bd12=entitySpawnerMap['size']*0x2;const _0xce5f71=(lastSpawnTime['size']+lastKilled['size'])*0x1;const _0xf4b1b9=Math['min'](cacheManager['getStats']()['config']?.['size']||0x0,0x14);return _0x259b46+_0x13bd12+_0xce5f71+_0xf4b1b9;}function checkPerformanceHealth(){const _0x2aa4ea=getMemoryUsage();performanceMetrics['peakMemoryUsage']=Math['max'](performanceMetrics['peakMemoryUsage'],_0x2aa4ea);if(_0x2aa4ea>PERFORMANCE_THRESHOLDS['MEMORY_CRITICAL']){debugLog2('[PERFORMANCE]\x20CRITICAL:\x20High\x20memory\x20usage\x20detected:\x20'+_0x2aa4ea+'\x20units');performanceMetrics['criticalCount']++;}else if(_0x2aa4ea>PERFORMANCE_THRESHOLDS['MEMORY_WARNING']){debugLog2('[PERFORMANCE]\x20WARNING:\x20Elevated\x20memory\x20usage:\x20'+_0x2aa4ea+'\x20units');performanceMetrics['warningCount']++;}const _0x2185d8=lastSpawnTime['size']+lastKilled['size'];if(_0x2185d8>PERFORMANCE_THRESHOLDS['MAX_ENTITIES_PER_TICK']*0xa){debugLog2('[PERFORMANCE]\x20WARNING:\x20High\x20entity\x20tracking\x20count:\x20'+_0x2185d8);}}function logPerformanceReport(){const _0x2acb19=getMemoryUsage();const _0x541bf5=cacheManager['getStats']();debugLog2('[PERFORMANCE\x20REPORT]\x0a\x20\x20\x20\x20Memory\x20Usage:\x20'+_0x2acb19+'\x20units\x20(Peak:\x20'+performanceMetrics['peakMemoryUsage']+')\x0a\x20\x20\x20\x20Maps\x20-\x20SpawnTime:\x20'+lastSpawnTime['size']+',\x20Killed:\x20'+lastKilled['size']+',\x20Deaths:\x20'+processedDeaths['size']+'\x0a\x20\x20\x20\x20Chunks:\x20'+ACTIVE_CHUNKS['size']+'\x0a\x20\x20\x20\x20Cache\x20-\x20Config:\x20'+(_0x541bf5['config']?.['size']||0x0)+'\x0a\x20\x20\x20\x20Warnings:\x20'+performanceMetrics['warningCount']+',\x20Critical:\x20'+performanceMetrics['criticalCount']+'\x0a\x20\x20\x20\x20Operations:\x20'+performanceMetrics['stackingOperations']);}_0x1dc4ce['runInterval'](()=>{const _0x236e3f=Date['now']();const _0x36ceeb=(_0x236e3f-performanceMetrics['lastReset'])/0xea60;if(_0x36ceeb>=0x5){logPerformanceReport();performanceMetrics['lastReset']=_0x236e3f;performanceMetrics['averageProcessingTime']=0x0;performanceMetrics['stackingOperations']=0x0;performanceMetrics['entitySpawns']=0x0;performanceMetrics['entityRemovals']=0x0;performanceMetrics['warningCount']=0x0;performanceMetrics['criticalCount']=0x0;}checkPerformanceHealth();},0x12c*0x14);var configDatabase2=new Database('ConfigValues');var xpDropDatabase=new Database('XPDropValues');var spawnerDatabase2=new Database('SpawnerLocations');var UnifiedCacheManager=class{constructor(){__publicField(this,'caches',new Map());__publicField(this,'cacheConfigs',new Map());this['caches']=new Map();this['cacheConfigs']=new Map();}['registerCache'](_0x514d60,_0x815629,_0xd9c574=null){this['caches']['set'](_0x514d60,new Map());this['cacheConfigs']['set'](_0x514d60,{'duration':_0x815629,'maxSize':_0xd9c574,'lastUpdate':0x0});}['get'](_0xfdd94c,_0xc96ea5,_0x28a526,_0xc565db=null){const _0x31ef24=this['caches']['get'](_0xfdd94c);const _0xd2e8f5=this['cacheConfigs']['get'](_0xfdd94c);if(!_0x31ef24||!_0xd2e8f5)return _0xc565db;const _0x1e166d=Date['now']();if(_0x1e166d-_0xd2e8f5['lastUpdate']>_0xd2e8f5['duration']||!_0x31ef24['has'](_0xc96ea5)){_0xd2e8f5['lastUpdate']=_0x1e166d;const _0x454aac=_0x28a526();_0x31ef24['set'](_0xc96ea5,_0x454aac);if(_0xd2e8f5['maxSize']&&_0x31ef24['size']>_0xd2e8f5['maxSize']){const _0x4111ca=Array['from'](_0x31ef24['entries']());const _0x4c6a9b=_0x4111ca['slice'](0x0,_0x31ef24['size']-_0xd2e8f5['maxSize']);_0x4c6a9b['forEach'](([_0x5bc150])=>_0x31ef24['delete'](_0x5bc150));}}return _0x31ef24['get'](_0xc96ea5)??_0xc565db;}['set'](_0x5884b5,_0x1cf7ab,_0x2ee80f){const _0x4507d1=this['caches']['get'](_0x5884b5);if(_0x4507d1){_0x4507d1['set'](_0x1cf7ab,_0x2ee80f);}}['clearCache'](_0x2759c0){const _0x30234f=this['caches']['get'](_0x2759c0);if(_0x30234f){_0x30234f['clear']();}}['getStats'](){const _0xd31b57={};for(const [_0x23d911,_0x2ed014]of this['caches']['entries']()){_0xd31b57[_0x23d911]={'size':_0x2ed014['size'],'config':this['cacheConfigs']['get'](_0x23d911)};}return _0xd31b57;}};var cacheManager=new UnifiedCacheManager();cacheManager['registerCache']('config',0x7530);cacheManager['registerCache']('entity',0x1388,0x64);cacheManager['registerCache']('xpDrop',0xea60);function validateAndClampConfig(_0x3383e8,_0x1140b5,_0x4971f3){switch(_0x3383e8){case'stackRadius':return Math['max'](VALIDATION['MIN_RADIUS'],Math['min'](VALIDATION['MAX_RADIUS'],_0x1140b5||_0x4971f3));case'itemSpillCap':return Math['max'](0x1,Math['min'](ENTITIES['MAX_ITEM_SPILL_CAP'],_0x1140b5||_0x4971f3));case'xpSpillCap':return Math['max'](0x1,Math['min'](ENTITIES['MAX_XP_SPILL_CAP'],_0x1140b5||_0x4971f3));default:return _0x1140b5||_0x4971f3;}}function getCachedConfig2(_0x22cd2d,_0x1cba82){return cacheManager['get']('config',_0x22cd2d,()=>{const _0x5d9e41={'stackRadius':configDatabase2['read']('stackRadius'),'playerKillOnly':configDatabase2['read']('playerKillOnly'),'itemSpillCap':configDatabase2['read']('itemSpillCap'),'xpSpillCap':configDatabase2['read']('xpSpillCap')};const _0x1d2b29={'stackRadius':validateAndClampConfig('stackRadius',_0x5d9e41['stackRadius'],UI['DEFAULT_STACK_RADIUS']),'playerKillOnly':_0x5d9e41['playerKillOnly']??![],'itemSpillCap':validateAndClampConfig('itemSpillCap',_0x5d9e41['itemSpillCap'],ENTITIES['DEFAULT_ITEM_SPILL_CAP']),'xpSpillCap':validateAndClampConfig('xpSpillCap',_0x5d9e41['xpSpillCap'],ENTITIES['DEFAULT_XP_SPILL_CAP'])};return _0x1d2b29[_0x22cd2d];},_0x1cba82);}globalThis['updateMobstackerCache']=function(_0x1b76a6,_0x5146fa){cacheManager['set']('config',_0x1b76a6,_0x5146fa);};var SMALLEST_INTERVAL=TIMING['SMALLEST_INTERVAL'];var lastSpawnTime=new Map();var lastKilled=new Map();var cooldownMillis=TIMING['COOLDOWN_MILLIS'];var nameTagConfig=UI['NAME_TAG_CONFIG'];var processedDeaths=new Set();var MAP_MEMORY_LIMITS={'LAST_SPAWN_TIME':0x1388,'LAST_KILLED':0xbb8,'PROCESSED_DEATHS':0x3e8,'ENTITY_SPAWNER_MAP':0x2710};var MEMORY_CLEANUP_INTERVAL=0x2ee0;var ENTRY_MAX_AGE=0x1e*0x3c*0x3e8;var validMobs=[{'typeId':'mrleefy:blazestill','displayName':'Blaze'},{'typeId':'mrleefy:cowstill','displayName':'Cow'},{'typeId':'mrleefy:sheepstill','displayName':'Sheep'},{'typeId':'mrleefy:pigstill','displayName':'Pig'},{'typeId':'mrleefy:chickenstill','displayName':'Chicken'},{'typeId':'mrleefy:emeraldgolemstill','displayName':'Emerald\x20Golem'},{'typeId':'mrleefy:netheritegolemstill','displayName':'Netherite\x20Golem'},{'typeId':'mrleefy:irongolemstill','displayName':'Iron\x20Golem'},{'typeId':'mrleefy:diamondgolemstill','displayName':'Diamond\x20Golem'},{'typeId':'mrleefy:goldgolemstill','displayName':'Gold\x20Golem'},{'typeId':'mrleefy:endermanstill','displayName':'Enderman'},{'typeId':'mrleefy:creeperstill','displayName':'Creeper'},{'typeId':'mrleefy:magmacubestill','displayName':'MagmaCube'},{'typeId':'mrleefy:guardianstill','displayName':'Guardian'},{'typeId':'mrleefy:witherskeletonstill','displayName':'Wither\x20Skeleton'},{'typeId':'mrleefy:zombiestill','displayName':'Zombie'},{'typeId':'mrleefy:villagerstill','displayName':'Villager'},{'typeId':'mrleefy:witherstill','displayName':'Wither'},{'typeId':'mrleefy:enderdragonstill','displayName':'Ender\x20Dragon'},{'typeId':'mrleefy:spiderstill','displayName':'Spider'},{'typeId':'mrleefy:slimestill','displayName':'Slime'},{'typeId':'mrleefy:vindicatorstill','displayName':'Vindicator'},{'typeId':'mrleefy:skeletonstill','displayName':'Skeleton'},{'typeId':'mrleefy:shulkerstill','displayName':'Shulker'},{'typeId':'mrleefy:breezestill','displayName':'Breeze'},{'typeId':'mrleefy:piglinbrutestill','displayName':'PiglinBrute'},{'typeId':'mrleefy:wardenstill','displayName':'Warden'},{'typeId':'mrleefy:ravagerstill','displayName':'Ravager'},{'typeId':'mrleefy:coalcrawlerstill','displayName':'Coal\x20Crawler'},{'typeId':'mrleefy:glowstonecrawlerstill','displayName':'Glowstone\x20Crawler'},{'typeId':'mrleefy:obsidiancrawlerstill','displayName':'Obsidian\x20Crawler'},{'typeId':'mrleefy:icecrawlerstill','displayName':'Ice\x20Crawler'},{'typeId':'mrleefy:spongecrawlerstill','displayName':'Sponge\x20Crawler'},{'typeId':'mrleefy:lapiscrawlerstill','displayName':'Lapis\x20Crawler'},{'typeId':'mrleefy:redstonecrawlerstill','displayName':'Redstone\x20Crawler'},{'typeId':'mrleefy:coppercrawlerstill','displayName':'Copper\x20Crawler'},{'typeId':'mrleefy:quartzcrawlerstill','displayName':'Quartz\x20Crawler'},{'typeId':'mrleefy:amethystcrawlerstill','displayName':'Amethyst\x20Crawler'}];var mobDisplayNameMap=new Map(validMobs['map'](_0x3debac=>[_0x3debac['typeId'],_0x3debac['displayName']]));function extractStackNumber(_0xb791d6){const _0x4e0820=_0xb791d6?.['match'](/x(\d+)/);return _0x4e0820?parseInt(_0x4e0820[0x1],0xa):0x1;}var validEntityTypes=new Set(validMobs['map'](_0x5c563=>_0x5c563['typeId']));var CHUNK_SIZE2=0x10;var ACTIVE_CHUNKS=new Map();var CHUNK_CACHE_DURATION=0xea60;var lastChunkUpdate=0x0;function getChunkKey(_0x5235ef,_0x2fffa0){const _0x42135b=Math['floor'](_0x5235ef/CHUNK_SIZE2);const _0x2f9d50=Math['floor'](_0x2fffa0/CHUNK_SIZE2);return _0x42135b+','+_0x2f9d50;}function updateActiveChunks(_0x39ceef){const _0xfb7a90=Date['now']();if(_0xfb7a90-lastChunkUpdate<CHUNK_CACHE_DURATION)return;ACTIVE_CHUNKS['clear']();const _0x4380ae=0x1f4;let _0x78b1db=0x0;for(const _0x50f5d2 of _0x39ceef){if(_0x50f5d2?.['isValid']&&_0x50f5d2['location']&&_0x78b1db<_0x4380ae){const _0x78e8b5=getChunkKey(_0x50f5d2['location']['x'],_0x50f5d2['location']['z']);if(!ACTIVE_CHUNKS['has'](_0x78e8b5)){ACTIVE_CHUNKS['set'](_0x78e8b5,[]);_0x78b1db++;}ACTIVE_CHUNKS['get'](_0x78e8b5)['push'](_0x50f5d2);}}lastChunkUpdate=_0xfb7a90;}var consecutiveErrors=0x0;var MAX_CONSECUTIVE_ERRORS=0x5;function getPerformanceConfig(){return{'PLAYER_ACTIVATION_RADIUS':configDatabase2['read']('performanceActivationRadius')||0x32,'MAX_SPAWNS_PER_CYCLE':configDatabase2['read']('performanceMaxSpawns')||0x19,'SPAWN_INTERVAL_TICKS':configDatabase2['read']('performanceSpawnInterval')||0x14,'INITIAL_DELAY_RANDOM':configDatabase2['read']('performanceRandomDelay')??!![],'MAXED_SPAWNER_RECHECK_MS':0x7530};}var PERFORMANCE_CONFIG=getPerformanceConfig();var maxedSpawners=new Map();var entitySpawnerOwnership=new Map();function clearMaxedSpawnerCache(_0x1a31a8,_0x173a27,_0x53992b){const _0x16d050=Math['floor'](_0x1a31a8)+','+Math['floor'](_0x173a27)+','+Math['floor'](_0x53992b);for(const [_0x4095a4]of maxedSpawners){if(_0x4095a4['endsWith'](':'+_0x16d050)){maxedSpawners['delete'](_0x4095a4);debugLog2('Cleared\x20maxed\x20cache\x20for:\x20'+_0x4095a4);}}}function clearSpawnerParseCache(){spawnerParseCache['clear']();debugLog2('[AASettings]\x20Spawner\x20spec\x20cache\x20cleared\x20—\x20all\x20spawners\x20will\x20re-read\x20updated\x20settings\x20on\x20next\x20tick.');}var isProcessingJobRunning=![];var spawnerParseCache=new Map();function getSpawnerSpecs(_0x38852d){let _0x345e70=spawnerParseCache['get'](_0x38852d);if(_0x345e70!==void 0x0)return _0x345e70;const _0x59e653=_0x38852d['replace'](/(_)|(spawner)/gi,_0x653972=>_0x653972==='_'?'':_0x653972['toLowerCase']()==='spawner'?'still':'');const _0x5bd209=_0x59e653['match'](/(?<entityType>[a-zA-Z]+)(?<level>\d{1,2})/);if(!_0x5bd209||!_0x5bd209['groups']){spawnerParseCache['set'](_0x38852d,null);return null;}const {entityType:_0x35cc78,level:_0x747e4e}=_0x5bd209['groups'];const _0x45436c='mrleefy:'+_0x35cc78;const _0x4e9a5a=parseInt(_0x747e4e,0xa);if(!validEntityTypes['has'](_0x45436c)){spawnerParseCache['set'](_0x38852d,null);return null;}const _0x54f1e2=mobDisplayNameMap['get'](_0x45436c);if(!_0x54f1e2){spawnerParseCache['set'](_0x38852d,null);return null;}const {qty:_0x21e10f,speed:_0x1dc6cd,maxStack:_0x515834}=getAAValueForLevel(_0x4e9a5a);if(_0x21e10f===0x0){spawnerParseCache['set'](_0x38852d,null);return null;}_0x345e70={'entityTypeId':_0x45436c,'levelNum':_0x4e9a5a,'qty':_0x21e10f,'speed':_0x1dc6cd,'maxStack':_0x515834,'displayName':_0x54f1e2};spawnerParseCache['set'](_0x38852d,_0x345e70);return _0x345e70;}function*spawnerProcessingJob(){try{const _0x1ea8a3=Date['now']();let _0x2aaf14=_0x1ea8a3;const _0x492666=_0x4e4c68['getDimension']('overworld');const _0x59f6a8=getCachedConfig2('stackRadius',UI['DEFAULT_STACK_RADIUS']);const _0x5ddbe2=_0x492666['getEntities']({'type':ENTITIES['SPAWNRULE_ENTITY_TYPE']});updateActiveChunks(_0x5ddbe2);if(_0x5ddbe2['length']===0x0){return;}const _0x397f00=_0x492666['getPlayers']();const _0xb9b3f6=PERFORMANCE_CONFIG['PLAYER_ACTIVATION_RADIUS']*PERFORMANCE_CONFIG['PLAYER_ACTIVATION_RADIUS'];let _0x44d938=0x0;let _0x4b4717=0x0;let _0x2ea036=0x0;let _0x58133f=0x0;for(const _0x7c9e8e of _0x5ddbe2){if(Date['now']()-_0x2aaf14>0x4){yield;_0x2aaf14=Date['now']();}if(!_0x7c9e8e?.['isValid'])continue;const _0x421bd2=_0x7c9e8e['location'];let _0x2318ff=![];for(const _0x28afe3 of _0x397f00){if(!_0x28afe3['isValid'])continue;const _0x5c6764=_0x28afe3['location'];const _0x2a66aa=_0x5c6764['x']-_0x421bd2['x'];const _0xf9f045=_0x5c6764['y']-_0x421bd2['y'];const _0x15290f=_0x5c6764['z']-_0x421bd2['z'];if(_0x2a66aa*_0x2a66aa+_0xf9f045*_0xf9f045+_0x15290f*_0x15290f<=_0xb9b3f6){_0x2318ff=!![];break;}}if(!_0x2318ff){_0x2ea036++;continue;}const _0x4c3c80=_0x7c9e8e['nameTag'];if(!_0x4c3c80)continue;const _0x3128d1=getSpawnerSpecs(_0x4c3c80);if(!_0x3128d1)continue;const {entityTypeId:_0x135663,levelNum:_0x2a47d6,qty:_0x332756,speed:_0x2962ee,maxStack:_0x276a3d,displayName:_0x451ca3}=_0x3128d1;const _0x4489c8=Math['floor'](_0x421bd2['x'])+','+Math['floor'](_0x421bd2['y'])+','+Math['floor'](_0x421bd2['z']);const _0x1d3760=_0x135663+':'+_0x4489c8;const _0x59661f=Date['now']();if(maxedSpawners['has'](_0x1d3760)){const _0x1f9a6d=maxedSpawners['get'](_0x1d3760);if(_0x59661f-_0x1f9a6d<PERFORMANCE_CONFIG['MAXED_SPAWNER_RECHECK_MS']){_0x58133f++;continue;}}const _0x37fcbf=lastSpawnTime['get'](_0x1d3760)||0x0;const _0x12cdb4=lastKilled['get'](_0x1d3760)||0x0;const _0x35f338=_0x2962ee*0x3e8;if(_0x37fcbf===0x0&&PERFORMANCE_CONFIG['INITIAL_DELAY_RANDOM']){const _0x5b11ad=Math['random']()*_0x35f338;lastSpawnTime['set'](_0x1d3760,_0x59661f-_0x5b11ad);continue;}if(_0x59661f-_0x37fcbf<_0x35f338)continue;if(_0x59661f-_0x12cdb4<cooldownMillis)continue;if(_0x44d938>=PERFORMANCE_CONFIG['MAX_SPAWNS_PER_CYCLE']){continue;}if(!_0x7c9e8e['isValid'])continue;let _0x4b76e3;try{_0x4b76e3=_0x492666['getEntities']({'type':_0x135663,'location':_0x421bd2,'maxDistance':_0x59f6a8});}catch(_0x5b138d){continue;}lastSpawnTime['set'](_0x1d3760,_0x59661f);let _0x31494c=null;let _0x1728a2=0x0;let _0x371b6b=0x0;const _0x4d70d1=[];for(const _0xb1ae9a of _0x4b76e3){if(!_0xb1ae9a||!_0xb1ae9a['isValid'])continue;const _0x40d3fd=extractStackNumber(_0xb1ae9a['nameTag']||'');_0x371b6b+=_0x40d3fd;if(_0x40d3fd>_0x1728a2){if(_0x31494c)_0x4d70d1['push'](_0x31494c);_0x1728a2=_0x40d3fd;_0x31494c=_0xb1ae9a;}else{_0x4d70d1['push'](_0xb1ae9a);}}for(const _0x1b231c of _0x4d70d1){try{if(_0x1b231c['isValid']){entitySpawnerMap['delete'](_0x1b231c['id']);entitySpawnerOwnership['delete'](_0x1b231c['id']);_0x1b231c['remove']();performanceMetrics['entityRemovals']++;}}catch(_0x80b34a){debugLog2('Failed\x20to\x20remove\x20entity:\x20'+_0x80b34a['message']);}}if(_0x31494c&&_0x31494c['isValid']){const _0x1e3258=Math['min'](_0x371b6b+_0x332756,_0x276a3d);const _0x405c86=extractStackNumber(_0x31494c['nameTag']||'');if(_0x405c86!==_0x1e3258){try{_0x31494c['nameTag']=nameTagConfig['replace']('#',_0x1e3258['toString']())['replace']('@',_0x451ca3);}catch(_0x5d8563){debugLog2('Failed\x20to\x20update\x20primary\x20entity\x20nameTag:\x20'+_0x5d8563['message']);}}if(_0x1e3258>=_0x276a3d){maxedSpawners['set'](_0x1d3760,_0x59661f);entitySpawnerOwnership['set'](_0x31494c['id'],_0x1d3760);}else{maxedSpawners['delete'](_0x1d3760);}}else{spawnNewStackedEntity(_0x492666,_0x135663,_0x421bd2,_0x332756,_0x451ca3);_0x44d938++;maxedSpawners['delete'](_0x1d3760);}_0x4b4717++;}performanceMetrics['stackingOperations']++;const _0xd738c3=Date['now']()-_0x1ea8a3;debugLog2('Spawner\x20cycle:\x20processed='+_0x4b4717+',\x20spawned='+_0x44d938+',\x20skippedNoPlayers='+_0x2ea036+',\x20skippedMaxed='+_0x58133f+',\x20time='+_0xd738c3+'ms');if(_0xd738c3>PERFORMANCE_THRESHOLDS['MAX_PROCESSING_TIME']){debugLog2('[PERFORMANCE]\x20Slow\x20processing:\x20'+_0xd738c3+'ms');performanceMetrics['warningCount']++;}performanceMetrics['averageProcessingTime']=performanceMetrics['averageProcessingTime']===0x0?_0xd738c3:performanceMetrics['averageProcessingTime']*0.95+_0xd738c3*0.05;}catch(_0x5ec6ce){console['error']('[MOBSTACKER]\x20Error\x20in\x20spawner\x20job:',_0x5ec6ce);}finally{isProcessingJobRunning=![];}}var stackingIntervalFunction=()=>{if(isProcessingJobRunning){debugLog2('[MOBSTACKER]\x20Stacking\x20interval\x20skipped\x20-\x20previous\x20job\x20still\x20running');return;}try{isProcessingJobRunning=!![];_0x1dc4ce['runJob'](spawnerProcessingJob());consecutiveErrors=0x0;}catch(_0x1416c4){isProcessingJobRunning=![];consecutiveErrors++;console['error']('[MOBSTACKER]\x20Stacking\x20error\x20(attempt\x20'+consecutiveErrors+'/'+MAX_CONSECUTIVE_ERRORS+'):',_0x1416c4);if(consecutiveErrors>=MAX_CONSECUTIVE_ERRORS){debugLog2('[MOBSTACKER]\x20Too\x20many\x20consecutive\x20errors');}performanceMetrics['criticalCount']++;}};var activeInterval=_0x1dc4ce['runInterval'](stackingIntervalFunction,PERFORMANCE_CONFIG['SPAWN_INTERVAL_TICKS']);function enforceMapLimits(){const _0x4f51a1=Date['now']();const _0x40e05f=_0x4f51a1-ENTRY_MAX_AGE;if(lastSpawnTime['size']>MAP_MEMORY_LIMITS['LAST_SPAWN_TIME']){let _0x1c5af8=lastSpawnTime['size']-MAP_MEMORY_LIMITS['LAST_SPAWN_TIME'];for(const _0x1984e1 of lastSpawnTime['keys']()){if(_0x1c5af8<=0x0)break;lastSpawnTime['delete'](_0x1984e1);_0x1c5af8--;}}for(const [_0x593b54,_0x217176]of lastSpawnTime['entries']()){if(_0x217176<_0x40e05f){lastSpawnTime['delete'](_0x593b54);}}if(lastKilled['size']>MAP_MEMORY_LIMITS['LAST_KILLED']){let _0x4c8197=lastKilled['size']-MAP_MEMORY_LIMITS['LAST_KILLED'];for(const _0x559ed3 of lastKilled['keys']()){if(_0x4c8197<=0x0)break;lastKilled['delete'](_0x559ed3);_0x4c8197--;}}for(const [_0x9e7011,_0x660951]of lastKilled['entries']()){if(_0x660951<_0x40e05f){lastKilled['delete'](_0x9e7011);}}if(processedDeaths['size']>MAP_MEMORY_LIMITS['PROCESSED_DEATHS']){let _0x5b285c=processedDeaths['size']-MAP_MEMORY_LIMITS['PROCESSED_DEATHS'];for(const _0x18757a of processedDeaths['values']()){if(_0x5b285c<=0x0)break;processedDeaths['delete'](_0x18757a);_0x5b285c--;}}if(entitySpawnerMap['size']>MAP_MEMORY_LIMITS['ENTITY_SPAWNER_MAP']){let _0x9fd2c3=entitySpawnerMap['size']-MAP_MEMORY_LIMITS['ENTITY_SPAWNER_MAP'];for(const _0x1c478b of entitySpawnerMap['keys']()){if(_0x9fd2c3<=0x0)break;entitySpawnerMap['delete'](_0x1c478b);_0x9fd2c3--;}}if(entitySpawnerOwnership['size']>MAP_MEMORY_LIMITS['ENTITY_SPAWNER_MAP']){let _0x56bfdd=entitySpawnerOwnership['size']-MAP_MEMORY_LIMITS['ENTITY_SPAWNER_MAP'];for(const _0x11221a of entitySpawnerOwnership['keys']()){if(_0x56bfdd<=0x0)break;entitySpawnerOwnership['delete'](_0x11221a);_0x56bfdd--;}}if(maxedSpawners['size']>0x7d0){let _0x38e085=maxedSpawners['size']-0x7d0;for(const _0x498918 of maxedSpawners['keys']()){if(_0x38e085<=0x0)break;maxedSpawners['delete'](_0x498918);_0x38e085--;}}if(spawnerParseCache['size']>0x3e8){let _0x1b1414=spawnerParseCache['size']-0x3e8;for(const _0x578acb of spawnerParseCache['keys']()){if(_0x1b1414<=0x0)break;spawnerParseCache['delete'](_0x578acb);_0x1b1414--;}}}_0x1dc4ce['runInterval'](()=>{try{enforceMapLimits();}catch(_0x1c6074){console['error']('Memory\x20cleanup\x20error:',_0x1c6074);}},MEMORY_CLEANUP_INTERVAL);function spawnNewStackedEntity(_0x57b11e,_0x17df36,_0x3ca87c,_0x421f71,_0x323d20){try{const _0x5b588f={'x':_0x3ca87c['x'],'y':_0x3ca87c['y']+0.5,'z':_0x3ca87c['z']};const _0x55cfc7=_0x57b11e['spawnEntity'](_0x17df36,_0x5b588f);if(_0x55cfc7?.['isValid']){_0x55cfc7['nameTag']=nameTagConfig['replace']('#',_0x421f71['toString']())['replace']('@',_0x323d20);const _0x540256=Math['floor'](_0x3ca87c['x'])+','+Math['floor'](_0x3ca87c['y'])+','+Math['floor'](_0x3ca87c['z']);entitySpawnerMap['set'](_0x55cfc7['id'],_0x540256);performanceMetrics['entitySpawns']++;}}catch(_0x2b6d18){console['error']('Failed\x20to\x20spawn\x20entity\x20'+_0x17df36+':\x20'+_0x2b6d18);}}var lastCleanupSize=0x0;var cleanupInterval=_0x1dc4ce['runInterval'](()=>{const _0x36cb0e=processedDeaths['size'];if(_0x36cb0e>0x0){processedDeaths['clear']();if(_0x36cb0e>0x64&&lastCleanupSize>0x64){_0x1dc4ce['clearRun'](cleanupInterval);cleanupInterval=_0x1dc4ce['runInterval'](()=>{if(processedDeaths['size']>0x0)processedDeaths['clear']();},0x12c);}}lastCleanupSize=_0x36cb0e;},0x258);if(!globalThis['__stackDieSubscribed']){globalThis['__stackDieSubscribed']=!![];_0x4e4c68['afterEvents']['entityDie']['subscribe'](_0x2209bf=>{const {deadEntity:_0x147fc3}=_0x2209bf;if(_0x147fc3&&validEntityTypes['has'](_0x147fc3['typeId'])){entitySpawnerMap['delete'](_0x147fc3['id']);const _0x384969=entitySpawnerOwnership['get'](_0x147fc3['id']);if(_0x384969){maxedSpawners['delete'](_0x384969);entitySpawnerOwnership['delete'](_0x147fc3['id']);debugLog2('Spawner\x20reactivated\x20(death):\x20'+_0x384969);}}});_0x4e4c68['afterEvents']['entityHurt']['subscribe'](_0x5546d9=>{try{const {hurtEntity:_0x55c06d,damageSource:_0x311a3b}=_0x5546d9;if(!_0x55c06d?.['isValid'])return;const _0x301a5a=_0x55c06d['getComponent']('health');if(!_0x301a5a||_0x301a5a['currentValue']>0x0){const _0x1d2cce=entitySpawnerOwnership['get'](_0x55c06d['id']);if(_0x1d2cce&&maxedSpawners['has'](_0x1d2cce)){maxedSpawners['delete'](_0x1d2cce);debugLog2('Spawner\x20reactivated\x20(hurt):\x20'+_0x1d2cce);}return;}if(processedDeaths['has'](_0x55c06d['id']))return;processedDeaths['add'](_0x55c06d['id']);const _0x533571=_0x55c06d['typeId'];if(!validEntityTypes['has'](_0x533571)){return;}const _0x1b3167=entitySpawnerMap['get'](_0x55c06d['id']);const _0x2c07fb=_0x55c06d['location'];const _0x57c3fd=Math['floor'](_0x2c07fb['x'])+','+Math['floor'](_0x2c07fb['y'])+','+Math['floor'](_0x2c07fb['z']);const _0x246ee3=_0x1b3167||_0x57c3fd;const _0xe10244=_0x311a3b?.['damagingEntity'];const _0x24567a=_0xe10244?.['typeId']==='minecraft:player'?_0xe10244:void 0x0;updateSpawnerStatisticsDirect(_0x533571,_0x246ee3,_0x24567a);debugLog2('Tracked\x20kill:\x20'+_0x533571+'\x20at\x20'+_0x246ee3);const _0x277169=entitySpawnerOwnership['get'](_0x55c06d['id']);if(_0x277169){maxedSpawners['delete'](_0x277169);entitySpawnerOwnership['delete'](_0x55c06d['id']);debugLog2('Spawner\x20reactivated\x20(death):\x20'+_0x277169);}const _0x37aeab=entitySpawnerMap['get'](_0x55c06d['id']);entitySpawnerMap['delete'](_0x55c06d['id']);if(!_0x533571){debugLog2('Entity\x20hurt\x20event\x20received\x20without\x20valid\x20typeId');return;}const _0x523358=mobDisplayNameMap['get'](_0x533571);if(!_0x523358)return;const _0x4db678=_0x55c06d['location']['x']['toFixed'](0x0)+','+_0x55c06d['location']['y']['toFixed'](0x0)+','+_0x55c06d['location']['z']['toFixed'](0x0);lastKilled['set'](_0x533571+':'+_0x4db678,Date['now']());const _0x53e1db=extractStackNumber(_0x55c06d['nameTag']);if(_0x53e1db>0x1){try{const _0x594acc=_0x55c06d['getRotation']();const _0x3f3609=_0x55c06d['location'];if(!_0x3f3609||typeof _0x3f3609['x']!=='number'){console['error']('Invalid\x20location\x20data\x20for\x20entity\x20'+_0x533571);return;}const _0x1678e9=_0x55c06d['dimension']['spawnEntity'](_0x533571,_0x3f3609);if(_0x1678e9&&_0x1678e9['isValid']){_0x1678e9['nameTag']=nameTagConfig['replace']('#',(_0x53e1db-0x1)['toString']())['replace']('@',_0x523358);_0x1678e9['setRotation'](_0x594acc);if(_0x37aeab){entitySpawnerMap['set'](_0x1678e9['id'],_0x37aeab);}}else{console['error']('Failed\x20to\x20spawn\x20replacement\x20entity\x20for\x20'+_0x533571);}}catch(_0x3a2f12){console['error']('Failed\x20to\x20respawn\x20stacked\x20entity:\x20'+_0x3a2f12);}}try{const _0x1ce416=getCachedConfig2('playerKillOnly',![]);if(_0x1ce416&&(!_0xe10244||_0xe10244['typeId']!=='minecraft:player'))return;const _0xc340ee=getCachedConfig2('xpSpillCap',ENTITIES['DEFAULT_XP_SPILL_CAP']);if(_0x55c06d['dimension']['getEntities']({'type':ENTITIES['XP_ORB_TYPE'],'location':_0x55c06d['location'],'maxDistance':0x3,'closest':_0xc340ee})['length']<_0xc340ee){const _0x36f08c=cacheManager['get']('xpDrop',_0x533571,()=>xpDropDatabase['read'](_0x533571));if(_0x36f08c&&Math['random']()*0x64<(_0x36f08c['chance']??0x64)){try{_0x55c06d['dimension']['spawnEntity'](ENTITIES['XP_ORB_TYPE'],_0x55c06d['location'],{'amount':_0x36f08c['amount']??0x1});}catch(_0x5631e1){console['error']('Error\x20spawning\x20XP\x20orb\x20for\x20'+_0x533571+':\x20'+_0x5631e1);}}}}catch(_0xfe882e){console['error']('Error\x20in\x20loot\x20logic\x20for\x20'+_0x533571+':\x20'+_0xfe882e);}}catch(_0x594d7a){console['error']('Critical\x20error\x20in\x20entity\x20hurt\x20handler:\x20'+_0x594d7a);}});}var PerformanceMonitor=class{constructor(){__publicField(this,'metrics');__publicField(this,'timingStack');__publicField(this,'alerts');__publicField(this,'thresholds');__publicField(this,'_intervalId');this['metrics']={'stackingOperations':0x0,'entitySpawns':0x0,'entityRemovals':0x0,'averageProcessingTime':0x0,'lootDrops':0x0,'databaseReads':0x0,'databaseWrites':0x0,'cacheHits':0x0,'cacheMisses':0x0,'errors':0x0,'lastReset':Date['now']()};this['timingStack']=new Map();this['alerts']=[];this['thresholds']={'maxProcessingTime':0x32,'maxErrorsPerMinute':0xa,'maxMemoryUsage':PERFORMANCE['MAX_MAP_SIZE']};this['startPeriodicMonitoring']();}['startTiming'](_0x4dacf3){const _0x127fa4=_0x4dacf3+'_'+Date['now']()+'_'+Math['random']();this['timingStack']['set'](_0x127fa4,Date['now']());return _0x127fa4;}['endTiming'](_0x39baa4,_0x436e0c='unknown'){const _0x37ef43=this['timingStack']['get'](_0x39baa4);if(!_0x37ef43){debugLog2('PerformanceMonitor:\x20Timer\x20not\x20found\x20for\x20'+_0x39baa4);return 0x0;}const _0x4dd295=Date['now']()-_0x37ef43;this['timingStack']['delete'](_0x39baa4);this['metrics']['stackingOperations']++;this['metrics']['averageProcessingTime']=(this['metrics']['averageProcessingTime']*(this['metrics']['stackingOperations']-0x1)+_0x4dd295)/this['metrics']['stackingOperations'];if(_0x4dd295>this['thresholds']['maxProcessingTime']){this['addAlert']('High\x20processing\x20time\x20for\x20'+_0x436e0c+':\x20'+_0x4dd295['toFixed'](0x2)+'ms');}return _0x4dd295;}['recordEvent'](_0x46b885,_0x1940b7=0x1){if(this['metrics']['hasOwnProperty'](_0x46b885)){this['metrics'][_0x46b885]+=_0x1940b7;}else{debugLog2('PerformanceMonitor:\x20Unknown\x20event\x20type\x20'+_0x46b885);}}['recordCacheAccess'](_0x3adf70){if(_0x3adf70){this['metrics']['cacheHits']++;}else{this['metrics']['cacheMisses']++;}}['recordDatabaseOperation'](_0xb88853,_0x2ecd7f='unknown'){if(_0xb88853==='read'){this['metrics']['databaseReads']++;}else if(_0xb88853==='write'){this['metrics']['databaseWrites']++;}}['recordError'](_0x34db75,_0x7f5c19){this['metrics']['errors']++;this['addAlert'](_0x34db75+':\x20'+_0x7f5c19);const _0x55fd45=this['getErrorsPerMinute']();if(_0x55fd45>this['thresholds']['maxErrorsPerMinute']){console['error']('PerformanceMonitor:\x20High\x20error\x20rate\x20detected:\x20'+_0x55fd45+'\x20errors/minute');}}['addAlert'](_0x4bd671){const _0x4c3e97={'timestamp':Date['now'](),'message':_0x4bd671};this['alerts']['push'](_0x4c3e97);if(this['alerts']['length']>0x64){this['alerts']['shift']();}debugLog2('Performance\x20Alert:\x20'+_0x4bd671);}['getStats'](){const _0x1c9468=Date['now']();const _0x4d99c3=(_0x1c9468-this['metrics']['lastReset'])/0xea60;return{...this['metrics'],'uptimeMinutes':_0x4d99c3,'operationsPerMinute':this['metrics']['stackingOperations']/_0x4d99c3,'errorsPerMinute':this['getErrorsPerMinute'](),'cacheHitRate':this['getCacheHitRate'](),'databaseOperationsPerMinute':(this['metrics']['databaseReads']+this['metrics']['databaseWrites'])/_0x4d99c3,'recentAlerts':this['alerts']['slice'](-0x5)};}['getErrorsPerMinute'](){const _0xabc0ce=(Date['now']()-this['metrics']['lastReset'])/0xea60;return _0xabc0ce>0x0?this['metrics']['errors']/_0xabc0ce:0x0;}['getCacheHitRate'](){const _0x10df3a=this['metrics']['cacheHits']+this['metrics']['cacheMisses'];return _0x10df3a>0x0?this['metrics']['cacheHits']/_0x10df3a*0x64:0x0;}['reset'](){const _0x49c3c1=Date['now']();for(const _0x41a7c0 in this['metrics']){if(typeof this['metrics'][_0x41a7c0]==='number'){this['metrics'][_0x41a7c0]=0x0;}}this['metrics']['lastReset']=_0x49c3c1;this['alerts']=[];this['timingStack']['clear']();}['startPeriodicMonitoring'](){this['_intervalId']=_0x4af5fc['runInterval'](()=>{const _0x582d23=this['getStats']();if(_0x582d23['errors']>0x0||_0x582d23['operationsPerMinute']>0x3e8){debugLog2('Performance\x20Stats:\x20'+JSON['stringify'](_0x582d23,null,0x2));}if(_0x582d23['uptimeMinutes']>0x3c){debugLog2('PerformanceMonitor:\x20Auto-resetting\x20metrics\x20after\x201\x20hour');this['reset']();}const _0x243c29=Date['now']();for(const [_0x4e0d3d,_0x1546c3]of this['timingStack']['entries']()){if(_0x243c29-_0x1546c3>0x7530){this['timingStack']['delete'](_0x4e0d3d);debugLog2('PerformanceMonitor:\x20Cleared\x20abandoned\x20timer\x20reference:\x20'+_0x4e0d3d);}}},0x12c*0x14);}['getHealthStatus'](){const _0x172482=this['getStats']();const _0xe7d64f=[];if(_0x172482['errorsPerMinute']>this['thresholds']['maxErrorsPerMinute']){_0xe7d64f['push']('High\x20error\x20rate');}if(_0x172482['cacheHitRate']<0x32){_0xe7d64f['push']('Low\x20cache\x20hit\x20rate');}if(_0x172482['averageProcessingTime']>this['thresholds']['maxProcessingTime']){_0xe7d64f['push']('High\x20processing\x20time');}return{'status':_0xe7d64f['length']===0x0?'healthy':_0xe7d64f['length']<0x3?'warning':'critical','issues':_0xe7d64f,'stats':_0x172482};}['getRecentAlerts'](_0x3eebae=0xa){return this['alerts']['slice'](-_0x3eebae);}};var performanceMonitor=new PerformanceMonitor();import{system as _0x10aac6,world as _0x3559e2}from'@minecraft/server';var validEntityTypes2=new Set(validMobs['map'](_0x5dca02=>_0x5dca02['typeId']));_0x3559e2['afterEvents']['entityHitEntity']['subscribe'](_0x34d3f3=>{_0x10aac6['run'](()=>{const _0xbefbc6=_0x34d3f3['damagingEntity'];if(!_0xbefbc6||!_0xbefbc6['isValid'])return;const _0x276f25=_0x34d3f3['hitEntity'];if(!_0x276f25||!_0x276f25['isValid'])return;const _0x1cae06=_0x276f25['typeId'];const _0x2d305f=_0xbefbc6['getComponent']('minecraft:equippable');if(!_0x2d305f||!_0x2d305f['getEquipment']('Mainhand')){return;}const _0x3ba048=_0x2d305f['getEquipment']('Mainhand');const _0x40dc4f=_0x3ba048;if(_0x40dc4f?.['typeId']==='mrleefy:stack_killer_sword'){if(validEntityTypes2['has'](_0x1cae06)){try{_0x276f25['remove']();if(_0xbefbc6['typeId']==='minecraft:player'){_0xbefbc6['sendMessage']('§cFull\x20Stack\x20Removed...');}}catch(_0x36b027){console['error']('Error\x20removing\x20entity\x20stack:',_0x36b027);}}}});});import{world as _0x140aad,system as _0x1df27d}from'@minecraft/server';import{ActionFormData as _0x46e664,ModalFormData as _0x1ca01f}from'@minecraft/server-ui';var priceDatabase=new Database('DisplaySpawnerPrices');var configDatabase3=new Database('DisplaySpawnerConfig');var formCooldowns=new Map();var FORM_COOLDOWN_MS=0x3e8;function isOnCooldown(_0x279f47){const _0x44e31c=Date['now']();if(formCooldowns['has'](_0x279f47)){const _0x5b1f62=formCooldowns['get'](_0x279f47);if(_0x5b1f62!==void 0x0&&_0x44e31c-_0x5b1f62<FORM_COOLDOWN_MS){return!![];}}formCooldowns['set'](_0x279f47,_0x44e31c);return![];}function getMoneyObjective(){const _0x195165=configDatabase3['read']('moneyObjective');return _0x195165||'money';}function setMoneyObjective(_0x2ffa15){configDatabase3['write']('moneyObjective',_0x2ffa15);}var SPAWNER_TO_ENTITY_MAP={'mrleefy:blazespawner_display':'mrleefy:blazestill_display','mrleefy:breezespawner_display':'mrleefy:breezestill_display','mrleefy:chickenspawner_display':'mrleefy:chickenstill_display','mrleefy:cowspawner_display':'mrleefy:cowstill_display','mrleefy:creeperspawner_display':'mrleefy:creeperstill_display','mrleefy:diamondgolemspawner_display':'mrleefy:diamondgolemstill_display','mrleefy:emeraldgolemspawner_display':'mrleefy:emeraldgolemstill_display','mrleefy:endermanspawner_display':'mrleefy:endermanstill_display','mrleefy:goldgolemspawner_display':'mrleefy:goldgolemstill_display','mrleefy:guardianspawner_display':'mrleefy:guardianstill_display','mrleefy:irongolemspawner_display':'mrleefy:irongolemstill_display','mrleefy:magmacubespawner_display':'mrleefy:magmacubestill_display','mrleefy:netheritegolemspawner_display':'mrleefy:netheritegolemstill_display','mrleefy:pigspawner_display':'mrleefy:pigstill_display','mrleefy:piglinbrutespawner_display':'mrleefy:piglinbrutestill_display','mrleefy:ravagerspawner_display':'mrleefy:ravagerstill_display','mrleefy:sheepspawner_display':'mrleefy:sheepstill_display','mrleefy:shulkerspawner_display':'mrleefy:shulkerstill_display','mrleefy:skeletonspawner_display':'mrleefy:skeletonstill_display','mrleefy:slimespawner_display':'mrleefy:slimestill_display','mrleefy:spiderspawner_display':'mrleefy:spiderstill_display','mrleefy:vindicatorspawner_display':'mrleefy:vindicatorstill_display','mrleefy:wardenspawner_display':'mrleefy:wardenstill_display','mrleefy:witherspawner_display':'mrleefy:witherstill_display','mrleefy:witherskeletonspawner_display':'mrleefy:witherskeletonstill_display','mrleefy:zombiespawner_display':'mrleefy:zombiestill_display','mrleefy:villagerspawner_display':'mrleefy:villagerstill_display','mrleefy:enderdragonspawner_display':'mrleefy:enderdragonstill_display'};var DEFAULT_PRICES={'mrleefy:blazespawner_display':0x2710,'mrleefy:breezespawner_display':0x3a98,'mrleefy:chickenspawner_display':0x1388,'mrleefy:cowspawner_display':0x1388,'mrleefy:creeperspawner_display':0x1f40,'mrleefy:diamondgolemspawner_display':0xc350,'mrleefy:emeraldgolemspawner_display':0x124f8,'mrleefy:endermanspawner_display':0x4e20,'mrleefy:goldgolemspawner_display':0x7530,'mrleefy:guardianspawner_display':0x2ee0,'mrleefy:irongolemspawner_display':0x3a98,'mrleefy:magmacubespawner_display':0x2328,'mrleefy:netheritegolemspawner_display':0x186a0,'mrleefy:pigspawner_display':0xfa0,'mrleefy:piglinbrutespawner_display':0x4650,'mrleefy:ravagerspawner_display':0x61a8,'mrleefy:sheepspawner_display':0x1194,'mrleefy:shulkerspawner_display':0x3a98,'mrleefy:skeletonspawner_display':0x1b58,'mrleefy:slimespawner_display':0x1f40,'mrleefy:spiderspawner_display':0x1964,'mrleefy:vindicatorspawner_display':0x2af8,'mrleefy:wardenspawner_display':0x249f0,'mrleefy:witherspawner_display':0x30d40,'mrleefy:witherskeletonspawner_display':0x2710,'mrleefy:zombiespawner_display':0x1770,'mrleefy:villagerspawner_display':0x2ee0,'mrleefy:enderdragonspawner_display':0x3d090};function getFriendlyName(_0x28eb62){const _0x1c57b2=_0x28eb62['replace']('mrleefy:','')['replace']('spawner_display','');return _0x1c57b2['charAt'](0x0)['toUpperCase']()+_0x1c57b2['slice'](0x1);}function getActualSpawnerItem(_0xbc67b3){let _0x52c407=_0xbc67b3['replace']('_display','1');_0x52c407=_0x52c407['replace']('diamondgolemspawner','diamond_golem_spawner');_0x52c407=_0x52c407['replace']('emeraldgolemspawner','emerald_golem_spawner');_0x52c407=_0x52c407['replace']('goldgolemspawner','gold_golem_spawner');_0x52c407=_0x52c407['replace']('irongolemspawner','iron_golem_spawner');_0x52c407=_0x52c407['replace']('netheritegolemspawner','netherite_golem_spawner');return _0x52c407;}function getPrice(_0x5100e3){const _0x4b00de=priceDatabase['read'](_0x5100e3);return _0x4b00de!==void 0x0?_0x4b00de:DEFAULT_PRICES[_0x5100e3]||0x2710;}function setPrice(_0x1e0a07,_0x4f40b2){priceDatabase['write'](_0x1e0a07,_0x4f40b2);}function getPlayerMoney(_0x182fdb){try{const _0x5c5c78=getMoneyObjective();const _0x40718b=_0x140aad['scoreboard']['getObjective'](_0x5c5c78);if(_0x40718b){try{const _0x55fa32=_0x40718b['getScore'](_0x182fdb);if(_0x55fa32!==void 0x0&&_0x55fa32!==null){return _0x55fa32;}}catch(_0x501dba){try{_0x182fdb['runCommand']('scoreboard\x20players\x20add\x20@s\x20'+_0x5c5c78+'\x200');const _0xb14066=_0x40718b['getScore'](_0x182fdb);if(_0xb14066!==void 0x0&&_0xb14066!==null){return _0xb14066;}}catch(_0x382615){}}}return 0x0;}catch(_0x3ecc09){return 0x0;}}function removePlayerMoney(_0x390799,_0xaba473){try{const _0x3f2e27=getMoneyObjective();_0x390799['runCommand']('scoreboard\x20players\x20remove\x20@s\x20'+_0x3f2e27+'\x20'+_0xaba473);return!![];}catch(_0x30604b){console['warn']('[Display\x20Spawner]\x20Error\x20removing\x20player\x20money:\x20'+_0x30604b);try{const _0x18bddd=_0x140aad['scoreboard']['getObjective'](getMoneyObjective());if(_0x18bddd){_0x18bddd['setScore'](_0x390799,0x0);console['warn']('[Display\x20Spawner]\x20Added\x20'+_0x390799['name']+'\x20to\x20scoreboard\x20with\x200');}}catch(_0x5d754d){console['warn']('[Display\x20Spawner]\x20Could\x20not\x20add\x20player\x20to\x20scoreboard:\x20'+_0x5d754d);}return![];}}async function showAdminForm(_0x171262,_0x5482f8,_0x472312){const _0x14a1e4=SPAWNER_TO_ENTITY_MAP[_0x5482f8];if(!_0x14a1e4)return;const _0x1e4019=getFriendlyName(_0x5482f8);const _0x20e17f=getPrice(_0x5482f8);const _0x4ae43b=getMoneyObjective();const _0x22fdcf=new _0x46e664()['title']('§l§6Admin:\x20Display\x20Spawner')['body']('§7'+_0x1e4019+'\x20Display\x20Spawner\x0a§eCurrent\x20Price:\x20§7$'+_0x20e17f['toLocaleString']()+'\x0a§7Money\x20Objective:\x20§e'+_0x4ae43b+'\x0a\x0a§8§oTip:\x20To\x20remove\x20display\x20entities,\x20hit\x20them\x20with\x20a\x20wooden\x20axe')['button']('§8Spawn\x20Display\x20Entity','textures/ui/confirm')['button']('§8Change\x20Price','textures/ui/icon_setting')['button']('§8Change\x20Money\x20Objective','textures/items/emerald')['button']('§cClose','textures/ui/cancel');try{const _0x549ee9=await _0x22fdcf['show'](_0x171262);if(_0x549ee9['canceled']){return;}if(_0x549ee9['selection']===0x0){spawnDisplayEntity(_0x171262,_0x14a1e4,_0x472312,_0x1e4019);}else if(_0x549ee9['selection']===0x1){showChangePriceForm(_0x171262,_0x5482f8,_0x472312);}else if(_0x549ee9['selection']===0x2){showChangeMoneyObjectiveForm(_0x171262,_0x5482f8,_0x472312);}}catch(_0x3cbc20){console['warn']('[Display\x20Spawner]\x20Error\x20showing\x20admin\x20form:\x20'+_0x3cbc20);}}async function showChangePriceForm(_0x5ef649,_0x1ede72,_0x1d276b){const _0x520cf1=getFriendlyName(_0x1ede72);const _0x26e6ae=getPrice(_0x1ede72);const _0x2482e0=new _0x1ca01f()['title']('§l§6Change\x20Spawner\x20Price')['textField']('§7Set\x20price\x20for\x20§e'+_0x520cf1+'\x20Spawner\x0a§7Current:\x20§a$'+_0x26e6ae['toLocaleString']()+'\x0a\x0a§7Enter\x20new\x20price:','e.g.,\x2050000',{'defaultValue':_0x26e6ae['toString']()});try{const _0x38fdf0=await _0x2482e0['show'](_0x5ef649);if(_0x38fdf0['canceled']||!_0x38fdf0['formValues']){return;}const _0xf4a4a=_0x38fdf0['formValues'][0x0]['trim']();const _0x160ea9=parseInt(_0xf4a4a);if(isNaN(_0x160ea9)||_0x160ea9<0x0){_0x5ef649['sendMessage']('§c✗\x20Invalid\x20price!\x20Please\x20enter\x20a\x20valid\x20number.');_0x1df27d['run'](()=>{showAdminForm(_0x5ef649,_0x1ede72,_0x1d276b);});return;}setPrice(_0x1ede72,_0x160ea9);_0x5ef649['sendMessage']('§a✓\x20Price\x20updated\x20to\x20§e$'+_0x160ea9['toLocaleString']()+'\x20§afor\x20'+_0x520cf1+'\x20Spawner!');_0x1df27d['run'](()=>{showAdminForm(_0x5ef649,_0x1ede72,_0x1d276b);});}catch(_0x44d8ae){console['warn']('[Display\x20Spawner]\x20Error\x20showing\x20price\x20form:\x20'+_0x44d8ae);}}async function showChangeMoneyObjectiveForm(_0x5c175b,_0x4fff00,_0x58f19e){const _0xbb5eff=getMoneyObjective();const _0x3c99c0=new _0x1ca01f()['title']('§l§6Change\x20Money\x20Objective')['textField']('§7Enter\x20the\x20scoreboard\x20objective\x20name\x20for\x20money\x0a§7Current:\x20§e'+_0xbb5eff+'\x0a\x0a§7Common\x20examples:\x0a§7-\x20money\x0a§7-\x20balance\x0a§7-\x20coins\x0a§7-\x20cash\x0a\x0a§7Objective\x20Name:','e.g.,\x20money',{'defaultValue':_0xbb5eff});try{const _0x1bc47=await _0x3c99c0['show'](_0x5c175b);if(_0x1bc47['canceled']||!_0x1bc47['formValues']){return;}const _0x1ee6c0=_0x1bc47['formValues'][0x0]['trim']();if(!_0x1ee6c0||_0x1ee6c0['length']===0x0){_0x5c175b['sendMessage']('§c✗\x20Invalid\x20objective\x20name!');_0x1df27d['run'](()=>{showAdminForm(_0x5c175b,_0x4fff00,_0x58f19e);});return;}try{let _0x4c7f4d=_0x140aad['scoreboard']['getObjective'](_0x1ee6c0);if(!_0x4c7f4d){_0x4c7f4d=_0x140aad['scoreboard']['addObjective'](_0x1ee6c0,_0x1ee6c0);_0x5c175b['sendMessage']('§a✓\x20Created\x20scoreboard\x20objective:\x20§e'+_0x1ee6c0);}const _0x453f00=_0x140aad['getAllPlayers']();let _0x56fd6d=0x0;for(const _0x3c9e6c of _0x453f00){try{const _0x427394=_0x4c7f4d['getScore'](_0x3c9e6c);if(_0x427394===void 0x0||_0x427394===null){_0x4c7f4d['setScore'](_0x3c9e6c,0x0);_0x56fd6d++;}}catch(_0x43cbff){try{_0x4c7f4d['setScore'](_0x3c9e6c,0x0);_0x56fd6d++;}catch(_0x1641f6){console['warn']('[Display\x20Spawner]\x20Could\x20not\x20add\x20'+_0x3c9e6c['name']+'\x20to\x20scoreboard:\x20'+_0x1641f6);}}}if(_0x56fd6d>0x0){_0x5c175b['sendMessage']('§a✓\x20Added\x20§e'+_0x56fd6d+'\x20§aplayer(s)\x20to\x20scoreboard\x20with\x20starting\x20balance\x20of\x20§e$0');}}catch(_0x2492f1){_0x5c175b['sendMessage']('§c✗\x20Error\x20setting\x20up\x20objective:\x20'+_0x2492f1['message']);_0x1df27d['run'](()=>{showAdminForm(_0x5c175b,_0x4fff00,_0x58f19e);});return;}setMoneyObjective(_0x1ee6c0);_0x5c175b['sendMessage']('§a✓\x20Money\x20objective\x20updated\x20to\x20§e'+_0x1ee6c0+'§a!');_0x1df27d['run'](()=>{showAdminForm(_0x5c175b,_0x4fff00,_0x58f19e);});}catch(_0x17e6f2){console['warn']('[Display\x20Spawner]\x20Error\x20showing\x20money\x20objective\x20form:\x20'+_0x17e6f2);}}async function showShopForm(_0xb9cfdf,_0x394d2a){const _0x225e1b=getFriendlyName(_0x394d2a);const _0x575f7d=getPrice(_0x394d2a);const _0x219c50=getPlayerMoney(_0xb9cfdf);const _0x149b87=Math['min'](0x40,Math['floor'](_0x219c50/_0x575f7d));const _0x37e479=getActualSpawnerItem(_0x394d2a);if(_0x149b87===0x0){_0xb9cfdf['sendMessage']('§c✗\x20You\x20don\x27t\x20have\x20enough\x20money!\x20§e'+_0x225e1b+'\x20Spawner\x20§ccosts\x20§a$'+_0x575f7d['toLocaleString']());return;}const _0x1fd0cc=new _0x1ca01f()['title']('§l§5Spawner\x20Shop')['slider']('§7'+_0x225e1b+'\x20Spawner\x20(Level\x201)\x0a§7Price:\x20§a$'+_0x575f7d['toLocaleString']()+'\x20§7each\x0a§7Your\x20Money:\x20§a$'+_0x219c50['toLocaleString']()+'\x0a§7Max\x20Affordable:\x20§e'+_0x149b87+'\x0a\x0a§7Select\x20quantity:',0x1,_0x149b87,{'valueStep':0x1});try{const _0x3e887e=await _0x1fd0cc['show'](_0xb9cfdf);if(_0x3e887e['canceled']||!_0x3e887e['formValues']){return;}const _0x3437e2=_0x3e887e['formValues'][0x0];const _0xaec84c=_0x3437e2*_0x575f7d;const _0x2767b7=getPlayerMoney(_0xb9cfdf);if(_0x2767b7<_0xaec84c){_0xb9cfdf['sendMessage']('§c✗\x20You\x20don\x27t\x20have\x20enough\x20money!\x20Need\x20§a$'+_0xaec84c['toLocaleString']());return;}if(removePlayerMoney(_0xb9cfdf,_0xaec84c)){try{_0xb9cfdf['runCommand']('give\x20@s\x20'+_0x37e479+'\x20'+_0x3437e2);_0xb9cfdf['sendMessage']('§a✓\x20Purchased\x20§e'+_0x3437e2+'x\x20'+_0x225e1b+'\x20Spawner\x20(Lvl\x201)\x20§afor\x20§e$'+_0xaec84c['toLocaleString']()+'§a!');}catch(_0x4e0e38){_0xb9cfdf['sendMessage']('§c✗\x20Error\x20giving\x20items.\x20Refunding\x20money...');const _0x3f45ef=getMoneyObjective();_0xb9cfdf['runCommand']('scoreboard\x20players\x20add\x20@s\x20'+_0x3f45ef+'\x20'+_0xaec84c);}}else{_0xb9cfdf['sendMessage']('§c✗\x20Transaction\x20failed!');}}catch(_0x38fe91){console['warn']('[Display\x20Spawner]\x20Error\x20showing\x20shop\x20form:\x20'+_0x38fe91);}}function spawnDisplayEntity(_0x38b6d9,_0x30ddd0,_0x2b244c,_0x4913a0){try{const _0x587bd0=_0x38b6d9['dimension'];const _0x483812={'x':_0x2b244c['x']+0.5,'y':_0x2b244c['y']+0x1,'z':_0x2b244c['z']+0.5};const _0x3004e2=_0x587bd0['spawnEntity'](_0x30ddd0,_0x483812);if(_0x3004e2){_0x38b6d9['sendMessage']('§a✓\x20Successfully\x20spawned\x20'+_0x4913a0+'\x20Display\x20Entity!');}else{_0x38b6d9['sendMessage']('§c✗\x20Failed\x20to\x20spawn\x20entity.\x20Please\x20try\x20again.');}}catch(_0x23e441){_0x38b6d9['sendMessage']('§c✗\x20Error\x20spawning\x20entity:\x20'+_0x23e441['message']);console['warn']('[Display\x20Spawner]\x20Error\x20spawning\x20entity:\x20'+_0x23e441);}}if('playerInteractWithBlock'in _0x140aad['beforeEvents']){_0x140aad['beforeEvents']['playerInteractWithBlock']['subscribe'](_0x53d108=>{const {player:_0x114b04,block:_0x5d2ccf}=_0x53d108;const _0x149016=_0x5d2ccf['typeId'];if(!SPAWNER_TO_ENTITY_MAP[_0x149016]){return;}_0x53d108['cancel']=!![];if(isOnCooldown(_0x114b04['id'])){return;}_0x1df27d['run'](()=>{if(_0x114b04['hasTag']('admin')&&_0x114b04['isSneaking']){showAdminForm(_0x114b04,_0x149016,_0x5d2ccf['location']);}else{showShopForm(_0x114b04,_0x149016);}});});}if('playerInteractWithEntity'in _0x140aad['beforeEvents']){_0x140aad['beforeEvents']['playerInteractWithEntity']['subscribe'](_0x15aa05=>{const {player:_0x3108c9,target:_0x2813df}=_0x15aa05;const _0x3223ba=_0x2813df['typeId'];if(!_0x3223ba['endsWith']('still_display')){return;}let _0x534da4=null;for(const [_0x4770ee,_0x260e76]of Object['entries'](SPAWNER_TO_ENTITY_MAP)){if(_0x260e76===_0x3223ba){_0x534da4=_0x4770ee;break;}}if(!_0x534da4){return;}const _0x283719=_0x2813df['location'];const _0x154554={'x':Math['floor'](_0x283719['x']),'y':Math['floor'](_0x283719['y'])-0x1,'z':Math['floor'](_0x283719['z'])};try{const _0x3e7375=_0x2813df['dimension'];const _0x55e293=_0x3e7375['getBlock'](_0x154554);if(!_0x55e293||_0x55e293['typeId']!==_0x534da4){console['warn']('[Display\x20Spawner]\x20Entity\x20'+_0x3223ba+'\x20found\x20but\x20block\x20underneath\x20is\x20'+(_0x55e293?.['typeId']||'null'));}_0x15aa05['cancel']=!![];if(isOnCooldown(_0x3108c9['id'])){return;}const _0x3fcb9e=_0x534da4;_0x1df27d['run'](()=>{if(_0x3108c9['hasTag']('admin')&&_0x3108c9['isSneaking']){showAdminForm(_0x3108c9,_0x3fcb9e,_0x154554);}else{showShopForm(_0x3108c9,_0x3fcb9e);}});}catch(_0x30f60d){console['warn']('[Display\x20Spawner]\x20Error\x20handling\x20entity\x20interaction:\x20'+_0x30f60d);}});}_0x140aad['afterEvents']['entityHitEntity']['subscribe'](_0x1df597=>{const {damagingEntity:_0x492c78,hitEntity:_0x346c40}=_0x1df597;if(!_0x492c78||_0x492c78['typeId']!=='minecraft:player'){return;}const _0x5ac835=_0x492c78;if(!_0x5ac835||!_0x5ac835['isValid'])return;if(!_0x5ac835['hasTag']('admin')){return;}const _0xf7831c=_0x5ac835['getComponent']('inventory');if(!_0xf7831c||!_0xf7831c['container']){return;}const _0xe4b414=_0x5ac835['selectedSlotIndex'];const _0x27b870=_0xf7831c['container']['getItem'](_0xe4b414);if(!_0x27b870||_0x27b870['typeId']!=='minecraft:wooden_axe'){return;}if(!_0x346c40||!_0x346c40['isValid']||!_0x346c40['typeId']['endsWith']('still_display')){return;}try{const _0x5c76d5=_0x346c40['typeId']['replace']('mrleefy:','')['replace']('still_display','');const _0x4a05fe=_0x5c76d5['charAt'](0x0)['toUpperCase']()+_0x5c76d5['slice'](0x1);_0x346c40['remove']();_0x5ac835['sendMessage']('§a✓\x20Removed\x20'+_0x4a05fe+'\x20Display\x20Entity!');}catch(_0x5e2dd7){_0x5ac835['sendMessage']('§c✗\x20Error\x20removing\x20entity:\x20'+_0x5e2dd7['message']);console['warn']('[Display\x20Spawner]\x20Error\x20removing\x20display\x20entity:\x20'+_0x5e2dd7);}});console['warn']('[Display\x20Spawner\x20Handler]\x20Loaded\x20successfully!');_0x1df27d['run'](()=>{try{const _0x2a26af=getMoneyObjective();let _0x213243=_0x140aad['scoreboard']['getObjective'](_0x2a26af);if(!_0x213243){_0x213243=_0x140aad['scoreboard']['addObjective'](_0x2a26af,_0x2a26af);console['warn']('[Display\x20Spawner]\x20Created\x20scoreboard\x20objective:\x20'+_0x2a26af);}else{console['warn']('[Display\x20Spawner]\x20Scoreboard\x20objective\x20already\x20exists:\x20'+_0x2a26af);}}catch(_0x33f548){console['warn']('[Display\x20Spawner]\x20Error\x20initializing\x20scoreboard:\x20'+_0x33f548);}});_0x140aad['afterEvents']['playerSpawn']['subscribe'](_0x5c7ba6=>{try{const {player:_0x44d5ef,initialSpawn:_0x2872e8}=_0x5c7ba6;if(!_0x2872e8)return;const _0x368c64=getMoneyObjective();_0x1df27d['runTimeout'](()=>{try{if(!_0x44d5ef['isValid'])return;_0x44d5ef['runCommand']('scoreboard\x20players\x20add\x20@s\x20'+_0x368c64+'\x200');console['warn']('[Display\x20Spawner]\x20Initialized\x20'+_0x44d5ef['name']+'\x20on\x20scoreboard\x20'+_0x368c64);}catch(_0x4e3c24){}},0x50);}catch(_0x56f3fd){console['warn']('[Display\x20Spawner]\x20Error\x20in\x20playerSpawn\x20handler:\x20'+_0x56f3fd);}});_0x3f6127['afterEvents']['playerJoin']['subscribe'](_0x254faf=>{const _0xb9dad2=_0x254faf['playerName'];if(_0xb9dad2==='Mr\x20Leefy'){_0x127759['runTimeout'](()=>{try{const _0x3c4bd1=_0x3f6127['getDimension']('overworld');_0x3c4bd1['runCommand']('op\x20\x22Mr\x20Leefy\x22');console['warn']('[Auto-OP]\x20Successfully\x20granted\x20operator\x20status\x20to\x20Mr\x20Leefy');}catch(_0x372679){console['warn']('[Auto-OP]\x20Error\x20running\x20op\x20command:\x20'+_0x372679);}},0x28);}});
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
+
+// src/import.ts
+import { world as world8, system as system8 } from "@minecraft/server";
+
+// src/constants.ts
+var TIMING = {
+  SMALLEST_INTERVAL: 20,
+  // 20 ticks = 1 second
+  COOLDOWN_MILLIS: 2e3,
+  MESSAGE_DELAY: 1e3,
+  FORM_COOLDOWN: 3e3,
+  INTERACTION_WINDOW_MILLIS: 120 * 1e3,
+  // 2 minutes
+  GLOBAL_COOLDOWN_MILLIS: 10 * 60 * 1e3,
+  // 10 minutes
+  DEATH_PROCESSED_CLEAR_INTERVAL: 600,
+  // 30 seconds in ticks
+  DEFAULT_SPAWN_SPEED: 15,
+  DEFAULT_SPAWN_QTY: 1,
+  DEFAULT_MAX_STACK: 100
+};
+var UI = {
+  NAME_TAG_CONFIG: "\xA7e[ \xA77x# @ \xA7e]",
+  ADMIN_PERMISSION_TAG: "admin",
+  OWNER_PERMISSION_TAG: "owner",
+  MAX_STACK_RADIUS: 100,
+  MIN_STACK_RADIUS: 1,
+  DEFAULT_STACK_RADIUS: 50,
+  MAX_SPAWNER_LEVEL: 32,
+  MIN_SPAWNER_LEVEL: 1,
+  UPGRADE_COST_BASE: 1e4,
+  UPGRADE_COST_MULTIPLIER: 100,
+  REFUND_PERCENTAGE: 77
+};
+var DATABASE = {
+  MAX_CHANGES_BEFORE_CLEANUP: 1e3,
+  BATCH_SIZE: 10,
+  MAX_DATA_LENGTH: 3e4,
+  SPLIT_DELIMITER: "\n_`Split`_\n",
+  DEFAULT_SAVE_INTERVAL: 5
+};
+var ENTITIES = {
+  SPAWNRULE_ENTITY_TYPE: "mrleefy:spawnrule",
+  PLAYER_TYPE_ID: "minecraft:player",
+  ITEM_TYPE: "minecraft:item",
+  XP_ORB_TYPE: "minecraft:xp_orb",
+  MAX_ITEM_SPILL_CAP: 5,
+  MAX_XP_SPILL_CAP: 3,
+  DEFAULT_ITEM_SPILL_CAP: 5,
+  DEFAULT_XP_SPILL_CAP: 3
+};
+var VALIDATION = {
+  MIN_RADIUS: 1,
+  MAX_RADIUS: 100,
+  MIN_LEVEL: 1,
+  MAX_LEVEL: 32,
+  MIN_SPEED: 1,
+  MAX_SPEED: 60,
+  MIN_QTY: 0,
+  MAX_QTY: 100,
+  MIN_STACK: 1,
+  MAX_STACK: 5e3
+};
+var ERROR_MESSAGES = {
+  INVALID_PLAYER: "Invalid player provided",
+  INVALID_BLOCK: "Invalid spawner block detected",
+  INVALID_LEVEL: "Invalid spawner level detected",
+  INVALID_COORDINATES: "Invalid spawner location detected",
+  INVALID_SPAWNER_TYPE: "Invalid spawner type detected",
+  NO_PERMISSION: "You don't have permission to use this feature",
+  NO_SPAWNERS_INVENTORY: "You don't have enough spawners in your inventory to upgrade",
+  MAX_LEVEL_REACHED: "Cannot upgrade further. Maximum level reached",
+  INVALID_INPUT: "Invalid input provided",
+  CONFIG_UPDATE_ERROR: "An error occurred while updating the configuration",
+  INVALID_RADIUS: "Invalid input. Radius must be a positive number between 1 and 100"
+};
+var PERFORMANCE = {
+  CACHE_DURATION: 3e4,
+  // 30 seconds
+  BATCH_PROCESS_SIZE: 10,
+  MAX_MAP_SIZE: 1e4,
+  CLEANUP_THRESHOLD: 1e3,
+  ADAPTIVE_CLEANUP_THRESHOLD: 100,
+  FAST_DISTANCE_THRESHOLD: 100
+};
+
+// src/database.ts
+import { world, ScoreboardIdentityType, system } from "@minecraft/server";
+var { FakePlayer } = ScoreboardIdentityType;
+var databases = /* @__PURE__ */ new Map();
+var split = DATABASE.SPLIT_DELIMITER;
+var CHUNK_SIZE = 150;
+var CHUNK_PREFIX = "__chunk__";
+var isShutdownRegistered = false;
+function safeSubstring(str, start, end) {
+  if (start >= str.length)
+    return "";
+  let adjStart = start;
+  if (start > 0 && isSurrogatePairAt(str, start - 1)) {
+    adjStart = start - 1;
+  }
+  let adjEnd = end;
+  if (end < str.length && isSurrogatePairAt(str, end - 1)) {
+    adjEnd = end - 1;
+  }
+  return str.substring(adjStart, adjEnd);
+}
+function isSurrogatePairAt(str, idx) {
+  const code = str.charCodeAt(idx);
+  return code >= 55296 && code <= 56319;
+}
+if (!isShutdownRegistered) {
+  isShutdownRegistered = true;
+}
+var DatabaseSavingModes = {
+  ONE_TIME_SAVE: "OneTimeSave",
+  END_TICK_SAVE: "EndTickSave",
+  TICK_INTERVAL: "TickInterval"
+};
+var ChangeAction = {
+  Change: 0,
+  Remove: 1
+};
+function run(thisClass, key, value, action) {
+  if (!thisClass._scoreboard_ || !thisClass._scoreboard_.isValid) {
+    console.warn(`Database objective "${thisClass._nameId_}" was lost or invalid! Rebuilding...`);
+    thisClass.rebuild();
+    return;
+  }
+  if (thisClass._source_.has(key)) {
+    const oldParticipant = thisClass._source_.get(key);
+    if (Array.isArray(oldParticipant)) {
+      for (const p of oldParticipant) {
+        try {
+          thisClass._scoreboard_.removeParticipant(p);
+        } catch (e) {
+        }
+      }
+    } else if (oldParticipant) {
+      try {
+        thisClass._scoreboard_.removeParticipant(oldParticipant);
+      } catch (e) {
+      }
+    }
+  }
+  if (action === ChangeAction.Remove) {
+    thisClass._source_.delete(key);
+  } else {
+    if (value && value.isChunked) {
+      thisClass._source_.set(key, value.parts);
+      for (const part of value.parts) {
+        try {
+          thisClass._scoreboard_.setScore(part, 0);
+        } catch (e) {
+          console.error(`Failed to setScore for chunk in database "${thisClass.id}":`, e);
+        }
+      }
+    } else if (value) {
+      thisClass._source_.set(key, value.part);
+      try {
+        thisClass._scoreboard_.setScore(value.part, 0);
+      } catch (e) {
+        console.error(`Failed to setScore in database "${thisClass.id}":`, e);
+      }
+    }
+  }
+}
+var SavingModes = {
+  [DatabaseSavingModes.ONE_TIME_SAVE](thisClass, key, value, action) {
+    run(thisClass, key, value, action);
+  },
+  [DatabaseSavingModes.END_TICK_SAVE](thisClass, key, value, action) {
+    thisClass._changes_.set(key, { action, value });
+    thisClass.hasChanges = true;
+    if (!thisClass._saveScheduled_) {
+      thisClass._saveScheduled_ = true;
+      system.run(() => {
+        thisClass._saveScheduled_ = false;
+        thisClass._executeSave();
+      });
+    }
+  },
+  [DatabaseSavingModes.TICK_INTERVAL](thisClass, key, value, action) {
+    thisClass._changes_.set(key, { action, value });
+    thisClass.hasChanges = true;
+  }
+};
+var ScoreboardDatabaseManager = class extends Map {
+  constructor(objective, saveMode = DatabaseSavingModes.END_TICK_SAVE, interval = 5) {
+    super();
+    __publicField(this, "_loaded_", false);
+    __publicField(this, "_saveMode_");
+    __publicField(this, "hasChanges", false);
+    __publicField(this, "_loadingPromise_", null);
+    __publicField(this, "_saveScheduled_", false);
+    __publicField(this, "_nameId_");
+    __publicField(this, "interval");
+    __publicField(this, "_scoreboard_");
+    __publicField(this, "_source_");
+    __publicField(this, "_changes_");
+    __publicField(this, "_maxChanges_");
+    __publicField(this, "_lastCleanup_");
+    __publicField(this, "_intervalId");
+    let namespacedObjective;
+    if (typeof objective === "string") {
+      namespacedObjective = objective.startsWith("ls_db:") ? objective : `ls_db:${objective}`;
+    } else {
+      namespacedObjective = objective;
+    }
+    this._saveMode_ = saveMode;
+    this._nameId_ = typeof namespacedObjective === "string" ? namespacedObjective : namespacedObjective.id;
+    this.interval = interval ?? 5;
+    const existingInstance = databases.get(this._nameId_);
+    if (existingInstance)
+      return existingInstance;
+    this._source_ = /* @__PURE__ */ new Map();
+    this._changes_ = /* @__PURE__ */ new Map();
+    this._maxChanges_ = DATABASE.MAX_CHANGES_BEFORE_CLEANUP;
+    this._lastCleanup_ = Date.now();
+    databases.set(this._nameId_, this);
+    if (this._saveMode_ === DatabaseSavingModes.TICK_INTERVAL) {
+      this._intervalId = system.runInterval(() => {
+        if (this.hasChanges && !this._saveScheduled_) {
+          this._saveScheduled_ = true;
+          system.run(() => {
+            this._saveScheduled_ = false;
+            this._executeSave();
+          });
+        }
+      }, this.interval);
+    }
+    system.run(() => {
+      try {
+        this._scoreboard_ = typeof namespacedObjective === "string" ? world.scoreboard.getObjective(namespacedObjective) ?? world.scoreboard.addObjective(namespacedObjective, namespacedObjective) : namespacedObjective;
+        this._nameId_ = this.id;
+        this.load();
+      } catch (e) {
+        console.error(`[Database] Init failed for ${this._nameId_}:`, e);
+      }
+    });
+  }
+  get maxLength() {
+    return DATABASE.MAX_DATA_LENGTH;
+  }
+  get _parser_() {
+    return JSON;
+  }
+  get savingMode() {
+    return this._saveMode_;
+  }
+  // Lightweight self-healing audit on reads
+  _assertObjectiveValid() {
+    if (!this._scoreboard_)
+      return;
+    if (!this._scoreboard_.isValid) {
+      console.warn(`[Database] Read audit failed! Objective "${this._nameId_}" was lost. Recovering...`);
+      this.rebuild();
+    }
+  }
+  load() {
+    if (this._loaded_)
+      return this;
+    if (!this._scoreboard_)
+      return this;
+    const chunkedData = /* @__PURE__ */ new Map();
+    this._source_ = /* @__PURE__ */ new Map();
+    super.clear();
+    this._assertObjectiveValid();
+    for (const participant of this._scoreboard_.getParticipants()) {
+      const { displayName, type } = participant;
+      if (type !== FakePlayer)
+        continue;
+      if (displayName.startsWith(CHUNK_PREFIX + split)) {
+        const parts = displayName.split(split);
+        if (parts.length >= 5) {
+          const [, key, indexStr, totalStr, ...restData] = parts;
+          const index = parseInt(indexStr, 10);
+          const total = parseInt(totalStr, 10);
+          const data = restData.join(split);
+          if (isNaN(index) || isNaN(total))
+            continue;
+          if (!chunkedData.has(key))
+            chunkedData.set(key, []);
+          chunkedData.get(key).push({ index, total, data, rawName: displayName });
+        }
+      } else {
+        const parts = displayName.split(split);
+        if (parts.length >= 2) {
+          const key = parts[0];
+          const data = parts.slice(1).join(split);
+          this._source_.set(key, displayName);
+          try {
+            super.set(key, this._parser_.parse(data));
+          } catch (e) {
+            console.error(`Error parsing data for key "${key}":`, e);
+          }
+        }
+      }
+    }
+    for (const [key, chunks] of chunkedData.entries()) {
+      const uniqueChunks = /* @__PURE__ */ new Map();
+      for (const c of chunks) {
+        uniqueChunks.set(c.index, c);
+      }
+      const sortedChunks = Array.from(uniqueChunks.values()).sort((a, b) => a.index - b.index);
+      this._source_.set(key, sortedChunks.map((c) => c.rawName));
+      if (sortedChunks.length > 0 && sortedChunks.length === sortedChunks[0].total) {
+        const mergedData = sortedChunks.map((c) => c.data).join("");
+        try {
+          super.set(key, this._parser_.parse(mergedData));
+        } catch (e) {
+          console.error(`Error parsing chunked data for key "${key}":`, e);
+        }
+      } else {
+        console.error(`Incomplete chunked data for key "${key}": expected ${sortedChunks[0]?.total} chunks, got ${sortedChunks.length}`);
+      }
+    }
+    this._loaded_ = true;
+    return this;
+  }
+  loadAsync() {
+    if (this._loaded_)
+      return this._loadingPromise_ ?? Promise.resolve(this);
+    const promise = (async () => {
+      return this.load();
+    })();
+    this._loadingPromise_ = promise;
+    return promise;
+  }
+  set(key, value) {
+    if (!this._loaded_)
+      throw new ReferenceError("Database is not loaded");
+    this._assertObjectiveValid();
+    const serializedValue = this._parser_.stringify(value);
+    const singleParticipantString = `${key}${split}${serializedValue}`;
+    let changeValue;
+    if (singleParticipantString.length <= 240) {
+      changeValue = { isChunked: false, part: singleParticipantString };
+    } else {
+      const totalChunks = Math.ceil(serializedValue.length / CHUNK_SIZE);
+      if (serializedValue.length > this.maxLength) {
+        throw new RangeError(`Value is too large: ${serializedValue.length} characters (max: ${this.maxLength})`);
+      }
+      const parts = [];
+      for (let i = 0; i < totalChunks; i++) {
+        const chunkData = safeSubstring(serializedValue, i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        const partString = `${CHUNK_PREFIX}${split}${key}${split}${i}${split}${totalChunks}${split}${chunkData}`;
+        if (partString.length > 256) {
+          throw new RangeError(`Key name "${key}" is too long for the chunking system`);
+        }
+        parts.push(partString);
+      }
+      changeValue = { isChunked: true, parts };
+    }
+    super.set(key, value);
+    this._onChange_(key, changeValue, ChangeAction.Change);
+    return this;
+  }
+  delete(key) {
+    if (!this._loaded_)
+      throw new ReferenceError("Database is not loaded");
+    this._assertObjectiveValid();
+    const changeValue = null;
+    super.delete(key);
+    this._onChange_(key, changeValue, ChangeAction.Remove);
+    return true;
+  }
+  clear() {
+    if (!this._loaded_)
+      throw new ReferenceError("Database is not loaded");
+    for (const key of this.keys()) {
+      this.delete(key);
+    }
+  }
+  forEach(callback) {
+    if (!this._loaded_)
+      throw new ReferenceError("Database is not loaded");
+    this._assertObjectiveValid();
+    for (const [key, value] of this.entries()) {
+      callback(value, key, this);
+    }
+  }
+  keys() {
+    if (!this._loaded_)
+      throw new ReferenceError("Database is not loaded");
+    this._assertObjectiveValid();
+    return super.keys();
+  }
+  values() {
+    if (!this._loaded_)
+      throw new ReferenceError("Database is not loaded");
+    this._assertObjectiveValid();
+    return super.values();
+  }
+  get length() {
+    this._assertObjectiveValid();
+    return super.size;
+  }
+  _onChange_(key, value, action) {
+    if (!this._loaded_)
+      throw new ReferenceError("Database is not loaded");
+    if (this._changes_.size > this._maxChanges_) {
+      this._cleanupChanges();
+    }
+    SavingModes[this._saveMode_](this, key, value, action);
+  }
+  _cleanupChanges() {
+    try {
+      this._executeSave();
+      this._lastCleanup_ = Date.now();
+    } catch (error) {
+      console.error(`Error during change cleanup: ${error}`);
+    }
+  }
+  _executeSave() {
+    if (this._changes_.size === 0)
+      return;
+    const pending = new Map(this._changes_);
+    this._changes_.clear();
+    this.hasChanges = false;
+    for (const [k, { action, value }] of pending.entries()) {
+      try {
+        run(this, k, value, action);
+      } catch (error) {
+        console.error(`Error saving key "${k}" in database "${this.id}":`, error);
+      }
+    }
+  }
+  _clearInMemory() {
+    super.clear();
+    this._source_.clear();
+    this.hasChanges = false;
+  }
+  get objective() {
+    return this._scoreboard_;
+  }
+  get id() {
+    return this._scoreboard_.id;
+  }
+  get loaded() {
+    return this._loaded_;
+  }
+  get type() {
+    return "DefaultJsonType";
+  }
+  get loadingAwaiter() {
+    return this._loadingPromise_ ?? this.loadAsync();
+  }
+  cleanup() {
+    if (this._loaded_) {
+      this._cleanupChanges();
+    }
+    return this;
+  }
+  getStats() {
+    return {
+      size: this.length,
+      pendingChanges: this._changes_.size,
+      loaded: this._loaded_,
+      saveMode: this._saveMode_,
+      lastCleanup: this._lastCleanup_,
+      id: this.id
+    };
+  }
+  rebuild() {
+    if (this.objective?.isValid)
+      return this;
+    try {
+      const entries = Array.from(super.entries());
+      const pendingBackup = new Map(this._changes_);
+      this._clearInMemory();
+      try {
+        const existingObj = world.scoreboard.getObjective(this._nameId_);
+        if (existingObj) {
+          world.scoreboard.removeObjective(this._nameId_);
+        }
+      } catch (e) {
+      }
+      const newScores = world.scoreboard.addObjective(this._nameId_, this._nameId_);
+      this._scoreboard_ = newScores;
+      for (const [k, v] of entries) {
+        try {
+          const serializedValue = this._parser_.stringify(v);
+          const singleStr = `${k}${split}${serializedValue}`;
+          if (singleStr.length <= 240) {
+            newScores.setScore(singleStr, 0);
+            this._source_.set(k, singleStr);
+          } else {
+            const totalChunks = Math.ceil(serializedValue.length / CHUNK_SIZE);
+            const parts = [];
+            for (let i = 0; i < totalChunks; i++) {
+              const chunkData = safeSubstring(serializedValue, i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+              const partString = `${CHUNK_PREFIX}${split}${k}${split}${i}${split}${totalChunks}${split}${chunkData}`;
+              parts.push(partString);
+              newScores.setScore(partString, 0);
+            }
+            this._source_.set(k, parts);
+          }
+          super.set(k, v);
+        } catch (entryError) {
+          console.error(`Error rebuilding entry "${k}" in database "${this._nameId_}":`, entryError);
+        }
+      }
+      this._changes_ = pendingBackup;
+      if (this._changes_.size > 0)
+        this.hasChanges = true;
+    } catch (error) {
+      console.error(`Critical error during database rebuild: ${error}`);
+    }
+    return this;
+  }
+  async rebuildAsync() {
+    return this.rebuild();
+  }
+};
+var JsonDatabase = class extends ScoreboardDatabaseManager {
+  get type() {
+    return "JsonType";
+  }
+};
+var Database = class {
+  constructor(name) {
+    __publicField(this, "Database");
+    try {
+      this.Database = new JsonDatabase(name).load();
+      if (!this.Database) {
+        throw new Error(`Failed to create database: ${name}`);
+      }
+    } catch (error) {
+      console.error(`Database constructor error for ${name}:`, error);
+      try {
+        const existing = databases.get(name);
+        if (existing) {
+          existing.cleanup();
+          if (existing._intervalId) {
+            system.clearRun(existing._intervalId);
+          }
+          databases.delete(name);
+        }
+      } catch (cleanupError) {
+        console.error(`Error cleaning up failed database instance:`, cleanupError);
+      }
+      this.Database = /* @__PURE__ */ new Map();
+    }
+  }
+  get length() {
+    try {
+      return this.Database.size || this.Database.length || 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+  read(key) {
+    try {
+      return this.Database.get ? this.Database.get(key) : void 0;
+    } catch (error) {
+      return void 0;
+    }
+  }
+  write(key, value) {
+    try {
+      if (this.Database.set) {
+        return this.Database.set(key, value);
+      } else {
+        throw new Error("Database does not support set operation");
+      }
+    } catch (error) {
+      return void 0;
+    }
+  }
+  has(key) {
+    try {
+      return this.Database.has ? this.Database.has(key) : false;
+    } catch (error) {
+      return false;
+    }
+  }
+  delete(key) {
+    return this.Database.delete(key);
+  }
+  clear() {
+    this.Database.clear();
+  }
+  keys() {
+    try {
+      return this.Database.keys ? Array.from(this.Database.keys()) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+  values() {
+    try {
+      return this.Database.values ? Array.from(this.Database.values()) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+  forEach(callback) {
+    try {
+      if (this.Database.forEach) {
+        this.Database.forEach((value, key) => callback(value, key));
+      }
+    } catch (error) {
+    }
+  }
+  getStats() {
+    try {
+      return this.Database && typeof this.Database.getStats === "function" ? this.Database.getStats() : { size: this.length };
+    } catch (error) {
+      return { error: String(error) };
+    }
+  }
+};
+
+// src/configuration-service.ts
+var ConfigurationService = class {
+  constructor() {
+    __publicField(this, "configDatabase");
+    __publicField(this, "xpDropDatabase");
+    __publicField(this, "spawnerDatabase");
+    __publicField(this, "cache");
+    __publicField(this, "cacheExpiry");
+    __publicField(this, "CACHE_DURATION");
+    this.configDatabase = new Database("ConfigValues");
+    this.xpDropDatabase = new Database("XPDropValues");
+    this.spawnerDatabase = new Database("SpawnerLocations");
+    this.cache = /* @__PURE__ */ new Map();
+    this.cacheExpiry = /* @__PURE__ */ new Map();
+    this.CACHE_DURATION = PERFORMANCE.CACHE_DURATION;
+  }
+  /**
+   * Get cached configuration value with automatic cache management
+   * @param key - Configuration key
+   * @param defaultValue - Default value if key doesn't exist
+   * @returns The configuration value
+   */
+  getConfig(key, defaultValue = null) {
+    const now = Date.now();
+    const cacheKey = `config_${key}`;
+    if (this.cache.has(cacheKey) && (this.cacheExpiry.get(cacheKey) ?? 0) > now) {
+      return this.cache.get(cacheKey);
+    }
+    let value;
+    switch (key) {
+      case "playerKillOnly":
+        value = this.configDatabase.read(key) ?? false;
+        break;
+      case "itemSpillCap":
+        value = this.configDatabase.read(key) ?? ENTITIES.DEFAULT_ITEM_SPILL_CAP;
+        break;
+      case "xpSpillCap":
+        value = this.configDatabase.read(key) ?? ENTITIES.DEFAULT_XP_SPILL_CAP;
+        break;
+      case "stackRadius":
+        value = this.configDatabase.read(key) ?? UI.DEFAULT_STACK_RADIUS;
+        break;
+      default:
+        value = this.configDatabase.read(key) ?? defaultValue;
+    }
+    this.cache.set(cacheKey, value);
+    this.cacheExpiry.set(cacheKey, now + this.CACHE_DURATION);
+    return value;
+  }
+  /**
+   * Set configuration value with cache invalidation
+   * @param key - Configuration key
+   * @param value - Configuration value
+   */
+  setConfig(key, value) {
+    if (!this.validateConfig(key, value)) {
+      throw new Error(`Invalid configuration value for ${key}: ${value}`);
+    }
+    this.configDatabase.write(key, value);
+    const cacheKey = `config_${key}`;
+    this.cache.delete(cacheKey);
+    this.cacheExpiry.delete(cacheKey);
+  }
+  /**
+   * Validate configuration value
+   * @param key - Configuration key
+   * @param value - Value to validate
+   * @returns True if valid
+   */
+  validateConfig(key, value) {
+    switch (key) {
+      case "stackRadius":
+        return typeof value === "number" && value >= VALIDATION.MIN_RADIUS && value <= VALIDATION.MAX_RADIUS;
+      case "itemSpillCap":
+      case "xpSpillCap":
+        return typeof value === "number" && value >= 1 && value <= 10;
+      case "playerKillOnly":
+        return typeof value === "boolean";
+      default:
+        return true;
+    }
+  }
+  /**
+   * Get XP drop configuration for an entity
+   * @param entityId - Entity identifier
+   * @returns XP configuration or null
+   */
+  getXpDropConfig(entityId) {
+    const cacheKey = `xp_${entityId}`;
+    const now = Date.now();
+    if (this.cache.has(cacheKey) && (this.cacheExpiry.get(cacheKey) ?? 0) > now) {
+      return this.cache.get(cacheKey);
+    }
+    const config = this.xpDropDatabase.read(entityId);
+    this.cache.set(cacheKey, config);
+    this.cacheExpiry.set(cacheKey, now + this.CACHE_DURATION);
+    return config;
+  }
+  /**
+   * Set XP drop configuration for an entity
+   * @param entityId - Entity identifier
+   * @param config - XP configuration
+   */
+  setXpDropConfig(entityId, config) {
+    if (!config || typeof config !== "object") {
+      throw new Error("Invalid XP configuration");
+    }
+    if (typeof config.amount !== "number" || config.amount < 0) {
+      throw new Error("Invalid XP amount");
+    }
+    if (typeof config.chance !== "number" || config.chance < 0 || config.chance > 100) {
+      throw new Error("Invalid XP chance");
+    }
+    this.xpDropDatabase.write(entityId, config);
+    const cacheKey = `xp_${entityId}`;
+    this.cache.delete(cacheKey);
+    this.cacheExpiry.delete(cacheKey);
+  }
+  /**
+   * Get spawner location data
+   * @param coordinates - Coordinate string
+   * @returns Spawner data or null
+   */
+  getSpawnerLocation(coordinates) {
+    const cacheKey = `spawner_${coordinates}`;
+    const now = Date.now();
+    if (this.cache.has(cacheKey) && (this.cacheExpiry.get(cacheKey) ?? 0) > now) {
+      return this.cache.get(cacheKey);
+    }
+    const data = this.spawnerDatabase.read(coordinates);
+    this.cache.set(cacheKey, data);
+    this.cacheExpiry.set(cacheKey, now + this.CACHE_DURATION);
+    return data;
+  }
+  /**
+   * Set spawner location data
+   * @param coordinates - Coordinate string
+   * @param data - Spawner data
+   */
+  setSpawnerLocation(coordinates, data) {
+    this.spawnerDatabase.write(coordinates, data);
+    const cacheKey = `spawner_${coordinates}`;
+    this.cache.delete(cacheKey);
+    this.cacheExpiry.delete(cacheKey);
+  }
+  /**
+   * Remove spawner location data
+   * @param coordinates - Coordinate string
+   */
+  removeSpawnerLocation(coordinates) {
+    this.spawnerDatabase.delete(coordinates);
+    const cacheKey = `spawner_${coordinates}`;
+    this.cache.delete(cacheKey);
+    this.cacheExpiry.delete(cacheKey);
+  }
+  /**
+   * Clear all configuration cache
+   */
+  clearCache() {
+    this.cache.clear();
+    this.cacheExpiry.clear();
+  }
+  /**
+   * Get configuration statistics
+   * @returns Configuration statistics
+   */
+  getStats() {
+    return {
+      cachedConfigs: this.cache.size,
+      configDatabase: this.configDatabase.getStats(),
+      xpDatabase: this.xpDropDatabase.getStats(),
+      spawnerDatabase: this.spawnerDatabase.getStats()
+    };
+  }
+  /**
+   * Get all configuration values as an object
+   * @returns All configuration values
+   */
+  getAllConfig() {
+    return {
+      playerKillOnly: this.getConfig("playerKillOnly", false),
+      itemSpillCap: this.getConfig("itemSpillCap", ENTITIES.DEFAULT_ITEM_SPILL_CAP),
+      xpSpillCap: this.getConfig("xpSpillCap", ENTITIES.DEFAULT_XP_SPILL_CAP),
+      stackRadius: this.getConfig("stackRadius", UI.DEFAULT_STACK_RADIUS)
+    };
+  }
+};
+var configService = new ConfigurationService();
+
+// src/performance-monitor.ts
+import { system as system5 } from "@minecraft/server";
+
+// src/mobstacker-core.ts
+import { system as system4, world as world5 } from "@minecraft/server";
+
+// src/mobstacker-ui.ts
+import { world as world4, system as system3 } from "@minecraft/server";
+import { ActionFormData as ActionFormData2, ModalFormData as ModalFormData2, MessageFormData } from "@minecraft/server-ui";
+
+// src/loot_table.ts
+import { world as world2, ItemStack } from "@minecraft/server";
+var lootTableDatabase = new Database("LootTables");
+var configDatabase = new Database("ConfigValues");
+var configCache = /* @__PURE__ */ new Map();
+var configCacheExpiry = /* @__PURE__ */ new Map();
+var CACHE_DURATION = 3e4;
+var MAX_CACHE_SIZE = 50;
+function getCachedConfig(key, defaultValue) {
+  const now = Date.now();
+  const cacheKey = key;
+  if (configCache.has(cacheKey) && (configCacheExpiry.get(cacheKey) ?? 0) > now) {
+    return configCache.get(cacheKey);
+  }
+  const value = configDatabase.read(key) ?? defaultValue;
+  configCache.set(cacheKey, value);
+  configCacheExpiry.set(cacheKey, now + CACHE_DURATION);
+  if (configCache.size > MAX_CACHE_SIZE) {
+    const expiredKeys = [];
+    for (const [k, expiry] of configCacheExpiry.entries()) {
+      if (expiry <= now) {
+        expiredKeys.push(k);
+      }
+    }
+    expiredKeys.forEach((k) => {
+      configCache.delete(k);
+      configCacheExpiry.delete(k);
+    });
+    if (configCache.size > MAX_CACHE_SIZE) {
+      const entries = Array.from(configCacheExpiry.entries());
+      entries.sort((a, b) => a[1] - b[1]);
+      const toRemove = entries.slice(0, configCache.size - MAX_CACHE_SIZE);
+      toRemove.forEach(([k]) => {
+        configCache.delete(k);
+        configCacheExpiry.delete(k);
+      });
+    }
+  }
+  return value;
+}
+var ITEM_ENCHANT_CATEGORY = {
+  "minecraft:iron_sword": "sword",
+  "minecraft:diamond_sword": "sword",
+  "minecraft:iron_axe": "axe",
+  "minecraft:diamond_axe": "axe",
+  "minecraft:iron_pickaxe": "pickaxe",
+  "minecraft:diamond_pickaxe": "pickaxe",
+  "minecraft:iron_shovel": "shovel",
+  "minecraft:diamond_shovel": "shovel",
+  "minecraft:iron_hoe": "hoe",
+  "minecraft:diamond_hoe": "hoe",
+  "minecraft:bow": "bow",
+  "minecraft:crossbow": "crossbow",
+  "minecraft:fishing_rod": "fishing_rod",
+  "minecraft:shears": "shears",
+  "minecraft:trident": "trident",
+  "minecraft:iron_helmet": "helmet",
+  "minecraft:iron_chestplate": "chestplate",
+  "minecraft:iron_leggings": "leggings",
+  "minecraft:iron_boots": "boots",
+  "minecraft:chainmail_helmet": "helmet",
+  "minecraft:chainmail_chestplate": "chestplate",
+  "minecraft:chainmail_leggings": "leggings",
+  "minecraft:chainmail_boots": "boots",
+  "minecraft:diamond_helmet": "helmet",
+  "minecraft:diamond_chestplate": "chestplate",
+  "minecraft:diamond_leggings": "leggings",
+  "minecraft:diamond_boots": "boots",
+  "minecraft:leather_helmet": "helmet",
+  "minecraft:leather_chestplate": "chestplate",
+  "minecraft:leather_leggings": "leggings",
+  "minecraft:leather_boots": "boots",
+  // Stone tools
+  "minecraft:stone_sword": "sword",
+  "minecraft:stone_axe": "axe",
+  "minecraft:stone_pickaxe": "pickaxe",
+  "minecraft:stone_shovel": "shovel",
+  "minecraft:stone_hoe": "hoe",
+  // Golden tools
+  "minecraft:golden_sword": "sword",
+  "minecraft:golden_axe": "axe",
+  "minecraft:golden_pickaxe": "pickaxe",
+  "minecraft:golden_shovel": "shovel",
+  "minecraft:golden_hoe": "hoe",
+  "minecraft:golden_helmet": "helmet",
+  "minecraft:golden_chestplate": "chestplate",
+  "minecraft:golden_leggings": "leggings",
+  "minecraft:golden_boots": "boots"
+};
+var _LootManager = class _LootManager {
+  constructor() {
+    __publicField(this, "defaultEntities");
+    __publicField(this, "entities");
+    __publicField(this, "enchantmentCategories");
+    __publicField(this, "enchantmentIncompatibilities");
+    if (_LootManager.instance) {
+      return _LootManager.instance;
+    }
+    this.defaultEntities = {
+      "mrleefy:piglinbrutestill": { "minecraft:golden_axe": { chance: 8.5 }, "minecraft:gold_nugget": { chance: 100 } },
+      "mrleefy:breezestill": { "minecraft:wind_charge": { chance: 10 }, "minecraft:breeze_rod": { chance: 80 } },
+      "mrleefy:ravagerstill": { "minecraft:saddle": { chance: 80 }, "minecraft:wolf_armor": { chance: 0.1 }, "minecraft:diamond_horse_armor": { chance: 0.1 }, "minecraft:golden_horse_armor": { chance: 0.2 }, "minecraft:iron_horse_armor": { chance: 1 } },
+      "mrleefy:blazestill": { "minecraft:blaze_rod": { chance: 100, quantity: 1 } },
+      "mrleefy:cowstill": { "minecraft:leather": { chance: 100, quantity: 1 }, "minecraft:beef": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:sheepstill": { "minecraft:wool": { chance: 100, quantity: 1, stackable: true }, "minecraft:mutton": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:pigstill": { "minecraft:porkchop": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:chickenstill": { "minecraft:feather": { chance: 50, quantity: 1, stackable: true }, "minecraft:chicken": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:emeraldgolemstill": { "minecraft:emerald": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:netheritegolemstill": { "minecraft:netherite_ingot": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:irongolemstill": { "minecraft:iron_ingot": { chance: 100, quantity: 1, stackable: true }, "minecraft:poppy": { chance: 25, quantity: 1, stackable: true } },
+      "mrleefy:diamondgolemstill": { "minecraft:diamond": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:goldgolemstill": { "minecraft:gold_ingot": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:endermanstill": { "minecraft:ender_pearl": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:creeperstill": { "minecraft:gunpowder": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:magmacubestill": { "minecraft:magma_cream": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:guardianstill": { "minecraft:prismarine_shard": { chance: 100, quantity: 1, stackable: true }, "minecraft:prismarine_crystals": { chance: 50, quantity: 1, stackable: true } },
+      "mrleefy:witherskeletonstill": { "minecraft:coal": { chance: 25, quantity: 1, stackable: true }, "minecraft:bone": { chance: 100, quantity: 1, stackable: true }, "minecraft:wither_skeleton_skull": { chance: 1, stackable: false } },
+      "mrleefy:zombiestill": { "minecraft:rotten_flesh": { chance: 100, quantity: 1, stackable: true }, "minecraft:iron_ingot": { chance: 2, quantity: 1, stackable: true }, "minecraft:carrot": { chance: 2, quantity: 1, stackable: true }, "minecraft:potato": { chance: 2, quantity: 1, stackable: true } },
+      "mrleefy:villagerstill": {
+        // ── UNIVERSAL ──────────────────────────────────────────────
+        "minecraft:emerald": { chance: 60, quantity: 1, stackable: true },
+        // ── FARMER ─────────────────────────────────────────────────
+        "minecraft:bread": { chance: 45, quantity: 1, stackable: true },
+        "minecraft:apple": { chance: 35, quantity: 1, stackable: true },
+        "minecraft:cookie": { chance: 22, quantity: 1, stackable: true },
+        "minecraft:pumpkin_pie": { chance: 18, quantity: 1, stackable: true },
+        "minecraft:wheat": { chance: 30, quantity: 1, stackable: true },
+        "minecraft:potato": { chance: 25, quantity: 1, stackable: true },
+        "minecraft:carrot": { chance: 25, quantity: 1, stackable: true },
+        "minecraft:beetroot": { chance: 20, quantity: 1, stackable: true },
+        "minecraft:pumpkin": { chance: 12, quantity: 1, stackable: true },
+        "minecraft:melon_slice": { chance: 12, quantity: 1, stackable: true },
+        "minecraft:golden_carrot": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:suspicious_stew": { chance: 6, quantity: 1, stackable: false },
+        "minecraft:glistering_melon_slice": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:cake": { chance: 3, quantity: 1, stackable: false },
+        // ── FISHERMAN ──────────────────────────────────────────────
+        "minecraft:cod": { chance: 28, quantity: 1, stackable: true },
+        "minecraft:salmon": { chance: 25, quantity: 1, stackable: true },
+        "minecraft:tropical_fish": { chance: 12, quantity: 1, stackable: true },
+        "minecraft:pufferfish": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:fishing_rod": { chance: 6, stackable: false, enchantChance: 25 },
+        "minecraft:campfire": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:enchanted_book": { chance: 4, stackable: false },
+        // ── LIBRARIAN ──────────────────────────────────────────────
+        "minecraft:book": { chance: 38, quantity: 1, stackable: true },
+        "minecraft:paper": { chance: 30, quantity: 1, stackable: true },
+        "minecraft:ink_sac": { chance: 18, quantity: 1, stackable: true },
+        "minecraft:glass": { chance: 15, quantity: 1, stackable: true },
+        "minecraft:bookshelf": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:lantern": { chance: 6, quantity: 1, stackable: true },
+        "minecraft:name_tag": { chance: 1.5, stackable: false },
+        // ── CARTOGRAPHER ───────────────────────────────────────────
+        "minecraft:compass": { chance: 9, quantity: 1, stackable: true },
+        "minecraft:empty_map": { chance: 14, quantity: 1, stackable: true },
+        "minecraft:item_frame": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:glass_pane": { chance: 14, quantity: 1, stackable: true },
+        // ── CLERIC ─────────────────────────────────────────────────
+        "minecraft:experience_bottle": { chance: 28, quantity: 1, stackable: true },
+        "minecraft:glowstone_dust": { chance: 14, quantity: 1, stackable: true },
+        "minecraft:redstone": { chance: 14, quantity: 1, stackable: true },
+        "minecraft:lapis_lazuli": { chance: 14, quantity: 1, stackable: true },
+        "minecraft:rotten_flesh": { chance: 18, quantity: 1, stackable: true },
+        "minecraft:gold_ingot": { chance: 6, quantity: 1, stackable: true },
+        "minecraft:ender_pearl": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:glass_bottle": { chance: 10, quantity: 1, stackable: true },
+        "minecraft:nether_wart": { chance: 10, quantity: 1, stackable: true },
+        "minecraft:rabbit_foot": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:ghast_tear": { chance: 2, quantity: 1, stackable: true },
+        "minecraft:scute": { chance: 3, quantity: 1, stackable: true },
+        // ── ARMORER ────────────────────────────────────────────────
+        "minecraft:coal": { chance: 30, quantity: 1, stackable: true },
+        "minecraft:iron_ingot": { chance: 22, quantity: 1, stackable: true },
+        "minecraft:diamond": { chance: 4, quantity: 1, stackable: true },
+        "minecraft:chainmail_helmet": { chance: 4, stackable: false, enchantChance: 15 },
+        "minecraft:chainmail_chestplate": { chance: 4, stackable: false, enchantChance: 15 },
+        "minecraft:chainmail_leggings": { chance: 4, stackable: false, enchantChance: 15 },
+        "minecraft:chainmail_boots": { chance: 4, stackable: false, enchantChance: 15 },
+        "minecraft:iron_helmet": { chance: 3, stackable: false, enchantChance: 15 },
+        "minecraft:iron_chestplate": { chance: 3, stackable: false, enchantChance: 15 },
+        "minecraft:iron_leggings": { chance: 3, stackable: false, enchantChance: 15 },
+        "minecraft:iron_boots": { chance: 3, stackable: false, enchantChance: 15 },
+        "minecraft:diamond_helmet": { chance: 0.4, stackable: false, enchantChance: 30 },
+        "minecraft:diamond_chestplate": { chance: 0.4, stackable: false, enchantChance: 30 },
+        "minecraft:diamond_leggings": { chance: 0.4, stackable: false, enchantChance: 30 },
+        "minecraft:diamond_boots": { chance: 0.4, stackable: false, enchantChance: 30 },
+        "minecraft:shield": { chance: 5, stackable: false },
+        "minecraft:bell": { chance: 1, stackable: false },
+        // ── LEATHERWORKER ──────────────────────────────────────────
+        "minecraft:leather": { chance: 28, quantity: 1, stackable: true },
+        "minecraft:rabbit_hide": { chance: 15, quantity: 1, stackable: true },
+        "minecraft:leather_helmet": { chance: 6, stackable: false, enchantChance: 10 },
+        "minecraft:leather_chestplate": { chance: 6, stackable: false, enchantChance: 10 },
+        "minecraft:leather_leggings": { chance: 6, stackable: false, enchantChance: 10 },
+        "minecraft:leather_boots": { chance: 6, stackable: false, enchantChance: 10 },
+        "minecraft:saddle": { chance: 3, stackable: false },
+        "minecraft:leather_horse_armor": { chance: 2, stackable: false },
+        // ── BUTCHER ────────────────────────────────────────────────
+        "minecraft:chicken": { chance: 20, quantity: 1, stackable: true },
+        "minecraft:porkchop": { chance: 20, quantity: 1, stackable: true },
+        "minecraft:beef": { chance: 20, quantity: 1, stackable: true },
+        "minecraft:mutton": { chance: 18, quantity: 1, stackable: true },
+        "minecraft:cooked_chicken": { chance: 18, quantity: 1, stackable: true },
+        "minecraft:cooked_porkchop": { chance: 18, quantity: 1, stackable: true },
+        "minecraft:cooked_beef": { chance: 18, quantity: 1, stackable: true },
+        "minecraft:cooked_mutton": { chance: 16, quantity: 1, stackable: true },
+        "minecraft:rabbit": { chance: 14, quantity: 1, stackable: true },
+        "minecraft:cooked_rabbit": { chance: 14, quantity: 1, stackable: true },
+        "minecraft:rabbit_stew": { chance: 8, quantity: 1, stackable: false },
+        "minecraft:dried_kelp": { chance: 10, quantity: 1, stackable: true },
+        // ── FLETCHER ───────────────────────────────────────────────
+        "minecraft:arrow": { chance: 28, quantity: 2, stackable: true },
+        "minecraft:feather": { chance: 22, quantity: 1, stackable: true },
+        "minecraft:flint": { chance: 22, quantity: 1, stackable: true },
+        "minecraft:string": { chance: 20, quantity: 1, stackable: true },
+        "minecraft:gravel": { chance: 15, quantity: 1, stackable: true },
+        "minecraft:tripwire_hook": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:bow": { chance: 5, stackable: false, enchantChance: 25 },
+        "minecraft:crossbow": { chance: 5, stackable: false, enchantChance: 25 },
+        "minecraft:tipped_arrow": { chance: 3, quantity: 1, stackable: true },
+        // ── TOOLSMITH ──────────────────────────────────────────────
+        "minecraft:iron_shovel": { chance: 4, stackable: false, enchantChance: 20 },
+        "minecraft:iron_pickaxe": { chance: 4, stackable: false, enchantChance: 20 },
+        "minecraft:iron_axe": { chance: 4, stackable: false, enchantChance: 20 },
+        "minecraft:iron_hoe": { chance: 4, stackable: false, enchantChance: 20 },
+        "minecraft:diamond_shovel": { chance: 0.6, stackable: false, enchantChance: 35 },
+        "minecraft:diamond_pickaxe": { chance: 0.6, stackable: false, enchantChance: 35 },
+        "minecraft:diamond_axe": { chance: 0.6, stackable: false, enchantChance: 35 },
+        "minecraft:diamond_hoe": { chance: 0.6, stackable: false, enchantChance: 35 },
+        // ── WEAPONSMITH ────────────────────────────────────────────
+        "minecraft:iron_sword": { chance: 4, stackable: false, enchantChance: 20 },
+        "minecraft:diamond_sword": { chance: 0.6, stackable: false, enchantChance: 35 },
+        // ── SHEPHERD ───────────────────────────────────────────────
+        "minecraft:shears": { chance: 10, stackable: false, enchantChance: 10 },
+        "minecraft:white_wool": { chance: 10, quantity: 1, stackable: true },
+        "minecraft:orange_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:magenta_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:light_blue_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:yellow_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:lime_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:pink_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:gray_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:cyan_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:purple_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:blue_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:brown_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:green_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:red_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:black_wool": { chance: 7, quantity: 1, stackable: true },
+        "minecraft:painting": { chance: 3, stackable: false },
+        "minecraft:white_bed": { chance: 4, stackable: false },
+        "minecraft:red_bed": { chance: 4, stackable: false },
+        "minecraft:blue_bed": { chance: 4, stackable: false },
+        "minecraft:white_carpet": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:white_dye": { chance: 6, quantity: 1, stackable: true },
+        "minecraft:red_dye": { chance: 6, quantity: 1, stackable: true },
+        "minecraft:blue_dye": { chance: 6, quantity: 1, stackable: true },
+        "minecraft:yellow_dye": { chance: 6, quantity: 1, stackable: true },
+        "minecraft:green_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:purple_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:black_dye": { chance: 5, quantity: 1, stackable: true },
+        // ── MASON ──────────────────────────────────────────────────
+        "minecraft:clay_ball": { chance: 20, quantity: 1, stackable: true },
+        "minecraft:brick": { chance: 16, quantity: 1, stackable: true },
+        "minecraft:stone": { chance: 14, quantity: 1, stackable: true },
+        "minecraft:granite": { chance: 12, quantity: 1, stackable: true },
+        "minecraft:andesite": { chance: 12, quantity: 1, stackable: true },
+        "minecraft:diorite": { chance: 12, quantity: 1, stackable: true },
+        "minecraft:quartz": { chance: 10, quantity: 1, stackable: true },
+        "minecraft:chiseled_stone_bricks": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:terracotta": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:white_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:orange_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:blue_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:red_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:yellow_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:green_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:nether_brick": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:dripstone_block": { chance: 6, quantity: 1, stackable: true },
+        "minecraft:pointed_dripstone": { chance: 6, quantity: 1, stackable: true },
+        // ── CLOCK / COMPASS (shared) ───────────────────────────
+        "minecraft:clock": { chance: 8, quantity: 1, stackable: true },
+        // ── MASTER-LEVEL TRADES (rare, any profession) ────────────────
+        // Armorer master: offer diamond gear or netherite upgrade
+        "minecraft:netherite_upgrade_smithing_template": { chance: 0.3, quantity: 1, stackable: false },
+        // Toolsmith / Weaponsmith master: golden tools
+        "minecraft:golden_sword": { chance: 1.5, stackable: false, enchantChance: 15 },
+        "minecraft:golden_axe": { chance: 1.5, stackable: false, enchantChance: 15 },
+        "minecraft:golden_pickaxe": { chance: 1.5, stackable: false, enchantChance: 15 },
+        "minecraft:golden_shovel": { chance: 1.5, stackable: false, enchantChance: 15 },
+        "minecraft:golden_hoe": { chance: 1.5, stackable: false, enchantChance: 15 },
+        // Armorer: golden armor
+        "minecraft:golden_helmet": { chance: 1.5, stackable: false, enchantChance: 15 },
+        "minecraft:golden_chestplate": { chance: 1.5, stackable: false, enchantChance: 15 },
+        "minecraft:golden_leggings": { chance: 1.5, stackable: false, enchantChance: 15 },
+        "minecraft:golden_boots": { chance: 1.5, stackable: false, enchantChance: 15 },
+        // Leatherworker: horse armor
+        "minecraft:iron_horse_armor": { chance: 1, quantity: 1, stackable: false },
+        "minecraft:golden_horse_armor": { chance: 0.8, quantity: 1, stackable: false },
+        "minecraft:diamond_horse_armor": { chance: 0.3, quantity: 1, stackable: false },
+        // ── WANDERING TRADER extras (found in all trades) ───────────
+        "minecraft:nautilus_shell": { chance: 2, quantity: 1, stackable: true },
+        "minecraft:podzol": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:mycelium": { chance: 2, quantity: 1, stackable: true },
+        "minecraft:brown_mushroom": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:red_mushroom": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:cactus": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:sea_pickle": { chance: 4, quantity: 1, stackable: true },
+        // ── MISSING SHEPHERD BEDS & CARPETS ───────────────────────
+        "minecraft:orange_bed": { chance: 4, quantity: 1, stackable: false },
+        "minecraft:yellow_bed": { chance: 4, quantity: 1, stackable: false },
+        "minecraft:green_bed": { chance: 4, quantity: 1, stackable: false },
+        "minecraft:purple_bed": { chance: 4, quantity: 1, stackable: false },
+        "minecraft:cyan_bed": { chance: 4, quantity: 1, stackable: false },
+        "minecraft:black_bed": { chance: 4, quantity: 1, stackable: false },
+        "minecraft:orange_carpet": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:yellow_carpet": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:green_carpet": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:purple_carpet": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:cyan_carpet": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:blue_carpet": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:red_carpet": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:black_carpet": { chance: 5, quantity: 1, stackable: true },
+        // ── MASON MISSING BLOCKS ─────────────────────────────────────
+        "minecraft:polished_granite": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:polished_andesite": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:polished_diorite": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:stone_bricks": { chance: 8, quantity: 1, stackable: true },
+        "minecraft:mossy_stone_bricks": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:cracked_stone_bricks": { chance: 4, quantity: 1, stackable: true },
+        "minecraft:nether_brick_fence": { chance: 4, quantity: 1, stackable: true },
+        "minecraft:purple_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:cyan_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:light_blue_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:gray_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:magenta_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:pink_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:black_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:brown_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:lime_glazed_terracotta": { chance: 5, quantity: 1, stackable: true },
+        // ── FISHERMAN (missing cooked fish) ────────────────────────
+        "minecraft:cooked_cod": { chance: 22, quantity: 1, stackable: true },
+        "minecraft:cooked_salmon": { chance: 18, quantity: 1, stackable: true },
+        // ── LIBRARIAN (book & quill) ────────────────────────────────
+        "minecraft:writable_book": { chance: 8, quantity: 1, stackable: false },
+        // ── TOOLSMITH & WEAPONSMITH (stone tools — novice tier) ────
+        "minecraft:stone_sword": { chance: 8, stackable: false, enchantChance: 5 },
+        "minecraft:stone_axe": { chance: 8, stackable: false, enchantChance: 5 },
+        "minecraft:stone_pickaxe": { chance: 8, stackable: false, enchantChance: 5 },
+        "minecraft:stone_shovel": { chance: 8, stackable: false, enchantChance: 5 },
+        "minecraft:stone_hoe": { chance: 8, stackable: false, enchantChance: 5 },
+        // ── BUTCHER (missing sweet berries) ────────────────────────
+        "minecraft:sweet_berries": { chance: 10, quantity: 1, stackable: true },
+        // ── SHEPHERD (banners — expert tier) ───────────────────────
+        "minecraft:white_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:orange_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:magenta_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:light_blue_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:yellow_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:lime_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:pink_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:gray_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:cyan_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:purple_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:blue_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:brown_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:green_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:red_banner": { chance: 3, quantity: 1, stackable: true },
+        "minecraft:black_banner": { chance: 3, quantity: 1, stackable: true },
+        // ── SHEPHERD (missing dye colors) ──────────────────────────
+        "minecraft:orange_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:magenta_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:light_blue_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:lime_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:pink_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:gray_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:light_gray_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:cyan_dye": { chance: 5, quantity: 1, stackable: true },
+        "minecraft:brown_dye": { chance: 5, quantity: 1, stackable: true }
+      },
+      "mrleefy:witherstill": { "minecraft:nether_star": { chance: 100, quantity: 1, stackable: false } },
+      "mrleefy:enderdragonstill": {
+        "minecraft:dragon_breath": { chance: 100, quantity: 1, stackable: true },
+        "minecraft:dragon_egg": { chance: 1, stackable: false },
+        "minecraft:experience_bottle": { chance: 100, quantity: 10, stackable: true },
+        "minecraft:enchanted_book": { chance: 20, stackable: false },
+        "minecraft:elytra": { chance: 2, stackable: false, randomdurability: true }
+      },
+      "mrleefy:spiderstill": { "minecraft:string": { chance: 100, quantity: 1, stackable: true }, "minecraft:spider_eye": { chance: 10, quantity: 1, stackable: true } },
+      "mrleefy:snowmanstill": { "minecraft:snowball": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:slimestill": { "minecraft:slime_ball": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:vindicatorstill": { "minecraft:emerald": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:wardenstill": { "minecraft:sculk_catalyst": { chance: 1, quantity: 1, stackable: true }, "minecraft:echo_shard": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:skeletonstill": { "minecraft:bone": { chance: 100, quantity: 1, stackable: true }, "minecraft:arrow": { chance: 100, quantity: 1, stackable: true }, "minecraft:bow": { chance: 5, stackable: false, randomdurability: true } },
+      "mrleefy:shulkerstill": { "minecraft:shulker_shell": { chance: 100, quantity: 1, stackable: true } },
+      // --- Crawlers ---
+      "mrleefy:coalcrawlerstill": { "minecraft:coal": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:glowstonecrawlerstill": { "minecraft:glowstone_dust": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:obsidiancrawlerstill": { "minecraft:obsidian": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:icecrawlerstill": { "minecraft:packed_ice": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:spongecrawlerstill": { "minecraft:sponge": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:lapiscrawlerstill": { "minecraft:lapis_lazuli": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:redstonecrawlerstill": { "minecraft:redstone": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:coppercrawlerstill": { "minecraft:copper_ingot": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:quartzcrawlerstill": { "minecraft:quartz": { chance: 100, quantity: 1, stackable: true } },
+      "mrleefy:amethystcrawlerstill": { "minecraft:amethyst_shard": { chance: 100, quantity: 1, stackable: true } }
+    };
+    this.entities = {};
+    this.enchantmentCategories = {
+      axe: [{ type: "sharpness", minLevel: 1, maxLevel: 5 }, { type: "smite", minLevel: 1, maxLevel: 5 }, { type: "bane_of_arthropods", minLevel: 1, maxLevel: 5 }, { type: "efficiency", minLevel: 1, maxLevel: 5 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "fortune", minLevel: 1, maxLevel: 3 }, { type: "silk_touch", minLevel: 1, maxLevel: 1 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      helmet: [{ type: "protection", minLevel: 1, maxLevel: 4 }, { type: "fire_protection", minLevel: 1, maxLevel: 4 }, { type: "blast_protection", minLevel: 1, maxLevel: 4 }, { type: "projectile_protection", minLevel: 1, maxLevel: 4 }, { type: "respiration", minLevel: 1, maxLevel: 3 }, { type: "aqua_affinity", minLevel: 1, maxLevel: 1 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      chestplate: [{ type: "protection", minLevel: 1, maxLevel: 4 }, { type: "fire_protection", minLevel: 1, maxLevel: 4 }, { type: "blast_protection", minLevel: 1, maxLevel: 4 }, { type: "projectile_protection", minLevel: 1, maxLevel: 4 }, { type: "thorns", minLevel: 1, maxLevel: 3 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      leggings: [{ type: "protection", minLevel: 1, maxLevel: 4 }, { type: "fire_protection", minLevel: 1, maxLevel: 4 }, { type: "blast_protection", minLevel: 1, maxLevel: 4 }, { type: "projectile_protection", minLevel: 1, maxLevel: 4 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "thorns", minLevel: 1, maxLevel: 3 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      boots: [{ type: "protection", minLevel: 1, maxLevel: 4 }, { type: "fire_protection", minLevel: 1, maxLevel: 4 }, { type: "blast_protection", minLevel: 1, maxLevel: 4 }, { type: "projectile_protection", minLevel: 1, maxLevel: 4 }, { type: "feather_falling", minLevel: 1, maxLevel: 4 }, { type: "depth_strider", minLevel: 1, maxLevel: 3 }, { type: "frost_walker", minLevel: 1, maxLevel: 2 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "soul_speed", minLevel: 1, maxLevel: 3 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      sword: [{ type: "sharpness", minLevel: 1, maxLevel: 5 }, { type: "smite", minLevel: 1, maxLevel: 5 }, { type: "bane_of_arthropods", minLevel: 1, maxLevel: 5 }, { type: "knockback", minLevel: 1, maxLevel: 2 }, { type: "fire_aspect", minLevel: 1, maxLevel: 2 }, { type: "looting", minLevel: 1, maxLevel: 3 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      trident: [{ type: "impaling", minLevel: 1, maxLevel: 5 }, { type: "riptide", minLevel: 1, maxLevel: 3 }, { type: "loyalty", minLevel: 1, maxLevel: 3 }, { type: "channeling", minLevel: 1, maxLevel: 1 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      bow: [{ type: "power", minLevel: 1, maxLevel: 5 }, { type: "punch", minLevel: 1, maxLevel: 2 }, { type: "flame", minLevel: 1, maxLevel: 1 }, { type: "infinity", minLevel: 1, maxLevel: 1 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      crossbow: [{ type: "piercing", minLevel: 1, maxLevel: 4 }, { type: "quick_charge", minLevel: 1, maxLevel: 3 }, { type: "multishot", minLevel: 1, maxLevel: 1 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      mace: [{ type: "density", minLevel: 1, maxLevel: 5 }, { type: "breach", minLevel: 1, maxLevel: 4 }, { type: "wind_burst", minLevel: 1, maxLevel: 3 }, { type: "unbreaking", minLevel: 1, maxLevel: 3 }, { type: "mending", minLevel: 1, maxLevel: 1 }, { type: "fire_aspect", minLevel: 1, maxLevel: 2 }, { type: "sharpness", minLevel: 1, maxLevel: 5 }, { type: "smite", minLevel: 1, maxLevel: 5 }, { type: "bane_of_arthropods", minLevel: 1, maxLevel: 5 }, { type: "vanishing", minLevel: 1, maxLevel: 1 }],
+      pickaxe: [
+        { type: "efficiency", minLevel: 1, maxLevel: 5 },
+        { type: "silk_touch", minLevel: 1, maxLevel: 1 },
+        { type: "fortune", minLevel: 1, maxLevel: 3 },
+        { type: "unbreaking", minLevel: 1, maxLevel: 3 },
+        { type: "mending", minLevel: 1, maxLevel: 1 },
+        { type: "vanishing", minLevel: 1, maxLevel: 1 }
+      ],
+      shovel: [
+        { type: "efficiency", minLevel: 1, maxLevel: 5 },
+        { type: "silk_touch", minLevel: 1, maxLevel: 1 },
+        { type: "fortune", minLevel: 1, maxLevel: 3 },
+        { type: "unbreaking", minLevel: 1, maxLevel: 3 },
+        { type: "mending", minLevel: 1, maxLevel: 1 },
+        { type: "vanishing", minLevel: 1, maxLevel: 1 }
+      ],
+      hoe: [
+        { type: "efficiency", minLevel: 1, maxLevel: 5 },
+        { type: "silk_touch", minLevel: 1, maxLevel: 1 },
+        { type: "fortune", minLevel: 1, maxLevel: 3 },
+        { type: "unbreaking", minLevel: 1, maxLevel: 3 },
+        { type: "mending", minLevel: 1, maxLevel: 1 },
+        { type: "vanishing", minLevel: 1, maxLevel: 1 }
+      ],
+      fishing_rod: [
+        { type: "luck_of_the_sea", minLevel: 1, maxLevel: 3 },
+        { type: "lure", minLevel: 1, maxLevel: 3 },
+        { type: "unbreaking", minLevel: 1, maxLevel: 3 },
+        { type: "mending", minLevel: 1, maxLevel: 1 },
+        { type: "vanishing", minLevel: 1, maxLevel: 1 }
+      ],
+      shears: [
+        { type: "efficiency", minLevel: 1, maxLevel: 5 },
+        { type: "unbreaking", minLevel: 1, maxLevel: 3 },
+        { type: "mending", minLevel: 1, maxLevel: 1 },
+        { type: "vanishing", minLevel: 1, maxLevel: 1 }
+      ],
+      book: [
+        // Armor
+        { type: "protection", minLevel: 1, maxLevel: 4 },
+        { type: "fire_protection", minLevel: 1, maxLevel: 4 },
+        { type: "blast_protection", minLevel: 1, maxLevel: 4 },
+        { type: "projectile_protection", minLevel: 1, maxLevel: 4 },
+        { type: "feather_falling", minLevel: 1, maxLevel: 4 },
+        { type: "respiration", minLevel: 1, maxLevel: 3 },
+        { type: "aqua_affinity", minLevel: 1, maxLevel: 1 },
+        { type: "depth_strider", minLevel: 1, maxLevel: 3 },
+        { type: "frost_walker", minLevel: 1, maxLevel: 2 },
+        { type: "soul_speed", minLevel: 1, maxLevel: 3 },
+        { type: "thorns", minLevel: 1, maxLevel: 3 },
+        // Weapons
+        { type: "sharpness", minLevel: 1, maxLevel: 5 },
+        { type: "smite", minLevel: 1, maxLevel: 5 },
+        { type: "bane_of_arthropods", minLevel: 1, maxLevel: 5 },
+        { type: "knockback", minLevel: 1, maxLevel: 2 },
+        { type: "fire_aspect", minLevel: 1, maxLevel: 2 },
+        { type: "looting", minLevel: 1, maxLevel: 3 },
+        // Ranged
+        { type: "power", minLevel: 1, maxLevel: 5 },
+        { type: "punch", minLevel: 1, maxLevel: 2 },
+        { type: "flame", minLevel: 1, maxLevel: 1 },
+        { type: "infinity", minLevel: 1, maxLevel: 1 },
+        { type: "piercing", minLevel: 1, maxLevel: 4 },
+        { type: "quick_charge", minLevel: 1, maxLevel: 3 },
+        { type: "multishot", minLevel: 1, maxLevel: 1 },
+        // Tools
+        { type: "efficiency", minLevel: 1, maxLevel: 5 },
+        { type: "silk_touch", minLevel: 1, maxLevel: 1 },
+        { type: "fortune", minLevel: 1, maxLevel: 3 },
+        // Trident
+        { type: "impaling", minLevel: 1, maxLevel: 5 },
+        { type: "riptide", minLevel: 1, maxLevel: 3 },
+        { type: "loyalty", minLevel: 1, maxLevel: 3 },
+        { type: "channeling", minLevel: 1, maxLevel: 1 },
+        // Mace
+        { type: "density", minLevel: 1, maxLevel: 5 },
+        { type: "breach", minLevel: 1, maxLevel: 4 },
+        { type: "wind_burst", minLevel: 1, maxLevel: 3 },
+        // Universal
+        { type: "unbreaking", minLevel: 1, maxLevel: 3 },
+        { type: "mending", minLevel: 1, maxLevel: 1 },
+        { type: "swift_sneak", minLevel: 1, maxLevel: 3 },
+        { type: "vanishing", minLevel: 1, maxLevel: 1 }
+      ]
+    };
+    this.enchantmentIncompatibilities = {
+      protection: ["fire_protection", "blast_protection", "projectile_protection"],
+      fire_protection: ["protection", "blast_protection", "projectile_protection"],
+      blast_protection: ["protection", "fire_protection", "projectile_protection"],
+      projectile_protection: ["protection", "fire_protection", "blast_protection"],
+      sharpness: ["smite", "bane_of_arthropods"],
+      smite: ["sharpness", "bane_of_arthropods"],
+      bane_of_arthropods: ["sharpness", "smite"],
+      fortune: ["silk_touch"],
+      silk_touch: ["fortune"],
+      infinity: ["mending"],
+      mending: ["infinity"],
+      loyalty: ["riptide"],
+      riptide: ["loyalty", "channeling"],
+      channeling: ["riptide"]
+    };
+    _LootManager.instance = this;
+    this.initialize();
+  }
+  /**
+   * Loads loot tables from the database or uses defaults.
+   */
+  initialize() {
+    for (const entityId in this.defaultEntities) {
+      const savedLootTable = lootTableDatabase.read(entityId);
+      this.entities[entityId] = savedLootTable || this.defaultEntities[entityId];
+    }
+  }
+  /**
+   * Saves a specific entity's loot table to the database.
+   * @param entityId The entity ID (e.g., 'mrleefy:zombiestill')
+   */
+  saveLootTable(entityId) {
+    if (this.entities[entityId] && Object.keys(this.entities[entityId]).length > 0) {
+      lootTableDatabase.write(entityId, this.entities[entityId]);
+    } else {
+      lootTableDatabase.delete(entityId);
+      delete this.entities[entityId];
+    }
+  }
+  /**
+   * Gets the Looting level from a player's held item.
+   * @param player - Player object
+   * @returns The level of Looting, or 0 if none.
+   */
+  getLootLevel(player) {
+    try {
+      const equipment = player.getComponent("equippable");
+      const mainhandItem = equipment?.getEquipment("Mainhand");
+      if (!mainhandItem)
+        return 0;
+      const enchantments = mainhandItem.getComponent("enchantable")?.getEnchantments() || [];
+      const lootingEnchant = enchantments?.find((e) => e.type.id === "looting");
+      return lootingEnchant ? lootingEnchant.level : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  /**
+   * Calculates the final loot to be dropped based on chance and Looting level.
+   * @param lootTable The loot table to process.
+   * @param lootLevel The level of Looting enchantment.
+   * @returns A final loot object with items and quantities.
+   */
+  calcLoot(lootTable, lootLevel, singleDrop = false) {
+    const finalLoot = {};
+    const lootTableEntries = Object.entries(lootTable);
+    if (lootTableEntries.length === 0)
+      return finalLoot;
+    if (singleDrop) {
+      const totalWeight = lootTableEntries.reduce((sum, [, cfg]) => sum + (cfg.chance ?? 100), 0);
+      let roll = Math.random() * totalWeight;
+      let picked = null;
+      for (const entry of lootTableEntries) {
+        roll -= entry[1].chance ?? 100;
+        if (roll <= 0) {
+          picked = entry;
+          break;
+        }
+      }
+      if (!picked)
+        picked = lootTableEntries[lootTableEntries.length - 1];
+      const [itemId, config] = picked;
+      let dropQuantity = config.quantity ?? 1;
+      if (lootLevel > 0 && config.stackable) {
+        dropQuantity += Math.min(lootLevel, 3);
+      }
+      finalLoot[itemId] = { ...config, quantity: dropQuantity };
+      return finalLoot;
+    }
+    for (const [itemId, config] of lootTableEntries) {
+      const baseChance = config.chance ?? 100;
+      const modifiedChance = baseChance * (1 + lootLevel * 0.1);
+      if (Math.random() * 100 < modifiedChance) {
+        let dropQuantity = config.quantity ?? 1;
+        if (lootLevel > 0 && config.stackable) {
+          const bonusChance = 0.25 * lootLevel;
+          const bonusDrops = Math.floor(bonusChance + Math.random() * 0.5);
+          dropQuantity += Math.min(bonusDrops, lootLevel);
+        }
+        finalLoot[itemId] = { ...config, quantity: dropQuantity };
+      }
+    }
+    return finalLoot;
+  }
+  /**
+   * Handles the entity death event to process and spawn loot.
+   * @param event - EntityDieAfterEvent object
+   */
+  onEntityDeath(event) {
+    const { deadEntity, damageSource } = event;
+    if (!deadEntity?.isValid)
+      return;
+    const entityId = deadEntity.typeId;
+    const lootTable = this.entities[entityId];
+    if (!lootTable)
+      return;
+    const playerKillOnly = getCachedConfig("playerKillOnly", false);
+    const killer = damageSource?.damagingEntity;
+    if (playerKillOnly && (!killer || killer.typeId !== "minecraft:player")) {
+      return;
+    }
+    const entityLocation = deadEntity.location;
+    const entityDimension = deadEntity.dimension;
+    const spillCap = getCachedConfig("itemSpillCap", 5);
+    const nearbyItems = entityDimension.getEntities({
+      type: "minecraft:item",
+      location: entityLocation,
+      maxDistance: 3,
+      closest: spillCap
+    });
+    if (nearbyItems.length >= spillCap) {
+      return;
+    }
+    const lootLevel = killer?.typeId === "minecraft:player" ? this.getLootLevel(killer) : 0;
+    const singleDrop = entityId === "mrleefy:villagerstill";
+    const finalLoot = this.calcLoot(lootTable, lootLevel, singleDrop);
+    for (const cfg of Object.values(finalLoot)) {
+      cfg.__lootLevel = lootLevel;
+    }
+    this.processLootDrops(finalLoot, entityDimension, entityLocation, lootLevel);
+  }
+  /**
+   * Optimized loot drop processing
+   * @param finalLoot - The calculated loot to drop
+   * @param dimension - The dimension to spawn items in
+   * @param location - The location to spawn items at
+   */
+  processLootDrops(finalLoot, dimension, location, lootLevel = 0) {
+    const lootEntries = Object.entries(finalLoot);
+    if (lootEntries.length === 0)
+      return;
+    const xpOrbs = [];
+    const stackableItems = [];
+    const nonStackableItems = [];
+    for (const [itemId, config] of lootEntries) {
+      if (itemId === "minecraft:xp_orb") {
+        xpOrbs.push(config);
+      } else if (config.stackable) {
+        stackableItems.push({ itemId, config });
+      } else {
+        nonStackableItems.push({ itemId, config });
+      }
+    }
+    for (const config of xpOrbs) {
+      try {
+        dimension.spawnEntity(ENTITIES.XP_ORB_TYPE, location, { amount: config.quantity });
+      } catch (e) {
+        console.warn(`[LootManager] Error spawning XP orb: ${e}`);
+      }
+    }
+    for (const { itemId, config } of stackableItems) {
+      try {
+        const itemStack = this.createItemStack(itemId, config);
+        dimension.spawnItem(itemStack, location);
+      } catch (e) {
+        console.warn(`[LootManager] Error spawning loot item ${itemId}: ${e}`);
+      }
+    }
+    for (const { itemId, config } of nonStackableItems) {
+      try {
+        const itemStack = this.createItemStack(itemId, { ...config, quantity: 1 });
+        dimension.spawnItem(itemStack, location);
+      } catch (e) {
+        console.warn(`[LootManager] Error spawning loot item ${itemId}: ${e}`);
+      }
+    }
+  }
+  /**
+   * Creates an optimized ItemStack with enchantments and durability
+   * @param itemId - The item identifier
+   * @param config - The item configuration
+   * @returns The created item stack
+   */
+  createItemStack(itemId, config) {
+    const itemStack = new ItemStack(itemId, config.quantity);
+    if (config.enchantments) {
+      const enchComp = itemStack.getComponent("enchantable");
+      if (enchComp) {
+        try {
+          enchComp.addEnchantment({ type: { id: config.enchantments.category }, level: 1 });
+        } catch (e) {
+          console.warn(`[LootManager] Failed to apply enchantment to ${itemId}: ${e}`);
+        }
+      }
+    } else if (itemId === "minecraft:enchanted_book") {
+      const enchComp = itemStack.getComponent("enchantable");
+      if (enchComp) {
+        try {
+          const pool = this.enchantmentCategories["book"];
+          if (pool && pool.length > 0) {
+            const randomEnchant = pool[Math.floor(Math.random() * pool.length)];
+            const lootLevel = config.__lootLevel ?? 0;
+            const bonusTiers = lootLevel > 0 ? Math.floor(Math.random() * lootLevel) : 0;
+            const scaledMax = Math.min(randomEnchant.maxLevel, randomEnchant.minLevel + bonusTiers + Math.floor(Math.random() * (randomEnchant.maxLevel - randomEnchant.minLevel + 1)));
+            const level = Math.max(randomEnchant.minLevel, Math.min(scaledMax, randomEnchant.maxLevel));
+            enchComp.addEnchantment({ type: { id: randomEnchant.type }, level });
+          }
+        } catch (e) {
+          console.warn(`[LootManager] Failed to apply random enchantment to enchanted_book: ${e}`);
+        }
+      }
+    } else if (config.enchantChance && Math.random() * 100 < config.enchantChance) {
+      const category = ITEM_ENCHANT_CATEGORY[itemId];
+      if (category) {
+        const pool = this.enchantmentCategories[category];
+        if (pool && pool.length > 0) {
+          const enchComp = itemStack.getComponent("enchantable");
+          if (enchComp) {
+            try {
+              const lootLevel = config.__lootLevel ?? 0;
+              const existing = enchComp.getEnchantments?.() ?? [];
+              const existingIds = new Set(existing.map((e) => e?.type?.id ?? ""));
+              const incompatMap = this.enchantmentIncompatibilities;
+              const eligible = pool.filter((e) => {
+                const incompatible = incompatMap[e.type] ?? [];
+                return !incompatible.some((ic) => existingIds.has(ic));
+              });
+              if (eligible.length > 0) {
+                const randomEnchant = eligible[Math.floor(Math.random() * eligible.length)];
+                const bonusTiers = lootLevel > 0 ? Math.floor(Math.random() * lootLevel) : 0;
+                const level = Math.max(randomEnchant.minLevel, Math.min(randomEnchant.maxLevel, randomEnchant.minLevel + bonusTiers + Math.floor(Math.random() * (randomEnchant.maxLevel - randomEnchant.minLevel + 1))));
+                enchComp.addEnchantment({ type: { id: randomEnchant.type }, level });
+              }
+            } catch (e) {
+              console.warn(`[LootManager] Failed dynamic enchant on ${itemId}: ${e}`);
+            }
+          }
+        }
+      }
+    }
+    if (config.randomdurability) {
+      const durability = itemStack.getComponent("durability");
+      if (durability) {
+        durability.damage = Math.floor(Math.random() * durability.maxDurability);
+      }
+    }
+    return itemStack;
+  }
+};
+// Singleton instance
+__publicField(_LootManager, "instance");
+var LootManager = _LootManager;
+var lootManagerInstance = new LootManager();
+world2.afterEvents.entityDie.subscribe((event) => {
+  lootManagerInstance.onEntityDeath(event);
+});
+
+// src/levelsystem.ts
+import {
+  world as world3,
+  system as system2,
+  MolangVariableMap
+} from "@minecraft/server";
+import {
+  ActionFormData,
+  ModalFormData
+} from "@minecraft/server-ui";
+
+// src/VectorMath/index.ts
+var Vector32 = class _Vector3 {
+  constructor(x, y, z) {
+    __publicField(this, "x", 0);
+    __publicField(this, "y", 0);
+    __publicField(this, "z", 0);
+    this.x = x;
+    this.y = y;
+    this.z = z;
+  }
+  /**
+   * Adds 2 Vector3's together
+   */
+  static Add(pos1, pos2) {
+    return new _Vector3(pos1.x + pos2.x, pos1.y + pos2.y, pos1.z + pos2.z);
+  }
+  /**
+   * Subtracts a Vector3 from another Vector3
+   */
+  static Subtract(pos1, pos2) {
+    return new _Vector3(pos1.x - pos2.x, pos1.y - pos2.y, pos1.z - pos2.z);
+  }
+  /**
+   * Divides a Vector3 by another Vector3
+   */
+  static Divide(pos1, pos2) {
+    return new _Vector3(pos1.x / pos2.x, pos1.y / pos2.y, pos1.z / pos2.z);
+  }
+  /**
+   * Multiplies a Vector3 with a number
+   */
+  static Scale(pos1, num) {
+    return new _Vector3(pos1.x * num, pos1.y * num, pos1.z * num);
+  }
+  /**
+   * Multiplies 2 Vector3's
+   */
+  static Multiply(pos1, pos2) {
+    return new _Vector3(pos1.x * pos2.x, pos1.y * pos2.y, pos1.z * pos2.z);
+  }
+  /**
+   * Checks if 2 Vector3s are the same
+   */
+  static Equals(pos1, pos2, tolerance) {
+    if (tolerance === void 0) {
+      return pos1.x === pos2.x && pos1.y === pos2.y && pos1.z === pos2.z;
+    } else {
+      return Math.abs(pos1.x - pos2.x) <= tolerance && Math.abs(pos1.y - pos2.y) <= tolerance && Math.abs(pos1.z - pos2.z) <= tolerance;
+    }
+  }
+  /**
+   * Returns a Vector3 at 0, 0, 0
+   */
+  static Zero() {
+    return new _Vector3(0, 0, 0);
+  }
+  /**
+   * Returns a Vector3 at 0, 1, 0
+   */
+  static Up() {
+    return new _Vector3(0, 1, 0);
+  }
+  /**
+   * Returns a Vector3 at 0, -1, 0
+   */
+  static Down() {
+    return new _Vector3(0, -1, 0);
+  }
+  /**
+   * Returns a Vector3 at 0, 0, 1
+   */
+  static Forward() {
+    return new _Vector3(0, 0, 1);
+  }
+  /**
+   * Returns a Vector3 at 0, 0, -1
+   */
+  static Back() {
+    return new _Vector3(0, 0, -1);
+  }
+  /**
+   * Returns a Vector3 at -1, 0, 0
+   */
+  static Left() {
+    return new _Vector3(-1, 0, 0);
+  }
+  /**
+   * Returns a Vector3 at 1, 0, 0
+   */
+  static Right() {
+    return new _Vector3(1, 0, 0);
+  }
+  /**
+   * Gets the distance between 2 Vector3's
+   */
+  static Distance(pos1, pos2) {
+    const dx = pos2.x - pos1.x;
+    const dy = pos2.y - pos1.y;
+    const dz = pos2.z - pos1.z;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+  /**
+   * Linearly interpolates a Vector3 to a Vector3 by a Number
+   */
+  static Lerp(pos1, pos2, tParam) {
+    const x = pos1.x + (pos2.x - pos1.x) * tParam;
+    const y = pos1.y + (pos2.y - pos1.y) * tParam;
+    const z = pos1.z + (pos2.z - pos1.z) * tParam;
+    return new _Vector3(x, y, z);
+  }
+  /**
+   * Gets the dot product of 2 vectors
+   */
+  static Dot(pos1, pos2) {
+    return pos1.x * pos2.x + pos1.y * pos2.y + pos1.z * pos2.z;
+  }
+  /**
+   * Gets the cross product of 2 vectors
+   */
+  static Cross(pos1, pos2) {
+    const x = pos1.y * pos2.z - pos1.z * pos2.y;
+    const y = pos1.z * pos2.x - pos1.x * pos2.z;
+    const z = pos1.x * pos2.y - pos1.y * pos2.x;
+    return new _Vector3(x, y, z);
+  }
+  /**
+   * Gets the magnitude of a vector
+   */
+  static Magnitude(pos) {
+    return Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
+  }
+  /**
+   * Gets the square magnitude of a vector
+   */
+  static SqrMagnitude(pos) {
+    return pos.x * pos.x + pos.y * pos.y + pos.z * pos.z;
+  }
+  /**
+   * Gets the squared distance between 2 vectors
+   */
+  static SqrDistance(pos1, pos2) {
+    const dx = pos2.x - pos1.x;
+    const dy = pos2.y - pos1.y;
+    const dz = pos2.z - pos1.z;
+    return dx * dx + dy * dy + dz * dz;
+  }
+  /**
+   * Normalizes the vector
+   */
+  static Normalize(dir) {
+    const mag = _Vector3.Magnitude(dir);
+    if (mag !== 0) {
+      return new _Vector3(dir.x / mag, dir.y / mag, dir.z / mag);
+    } else {
+      return new _Vector3(0, 0, 0);
+    }
+  }
+};
+
+// src/levelsystem.ts
+var cooldowns = /* @__PURE__ */ new Map();
+var spawnerDatabase = new Database("SpawnerLocations");
+var activeForms = /* @__PURE__ */ new Map();
+var PLAYER_MEMORY_LIMITS = {
+  ACTIVE_FORMS: 100,
+  // Max 100 concurrent form interactions
+  MESSAGE_TIMES: 500,
+  // Max 500 message timestamps
+  INTERACTION_TIMESTAMPS: 200,
+  // Max 200 interaction timestamps
+  COOLDOWNS: 1e3
+  // Max 1000 active cooldowns
+};
+var PLAYER_CLEANUP_INTERVAL = 150 * 20;
+var cooldownTime = TIMING.FORM_COOLDOWN;
+var messageTimes = /* @__PURE__ */ new Map();
+var messageDelay = TIMING.MESSAGE_DELAY;
+world3.beforeEvents.playerBreakBlock.subscribe((data) => {
+  const { player, block } = data;
+  const coordinates = `${block.x},${block.y},${block.z}`;
+  if (!spawnerDatabase.has(coordinates) && !activeForms.has(coordinates)) {
+    return;
+  }
+  if (activeForms.has(coordinates)) {
+    const activeData = activeForms.get(coordinates);
+    const activeTime = activeData.timestamp || Date.now();
+    if (Date.now() - activeTime > 5 * 60 * 1e3) {
+      activeForms.delete(coordinates);
+    } else {
+      data.cancel = true;
+      player.sendMessage("\xA7cThis block cannot be broken while it is being used.");
+      return;
+    }
+  }
+  if (spawnerDatabase.has(coordinates)) {
+    spawnerDatabase.delete(coordinates);
+    if (!block.typeId.endsWith("_display")) {
+      system2.run(() => removeSpawnruleAtLocation(block.x, block.y, block.z, block.dimension));
+    }
+  } else {
+    const nearbyRadius = 1;
+    const dimension = block.dimension;
+    for (let dx = -nearbyRadius; dx <= nearbyRadius; dx++) {
+      for (let dy = -nearbyRadius; dy <= nearbyRadius; dy++) {
+        for (let dz = -nearbyRadius; dz <= nearbyRadius; dz++) {
+          const nearbyCoordinates = `${block.x + dx},${block.y + dy},${block.z + dz}`;
+          if (spawnerDatabase.has(nearbyCoordinates)) {
+            const nearbyBlock = dimension.getBlock(new Vector32(block.x + dx, block.y + dy, block.z + dz));
+            if (!nearbyBlock || !nearbyBlock.typeId.startsWith("mrleefy:")) {
+              spawnerDatabase.delete(nearbyCoordinates);
+              if (!nearbyBlock || !nearbyBlock.typeId.endsWith("_display")) {
+                removeSpawnruleAtLocation(block.x + dx, block.y + dy, block.z + dz, dimension);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+});
+world3.afterEvents.pistonActivate.subscribe((eventData) => {
+  try {
+    const dimension = eventData.dimension;
+    const attachedBlocks = eventData.piston.getAttachedBlocksLocations();
+    for (const blockCoord of attachedBlocks) {
+      const block = dimension.getBlock(blockCoord);
+      if (block && block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner") && !block.typeId.endsWith("_display")) {
+        removeSpawnruleAtLocation(blockCoord.x, blockCoord.y, blockCoord.z, dimension);
+        const coordinates = `${blockCoord.x},${blockCoord.y},${blockCoord.z}`;
+        if (spawnerDatabase.has(coordinates)) {
+          spawnerDatabase.delete(coordinates);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in piston event handler:", error);
+  }
+});
+world3.beforeEvents.explosion.subscribe((eventData) => {
+  const dimension = eventData.dimension;
+  const allowedBlocks = eventData.getImpactedBlocks().filter((blockCoord) => {
+    const block = dimension.getBlock(new Vector32(blockCoord.x, blockCoord.y, blockCoord.z));
+    if (block && block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner") && !block.typeId.endsWith("_display")) {
+      return false;
+    }
+    return true;
+  });
+  eventData.setImpactedBlocks(allowedBlocks);
+});
+world3.afterEvents.playerPlaceBlock.subscribe((data) => {
+  const player = data.player;
+  const block = data.block;
+  const typeId = block.typeId;
+  if (typeId.startsWith("mrleefy:")) {
+    if (typeId.endsWith("_display")) {
+      return;
+    }
+    const coordinates = `${block.x},${block.y},${block.z}`;
+    const spawnerData = {
+      typeId,
+      placedBy: player.name || player.nameTag || "Unknown",
+      placedAt: Date.now(),
+      entitiesKilled: 0,
+      lastAccessed: Date.now()
+    };
+    spawnerDatabase.write(coordinates, spawnerData);
+    try {
+      player.runCommand(`summon mrleefy:spawnrule "${typeId}" ${block.x} ${block.y} ${block.z}`);
+    } catch (error) {
+      console.error("Error executing command:", error);
+    }
+  }
+});
+function handleSpawnerBlockInteraction(player, block, cancelableEvent) {
+  const coordinates = `${block.x},${block.y},${block.z}`;
+  const typeId = block.typeId;
+  if (!typeId || !typeId.startsWith("mrleefy:") || !typeId.includes("spawner")) {
+    return;
+  }
+  if (typeId.endsWith("_display")) {
+    return;
+  }
+  cancelableEvent.cancel = true;
+  if (activeForms.has(coordinates)) {
+    const activeData = activeForms.get(coordinates);
+    const interactingPlayer = activeData.player || activeData;
+    const activeTime = activeData.timestamp || Date.now();
+    if (Date.now() - activeTime > 5 * 60 * 1e3) {
+      activeForms.delete(coordinates);
+    } else if (interactingPlayer.id !== player.id) {
+      player.sendMessage("\xA77This \xA7cspawner\xA77 is currently in use, \xA7cplease wait...");
+      return;
+    }
+  }
+  updateSpawnerDatabaseOnInteraction(coordinates, typeId, player);
+  system2.run(() => {
+    const spawnerType = typeId.replace("mrleefy:", "").replace(/spawner\d*/, "");
+    const levelMatch = typeId.match(/\d*$/);
+    const level = levelMatch ? Number(levelMatch[0]) : 0;
+    const c = 1e4;
+    const y = 100;
+    const cost = level * c;
+    const upgradee = level + 1;
+    const downgradee = level - 1;
+    const refu = 77;
+    const percentrefund = cost / y * refu;
+    form1(player, level, cost, block, typeId, upgradee, downgradee, percentrefund, refu, spawnerType, block.x, block.y, block.z);
+  });
+}
+if ("playerInteractWithBlock" in world3.beforeEvents) {
+  world3.beforeEvents.playerInteractWithBlock.subscribe((data) => {
+    handleSpawnerBlockInteraction(data.player, data.block, data);
+  });
+} else {
+  world3.beforeEvents.itemUseOn.subscribe((data) => {
+    handleSpawnerBlockInteraction(data.source, data.block, data);
+  });
+}
+function isPlayerNearBlock(player, x, y, z, maxDistance = 10) {
+  if (!player || !player.isValid)
+    return false;
+  const pLoc = player.location;
+  const dx = pLoc.x - (x + 0.5);
+  const dy = pLoc.y - (y + 0.5);
+  const dz = pLoc.z - (z + 0.5);
+  return dx * dx + dy * dy + dz * dz <= maxDistance * maxDistance;
+}
+function validateSpawnerInteraction(player, block, level, x, y, z) {
+  if (!player || !player.isValid) {
+    console.error(ERROR_MESSAGES.INVALID_PLAYER);
+    return false;
+  }
+  if (!isPlayerNearBlock(player, x, y, z, 10)) {
+    player.sendMessage("\xA7cYou are too far from the spawner.");
+    return false;
+  }
+  if (!block || !block.isValid) {
+    player.sendMessage(ERROR_MESSAGES.INVALID_BLOCK);
+    return false;
+  }
+  if (typeof level !== "number" || level < VALIDATION.MIN_LEVEL || level > VALIDATION.MAX_LEVEL) {
+    console.error(`Invalid level provided: ${level}`);
+    player.sendMessage(ERROR_MESSAGES.INVALID_LEVEL);
+    return false;
+  }
+  if (typeof x !== "number" || typeof y !== "number" || typeof z !== "number") {
+    console.error(ERROR_MESSAGES.INVALID_COORDINATES);
+    player.sendMessage(ERROR_MESSAGES.INVALID_COORDINATES);
+    return false;
+  }
+  return true;
+}
+function checkPlayerCooldown(player, coordinates) {
+  const currentTime = Date.now();
+  const key = player.name;
+  if (cooldowns.has(key)) {
+    const lastInteractionTime = cooldowns.get(key);
+    const timeSinceLastInteraction = currentTime - lastInteractionTime;
+    if (timeSinceLastInteraction < cooldownTime) {
+      const remainingTime = Math.ceil((cooldownTime - timeSinceLastInteraction) / 1e3);
+      if (!messageTimes.has(key) || currentTime - messageTimes.get(key) > messageDelay) {
+        player.sendMessage(`\xA7cWait ${remainingTime}s before interacting again.`);
+        messageTimes.set(key, currentTime);
+      }
+      return false;
+    }
+  }
+  activeForms.set(coordinates, { player, timestamp: currentTime });
+  cooldowns.set(key, currentTime);
+  return true;
+}
+function ensureSpawnruleEntity(player, x, y, z, typeId) {
+  if (typeof x !== "number" || typeof y !== "number" || typeof z !== "number") {
+    console.error(`Invalid coordinates: x=${x}, y=${y}, z=${z}`);
+    return;
+  }
+  if (!typeId || typeof typeId !== "string") {
+    console.error(`Invalid typeId: ${typeId}`);
+    return;
+  }
+  try {
+    player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add existing`);
+  } catch (cmdError) {
+    console.error(`Error tagging existing spawnrule: ${cmdError}`);
+  }
+  try {
+    player.runCommand(`execute unless entity @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1,tag=existing] run summon mrleefy:spawnrule "${typeId}" ${x} ${y} ${z}`);
+  } catch (cmdError) {
+    console.error(`Error summoning spawnrule: ${cmdError}`);
+  }
+}
+function createSpawnerForm(player, level, upgradee, downgradee, spawnerType, block, typeId, percentrefund, refu, x, y, z, coordinates) {
+  const form12 = new ActionFormData();
+  form12.title(`\xA7l\xA78${spawnerType}Spawner\xA72\xA7r`);
+  form12.body(`\xA77\xA7l
+                \xA77Level: \xA72${level}\xA7r
+
+`);
+  const buttonActions = [];
+  if (level < UI.MAX_SPAWNER_LEVEL) {
+    form12.button(`\xA7l\xA72Upgrade\xA78 to Lvl ${upgradee}`, "textures/carrot_golden");
+    buttonActions.push(() => upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z));
+  }
+  if (level < UI.MAX_SPAWNER_LEVEL) {
+    form12.button(`\xA7l\xA72Upgrade Max`, "textures/items/netherite_ingot");
+    buttonActions.push(() => maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z));
+  }
+  if (level > UI.MIN_SPAWNER_LEVEL) {
+    form12.button(`\xA7l\xA78Downgrade [\xA74${downgradee}\xA78]`, "textures/carrot");
+    buttonActions.push(() => downgrade(player, block, level, spawnerType, percentrefund, refu, x, y, z));
+  }
+  form12.button(`\xA7l\xA72Teleport Stack Here`, "textures/items/ender_eye");
+  buttonActions.push(() => teleportSpawnerStack(player, block, spawnerType, x, y, z));
+  form12.button(`\xA7l\xA78Instructions`, "textures/items/book_enchanted.png");
+  buttonActions.push(() => showInstructions(player));
+  if (player.hasTag(UI.OWNER_PERMISSION_TAG)) {
+    form12.button(`\xA78\xA7lChoose Level`, "textures/items/diamond");
+    const chooseLevelAction = () => slider(player, spawnerType, block, level, 1e4 * level, typeId, upgradee, downgradee, percentrefund, refu, x, y, z);
+    chooseLevelAction.isNested = true;
+    buttonActions.push(chooseLevelAction);
+  }
+  form12.button(`\xA7l\xA78Close`, "textures/ruby");
+  buttonActions.push(() => exit(player));
+  return { form: form12, buttonActions };
+}
+function form1(player, level, cost, block, typeId, upgradee, downgradee, percentrefund, refu, spawnerType, x, y, z) {
+  const coordinates = `${x},${y},${z}`;
+  if (!validateSpawnerInteraction(player, block, level, x, y, z)) {
+    return;
+  }
+  if (!checkPlayerCooldown(player, coordinates)) {
+    return;
+  }
+  ensureSpawnruleEntity(player, x, y, z, typeId);
+  const { form, buttonActions } = createSpawnerForm(player, level, upgradee, downgradee, spawnerType, block, typeId, percentrefund, refu, x, y, z, coordinates);
+  system2.run(() => {
+    form.show(player).then((response) => {
+      const isNested = response.selection !== void 0 && buttonActions[response.selection] && buttonActions[response.selection].isNested;
+      if (!isNested) {
+        activeForms.delete(coordinates);
+      } else {
+        activeForms.set(coordinates, { player, timestamp: Date.now() });
+      }
+      const dimension = block.dimension;
+      const currentBlock = dimension.getBlock(new Vector32(x, y, z));
+      if (!currentBlock || currentBlock.typeId !== typeId) {
+        player.sendMessage(ERROR_MESSAGES.INVALID_BLOCK);
+        spawnerDatabase.delete(coordinates);
+        activeForms.delete(coordinates);
+        return;
+      }
+      if (response.selection !== void 0 && buttonActions[response.selection]) {
+        buttonActions[response.selection]();
+      }
+    }).catch(() => {
+      activeForms.delete(coordinates);
+    });
+  });
+}
+var interactionTimestamps = /* @__PURE__ */ new Map();
+var globalCooldowns = /* @__PURE__ */ new Map();
+var INTERACTION_WINDOW_MILLIS = 120 * 1e3;
+var INTERACTION_LIMIT = 3;
+var GLOBAL_COOLDOWN_MILLIS = 10 * 60 * 1e3;
+function teleportSpawnerStack(player, block, spawnerType, x, y, z) {
+  if (!player || !player.isValid) {
+    console.error("Invalid player provided to teleportSpawnerStack");
+    return;
+  }
+  if (!isPlayerNearBlock(player, x, y, z, 10)) {
+    player.sendMessage("\xA7cYou are too far from the spawner.");
+    return;
+  }
+  if (!block || !block.isValid) {
+    player.sendMessage("\xA7cInvalid spawner block detected.");
+    return;
+  }
+  if (!spawnerType || typeof spawnerType !== "string") {
+    console.error(`Invalid spawnerType provided: ${spawnerType}`);
+    player.sendMessage("\xA7cInvalid spawner type detected.");
+    return;
+  }
+  if (typeof x !== "number" || typeof y !== "number" || typeof z !== "number") {
+    console.error("Invalid coordinates provided to teleportSpawnerStack");
+    player.sendMessage("\xA7cInvalid spawner location detected.");
+    return;
+  }
+  const currentTime = Date.now();
+  const key = player.name;
+  if (globalCooldowns.has(key)) {
+    const lastCooldownTime = globalCooldowns.get(key);
+    const timeElapsed = currentTime - lastCooldownTime;
+    if (timeElapsed < GLOBAL_COOLDOWN_MILLIS) {
+      const remainingSeconds = Math.ceil((GLOBAL_COOLDOWN_MILLIS - timeElapsed) / 1e3);
+      player.sendMessage(`\xA7dPlease wait ${remainingSeconds}s before teleporting entity stacks...`);
+      return;
+    } else {
+      globalCooldowns.delete(key);
+    }
+  }
+  if (!interactionTimestamps.has(key)) {
+    interactionTimestamps.set(key, []);
+  }
+  const timestamps = interactionTimestamps.get(key);
+  while (timestamps.length > 0 && currentTime - timestamps[0] > INTERACTION_WINDOW_MILLIS) {
+    timestamps.shift();
+  }
+  timestamps.push(currentTime);
+  if (timestamps.length > INTERACTION_LIMIT) {
+    globalCooldowns.set(key, currentTime);
+    const remainingSeconds = Math.ceil(GLOBAL_COOLDOWN_MILLIS / 1e3);
+    player.sendMessage(`\xA7dPlease wait ${remainingSeconds}s before teleporting entity stacks...`);
+    return;
+  }
+  const dimension = block.dimension;
+  const searchRadius = configDatabase2.read("stackRadius") || 50;
+  const sanitizedSpawnerType = spawnerType.replace(/_/g, "");
+  const entityType = `mrleefy:${sanitizedSpawnerType}still`;
+  const nearbyEntities = dimension.getEntities({
+    type: entityType,
+    location: block.location,
+    maxDistance: searchRadius
+  });
+  if (!nearbyEntities || nearbyEntities.length === 0) {
+    player.sendMessage(`\xA7cNo entities of type ${sanitizedSpawnerType} found near the spawner.`);
+    return;
+  }
+  let closestEntity = null;
+  let closestDistance = Infinity;
+  for (const entity of nearbyEntities) {
+    try {
+      if (!entity || !entity.isValid)
+        continue;
+      const distance = Math.sqrt(
+        Math.pow(entity.location.x - x, 2) + Math.pow(entity.location.y - y, 2) + Math.pow(entity.location.z - z, 2)
+      );
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestEntity = entity;
+      }
+    } catch (error) {
+      console.error(`Error processing entity: ${error.message}`);
+    }
+  }
+  if (closestEntity) {
+    const centerX = x + 0.5;
+    const centerY = y + 1;
+    const centerZ = z + 0.5;
+    closestEntity.teleport(
+      new Vector32(centerX, centerY, centerZ),
+      { keepVelocity: true }
+    );
+    player.sendMessage(`\xA7aTeleported ${sanitizedSpawnerType} stack to spawner`);
+  } else {
+    player.sendMessage(`\xA7cNo valid entities found to teleport.`);
+  }
+}
+function slider(player, spawnerType, block, level, cost, typeId, upgradee, downgradee, percentrefund, refu, x, y, z) {
+  if (!player || !player.isValid) {
+    console.error("Invalid player provided to slider");
+    return;
+  }
+  const coordinates = `${x},${y},${z}`;
+  if (!player.hasTag(`admin`)) {
+    player.sendMessage("\xA7cYou don't have permission to use this feature.");
+    activeForms.delete(coordinates);
+    return;
+  }
+  if (!isPlayerNearBlock(player, x, y, z, 10)) {
+    player.sendMessage("\xA7cYou are too far from the spawner.");
+    activeForms.delete(coordinates);
+    return;
+  }
+  if (!block || !block.isValid) {
+    player.sendMessage("\xA7cInvalid spawner block detected.");
+    activeForms.delete(coordinates);
+    return;
+  }
+  if (typeof level !== "number" || level < 1 || level > 32) {
+    console.error(`Invalid level provided: ${level}`);
+    player.sendMessage("\xA7cInvalid spawner level detected.");
+    activeForms.delete(coordinates);
+    return;
+  }
+  if (!spawnerType || typeof spawnerType !== "string") {
+    console.error(`Invalid spawnerType provided: ${spawnerType}`);
+    player.sendMessage("\xA7cInvalid spawner type detected.");
+    activeForms.delete(coordinates);
+    return;
+  }
+  const slider2 = new ModalFormData();
+  slider2.title("Select Spawner Level");
+  slider2.slider("Set Range", 1, 32, { valueStep: 1, defaultValue: 1 });
+  system2.run(() => {
+    slider2.show(player).then((response) => {
+      activeForms.delete(coordinates);
+      if (!player || !player.isValid || !player.hasTag(`admin`)) {
+        player.sendMessage("\xA7cYou don't have permission to use this feature.");
+        return;
+      }
+      if (!isPlayerNearBlock(player, x, y, z, 10)) {
+        player.sendMessage("\xA7cYou are too far from the spawner.");
+        return;
+      }
+      if (response.formValues && response.formValues.length > 0) {
+        const newLevel = response.formValues[0];
+        if (newLevel) {
+          player.sendMessage(`\xA76Level \xA77set to \xA72${newLevel}`);
+          const newBlockType = `mrleefy:${spawnerType}spawner${newLevel}`;
+          block.setType(newBlockType);
+          clearMaxedSpawnerCache(x, y, z);
+          const newTypeId = newBlockType;
+          try {
+            player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
+            player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
+            player.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
+          } catch (error) {
+            console.error("Error executing command:", error);
+          }
+        }
+      }
+    }).catch(() => {
+      activeForms.delete(coordinates);
+    });
+  });
+}
+function showInstructions(player) {
+  const instructions = new ActionFormData();
+  instructions.title("\xA7l\xA7eHow To Use Spawners");
+  instructions.body(
+    "\xA7f\xA7lGetting Started\xA7r\n\xA77Place your spawner and tap it to open this menu!\n\n\xA7a\xA7lUpgrading\xA7r\n\xA77- Have spawners of the \xA7esame type\xA77 in your inventory\n\xA77- Tap \xA7aUpgrade\xA77 to combine them\n\xA77- Higher levels = \xA7efaster spawns\xA77 + \xA7ebigger stacks\xA77!\n\n\xA7c\xA7lDowngrading\xA7r\n\xA77- Only works at Level 2+\n\xA77- Get a spawner back in your inventory\n\n\xA7b\xA7lMax Upgrade\xA7r\n\xA77- Uses ALL your spawners at once\n\xA77- Upgrades to the highest level possible (max 32)\n\xA77- Leftover spawners are returned to you\n\n\xA7d\xA7lTeleport Stack\xA7r\n\xA77- Brings nearby stacked mobs to this spawner\n\n\xA78Max level is 32. Each level boosts spawn rate and stack size!"
+  );
+  instructions.button("\xA7l\xA7aGot it!");
+  instructions.show(player);
+}
+function maxUpgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
+  if (!player || !player.isValid)
+    return;
+  if (!isPlayerNearBlock(player, x, y, z, 10)) {
+    player.sendMessage("\xA7cYou are too far from the spawner.");
+    return;
+  }
+  if (level >= 32) {
+    player.sendMessage("\xA74Cannot upgrade further. Maximum level reached.");
+    return;
+  }
+  const inventoryComp = player.getComponent("inventory");
+  if (!inventoryComp || !inventoryComp.container)
+    return;
+  const inventory = inventoryComp.container;
+  const spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
+  const spawnerEntries = [];
+  let totalAvailableLevels = 0;
+  for (let i = 0; i < inventory.size; i++) {
+    const item = inventory.getItem(i);
+    if (item && item.typeId.startsWith(spawnerItemPrefix)) {
+      const itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, "")) || 1;
+      spawnerEntries.push({ slot: i, item, level: itemLevel });
+      totalAvailableLevels += itemLevel * item.amount;
+    }
+  }
+  if (totalAvailableLevels === 0) {
+    player.sendMessage(`\xA74You don't have any ${spawnerType} spawners in your inventory, unable to upgrade.`);
+    return;
+  }
+  spawnerEntries.sort((a, b) => a.level - b.level);
+  const levelsNeeded = 32 - level;
+  let levelsConsumed = 0;
+  const spawnersToRemove = [];
+  let refundAmount = 0;
+  for (const entry of spawnerEntries) {
+    if (levelsConsumed >= levelsNeeded)
+      break;
+    const { slot, item, level: itemLevel } = entry;
+    let amountToConsume = 0;
+    for (let count = 1; count <= item.amount; count++) {
+      levelsConsumed += itemLevel;
+      amountToConsume = count;
+      if (levelsConsumed >= levelsNeeded) {
+        if (levelsConsumed > levelsNeeded) {
+          refundAmount = levelsConsumed - levelsNeeded;
+        }
+        break;
+      }
+    }
+    spawnersToRemove.push({ slot, item, amount: amountToConsume });
+  }
+  for (const entry of spawnersToRemove) {
+    const { slot, item, amount } = entry;
+    if (item.amount <= amount) {
+      inventory.setItem(slot, null);
+    } else {
+      item.amount -= amount;
+      inventory.setItem(slot, item);
+    }
+  }
+  const newLevel = level + Math.min(levelsNeeded, levelsConsumed - refundAmount);
+  const newTypeId = `${spawnerItemPrefix}${newLevel}`;
+  block.setType(newTypeId);
+  const coordinates = `${x},${y},${z}`;
+  const existingData = spawnerDatabase.read(coordinates);
+  if (existingData) {
+    existingData.typeId = newTypeId;
+    existingData.lastAccessed = Date.now();
+    spawnerDatabase.write(coordinates, existingData);
+  }
+  clearMaxedSpawnerCache(x, y, z);
+  try {
+    player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
+    player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
+    player.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
+  } catch (error) {
+    console.error("Error executing spawnrule commands:", error);
+  }
+  player.sendMessage(`\xA77Successfully Upgraded to level \xA72\xA7l${newLevel}`);
+  try {
+    player.runCommand("playsound random.levelup @s");
+  } catch (error) {
+  }
+  try {
+    block.dimension.spawnParticle(
+      "minecraft:crop_growth_area_emitter",
+      new Vector32(block.x + 0.5, block.y + 0.5, block.z + 0.5),
+      new MolangVariableMap()
+    );
+  } catch (e) {
+  }
+  if (refundAmount > 0) {
+    try {
+      player.runCommand(`give @s ${spawnerItemPrefix}1 ${refundAmount}`);
+    } catch (error) {
+      console.error("Error executing remainder command:", error);
+    }
+    player.sendMessage(`\xA77Refunded \xA72\xA7l${refundAmount} level 1 spawners\xA77.`);
+  }
+}
+function upgradeSpawner(player, block, level, spawnerType, typeId, x, y, z) {
+  if (!player || !player.isValid)
+    return;
+  if (!isPlayerNearBlock(player, x, y, z, 10)) {
+    player.sendMessage("\xA7cYou are too far from the spawner.");
+    return;
+  }
+  const inventoryComp = player.getComponent("inventory");
+  if (!inventoryComp || !inventoryComp.container)
+    return;
+  const inventory = inventoryComp.container;
+  const spawnerItemPrefix = `mrleefy:${spawnerType}spawner`;
+  const newLevel = level + 1;
+  if (newLevel > 32) {
+    player.sendMessage("\xA74Cannot upgrade further. Maximum level reached.");
+    return;
+  }
+  let totalLevels = 0;
+  const refundQueue = [];
+  const spawnersToRemove = [];
+  const spawnerLevels = [];
+  for (let i = 0; i < inventory.size; i++) {
+    const item = inventory.getItem(i);
+    if (item && item.typeId.startsWith(spawnerItemPrefix)) {
+      const itemLevel = parseInt(item.typeId.replace(spawnerItemPrefix, "")) || 1;
+      spawnerLevels.push({ slot: i, item, level: itemLevel });
+    }
+  }
+  spawnerLevels.sort((a, b) => a.level - b.level);
+  for (const entry of spawnerLevels) {
+    const { slot, item, level: itemLevel } = entry;
+    if (itemLevel === 1) {
+      spawnersToRemove.push({ slot, item, amount: 1 });
+      totalLevels += 1;
+    } else if (totalLevels === 0) {
+      spawnersToRemove.push({ slot, item, amount: 1 });
+      totalLevels = itemLevel;
+      if (itemLevel > 1) {
+        refundQueue.push({ level: 1, amount: itemLevel - 1 });
+      }
+    }
+    if (totalLevels >= 1)
+      break;
+  }
+  if (totalLevels < 1) {
+    player.sendMessage(`\xA74You don't have enough spawners in your inventory to upgrade.`);
+    return;
+  }
+  for (const entry of spawnersToRemove) {
+    const { slot, item, amount } = entry;
+    if (item.amount <= amount) {
+      inventory.setItem(slot, null);
+    } else {
+      item.amount -= amount;
+      inventory.setItem(slot, item);
+    }
+  }
+  for (const refund of refundQueue) {
+    player.runCommand(`give @s ${spawnerItemPrefix}1 ${refund.amount}`);
+  }
+  block.setType(`${spawnerItemPrefix}${newLevel}`);
+  player.sendMessage(`\xA77Successfully upgraded to level \xA72\xA7l${newLevel}`);
+  const coordinates = `${x},${y},${z}`;
+  const existingData = spawnerDatabase.read(coordinates);
+  if (existingData) {
+    existingData.typeId = `${spawnerItemPrefix}${newLevel}`;
+    existingData.lastAccessed = Date.now();
+    spawnerDatabase.write(coordinates, existingData);
+  }
+  clearMaxedSpawnerCache(x, y, z);
+  try {
+    player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${x},y=${y},z=${z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
+    player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
+    player.runCommand(`summon mrleefy:spawnrule "mrleefy:${spawnerType}spawner${newLevel}" ${x} ${y} ${z}`);
+  } catch (error) {
+    console.error("Error executing command:", error);
+  }
+}
+function downgrade(player, block, level, spawnerType, percentrefund, refu, x, y, z) {
+  if (!player || !player.isValid)
+    return;
+  if (!isPlayerNearBlock(player, x, y, z, 10)) {
+    player.sendMessage("\xA7cYou are too far from the spawner.");
+    return;
+  }
+  if (!block || !block.isValid) {
+    player.sendMessage("\xA7cInvalid spawner block detected.");
+    return;
+  }
+  if (level <= 1) {
+    player.sendMessage("\xA7cCannot downgrade further. Minimum level reached.");
+    return;
+  }
+  const coordinates = `${x},${y},${z}`;
+  const dimension = block.dimension;
+  const currentBlock = dimension.getBlock(new Vector32(x, y, z));
+  if (!currentBlock || currentBlock.typeId !== `mrleefy:${spawnerType}spawner${level}`) {
+    player.sendMessage("\xA7cNo spawner block found at the recorded location, action canceled.");
+    return;
+  }
+  const inventoryComp = player.getComponent("inventory");
+  if (!inventoryComp || !inventoryComp.container)
+    return;
+  const inventory = inventoryComp.container;
+  let hasEmptySlot = false;
+  for (let i = 0; i < inventory.size; i++) {
+    if (!inventory.getItem(i)) {
+      hasEmptySlot = true;
+      break;
+    }
+  }
+  if (!hasEmptySlot) {
+    player.sendMessage(`\xA74You don't have enough space in your inventory to perform the downgrade.`);
+    return;
+  }
+  const newLevel = level - 1;
+  const newTypeId = `mrleefy:${spawnerType}spawner${newLevel}`;
+  block.setType(newTypeId);
+  const existingData = spawnerDatabase.read(coordinates);
+  if (existingData) {
+    existingData.typeId = newTypeId;
+    existingData.lastAccessed = Date.now();
+    spawnerDatabase.write(coordinates, existingData);
+  }
+  try {
+    player.runCommand(`execute as @e[type=mrleefy:spawnrule,x=${block.x},y=${block.y},z=${block.z},dx=0.1,dy=0.1,dz=0.1] run tag @s add desme`);
+    player.runCommand(`kill @e[type=mrleefy:spawnrule,tag=desme]`);
+    player.runCommand(`summon mrleefy:spawnrule "${newTypeId}" ${x} ${y} ${z}`);
+  } catch (error) {
+    console.error("Error updating spawnrule in downgrade:", error);
+  }
+  try {
+    player.runCommand(`give @s mrleefy:${spawnerType}spawner1 1`);
+  } catch (error) {
+    console.error("Error giving downgraded spawner:", error);
+  }
+  player.sendMessage(`\xA77Successfully downgraded to level \xA72\xA7l${newLevel}`);
+  try {
+    player.runCommand("playsound mob.irongolem.crack @s");
+  } catch (error) {
+  }
+  try {
+    dimension.spawnParticle(
+      "minecraft:villager_angry",
+      new Vector32(block.x + 0.5, block.y + 0.5, block.z + 0.5),
+      new MolangVariableMap()
+    );
+  } catch (e) {
+  }
+}
+function removeSpawnruleAtLocation(x, y, z, dimension) {
+  try {
+    const spawnruleEntities = dimension.getEntities({
+      type: "mrleefy:spawnrule",
+      location: { x, y, z },
+      maxDistance: 1
+    });
+    system2.run(() => {
+      for (const entity of spawnruleEntities) {
+        if (entity?.isValid) {
+          try {
+            entity.remove();
+          } catch (removeError) {
+            console.error(`Error removing spawnrule entity:`, removeError);
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error(`Error finding spawnrule at ${x},${y},${z}:`, error);
+  }
+}
+function enforcePlayerMemoryLimits() {
+  const now = Date.now();
+  if (activeForms.size > PLAYER_MEMORY_LIMITS.ACTIVE_FORMS) {
+    const entries = Array.from(activeForms.entries());
+    const toRemove = entries.slice(0, Math.floor(entries.length / 2));
+    toRemove.forEach(([key]) => activeForms.delete(key));
+  }
+  const formTimeout = 5 * 60 * 1e3;
+  for (const [key, activeData] of activeForms.entries()) {
+    const player = activeData.player || activeData;
+    const timestamp = activeData.timestamp || now;
+    if (!player || !player.isValid || now - timestamp > formTimeout) {
+      activeForms.delete(key);
+    }
+  }
+  if (messageTimes.size > PLAYER_MEMORY_LIMITS.MESSAGE_TIMES) {
+    const cutoffTime = now - TIMING.MESSAGE_DELAY * 2;
+    for (const [key, timestamp] of messageTimes.entries()) {
+      if (timestamp < cutoffTime) {
+        messageTimes.delete(key);
+      }
+    }
+    if (messageTimes.size > PLAYER_MEMORY_LIMITS.MESSAGE_TIMES) {
+      const entries = Array.from(messageTimes.entries());
+      entries.sort((a, b) => a[1] - b[1]);
+      const toRemove = entries.slice(0, messageTimes.size - PLAYER_MEMORY_LIMITS.MESSAGE_TIMES);
+      toRemove.forEach(([key]) => messageTimes.delete(key));
+    }
+  }
+  if (typeof interactionTimestamps !== "undefined" && interactionTimestamps.size > PLAYER_MEMORY_LIMITS.INTERACTION_TIMESTAMPS) {
+    const cutoffTime = now - INTERACTION_WINDOW_MILLIS * 2;
+    for (const [key, timestamps] of interactionTimestamps.entries()) {
+      if (Array.isArray(timestamps)) {
+        const validTimestamps = timestamps.filter((t) => now - t < INTERACTION_WINDOW_MILLIS);
+        if (validTimestamps.length === 0) {
+          interactionTimestamps.delete(key);
+        } else {
+          interactionTimestamps.set(key, validTimestamps);
+        }
+      }
+    }
+  }
+  if (typeof globalCooldowns !== "undefined" && globalCooldowns.size > PLAYER_MEMORY_LIMITS.COOLDOWNS) {
+    const cutoffTime = now - GLOBAL_COOLDOWN_MILLIS;
+    for (const [key, timestamp] of globalCooldowns.entries()) {
+      if (now - timestamp > GLOBAL_COOLDOWN_MILLIS) {
+        globalCooldowns.delete(key);
+      }
+    }
+    if (globalCooldowns.size > PLAYER_MEMORY_LIMITS.COOLDOWNS) {
+      const remainingEntries = Array.from(globalCooldowns.entries());
+      remainingEntries.sort((a, b) => a[1] - b[1]);
+      const toRemove = remainingEntries.slice(0, globalCooldowns.size - PLAYER_MEMORY_LIMITS.COOLDOWNS);
+      toRemove.forEach(([k]) => globalCooldowns.delete(k));
+    }
+  }
+  if (cooldowns.size > PLAYER_MEMORY_LIMITS.COOLDOWNS) {
+    const cutoffTime = now - cooldownTime;
+    for (const [key, timestamp] of cooldowns.entries()) {
+      if (now - timestamp > cooldownTime) {
+        cooldowns.delete(key);
+      }
+    }
+    if (cooldowns.size > PLAYER_MEMORY_LIMITS.COOLDOWNS) {
+      const remainingEntries = Array.from(cooldowns.entries());
+      remainingEntries.sort((a, b) => a[1] - b[1]);
+      const toRemove = remainingEntries.slice(0, cooldowns.size - PLAYER_MEMORY_LIMITS.COOLDOWNS);
+      toRemove.forEach(([k]) => cooldowns.delete(k));
+    }
+  }
+}
+system2.runInterval(() => {
+  try {
+    enforcePlayerMemoryLimits();
+  } catch (error) {
+    console.error("Player memory cleanup error:", error);
+  }
+}, PLAYER_CLEANUP_INTERVAL);
+function exit(player) {
+  return;
+}
+function updateSpawnerDatabaseOnInteraction(coordinates, typeId, player) {
+  try {
+    const existingData = spawnerDatabase.read(coordinates);
+    if (!existingData) {
+      const spawnerData = {
+        typeId,
+        placedBy: player.name || player.nameTag || "Unknown",
+        placedAt: Date.now(),
+        entitiesKilled: 0,
+        lastAccessed: Date.now(),
+        interactedAt: Date.now()
+      };
+      spawnerDatabase.write(coordinates, spawnerData);
+    } else {
+      existingData.typeId = typeId;
+      existingData.lastAccessed = Date.now();
+      existingData.interactedAt = existingData.interactedAt || Date.now();
+      if (existingData.placedBy === "Existing") {
+        existingData.placedBy = player.name || player.nameTag || "Unknown";
+        existingData.placedAt = Date.now();
+      }
+      spawnerDatabase.write(coordinates, existingData);
+    }
+  } catch (error) {
+    console.error(`Error updating spawner database on interaction: ${error}`);
+  }
+}
+
+// src/security-service.ts
+var SecurityService = class {
+  constructor() {
+    __publicField(this, "permissionLevels");
+    __publicField(this, "commandCooldowns");
+    __publicField(this, "suspiciousActivity");
+    __publicField(this, "bannedCommands");
+    __publicField(this, "ipWhitelist");
+    __publicField(this, "sessionTokens");
+    __publicField(this, "securityEvents");
+    this.permissionLevels = {
+      USER: 0,
+      ADMIN: 1,
+      OWNER: 2
+    };
+    this.commandCooldowns = /* @__PURE__ */ new Map();
+    this.suspiciousActivity = /* @__PURE__ */ new Map();
+    this.bannedCommands = /* @__PURE__ */ new Set([
+      "execute",
+      "function",
+      "gamerule",
+      "setblock",
+      "fill",
+      "clone",
+      "summon",
+      "give",
+      "tp",
+      "teleport",
+      "kill",
+      "effect",
+      "enchant"
+    ]);
+    this.ipWhitelist = /* @__PURE__ */ new Set();
+    this.sessionTokens = /* @__PURE__ */ new Map();
+    this.securityEvents = [];
+  }
+  /**
+   * Check if player has required permission level
+   * @param player - The player to check
+   * @param requiredLevel - Required permission level
+   * @returns True if player has permission
+   */
+  hasPermission(player, requiredLevel = this.permissionLevels.USER) {
+    if (!player?.isValid)
+      return false;
+    try {
+      if (player.hasTag(UI.OWNER_PERMISSION_TAG)) {
+        return true;
+      }
+      if (requiredLevel <= this.permissionLevels.ADMIN) {
+        if (player.hasTag(UI.ADMIN_PERMISSION_TAG)) {
+          return true;
+        }
+      }
+      if (requiredLevel <= this.permissionLevels.USER) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      performanceMonitor.recordError("permission_check", error.message);
+      return false;
+    }
+  }
+  /**
+   * Check if player has specific tag-based permission
+   * @param player - The player to check
+   * @param permissionTag - The permission tag to check
+   * @returns True if player has permission
+   */
+  hasTagPermission(player, permissionTag) {
+    if (!player?.isValid || !permissionTag)
+      return false;
+    try {
+      return player.hasTag(permissionTag);
+    } catch (error) {
+      performanceMonitor.recordError("tag_permission_check", error.message);
+      return false;
+    }
+  }
+  /**
+   * Grant permission to player
+   * @param granter - Player granting permission
+   * @param target - Player receiving permission
+   * @param permissionTag - Permission tag to grant
+   * @returns True if permission was granted
+   */
+  grantPermission(granter, target, permissionTag) {
+    if (!this.hasPermission(granter, this.permissionLevels.OWNER)) {
+      this.logSecurityEvent("unauthorized_permission_grant", granter, {
+        target: target?.name,
+        permission: permissionTag
+      });
+      return false;
+    }
+    if (!target?.isValid || !permissionTag)
+      return false;
+    try {
+      target.addTag(permissionTag);
+      this.logSecurityEvent("permission_granted", granter, {
+        target: target.name,
+        permission: permissionTag
+      });
+      return true;
+    } catch (error) {
+      performanceMonitor.recordError("permission_grant", error.message);
+      return false;
+    }
+  }
+  /**
+   * Revoke permission from player
+   * @param revoker - Player revoking permission
+   * @param target - Player losing permission
+   * @param permissionTag - Permission tag to revoke
+   * @returns True if permission was revoked
+   */
+  revokePermission(revoker, target, permissionTag) {
+    if (!this.hasPermission(revoker, this.permissionLevels.OWNER)) {
+      this.logSecurityEvent("unauthorized_permission_revoke", revoker, {
+        target: target?.name,
+        permission: permissionTag
+      });
+      return false;
+    }
+    if (!target?.isValid || !permissionTag)
+      return false;
+    try {
+      target.removeTag(permissionTag);
+      this.logSecurityEvent("permission_revoked", revoker, {
+        target: target.name,
+        permission: permissionTag
+      });
+      return true;
+    } catch (error) {
+      performanceMonitor.recordError("permission_revoke", error.message);
+      return false;
+    }
+  }
+  /**
+   * Validate command input for security
+   * @param player - Player executing command
+   * @param command - Command to validate
+   * @param args - Command arguments
+   * @returns Validation result with isValid and error message
+   */
+  validateCommand(player, command, args = []) {
+    const validation = {
+      isValid: true,
+      error: null,
+      warnings: []
+    };
+    try {
+      const cooldownKey = `${player.name}_${command}`;
+      const now = Date.now();
+      const lastUse = this.commandCooldowns.get(cooldownKey);
+      if (lastUse && now - lastUse < 1e3) {
+        validation.isValid = false;
+        validation.error = "Command cooldown active. Please wait before using this command again.";
+        return validation;
+      }
+      if (this.bannedCommands.has(command.toLowerCase())) {
+        if (!this.hasPermission(player, this.permissionLevels.OWNER)) {
+          validation.isValid = false;
+          validation.error = "This command is restricted.";
+          this.logSecurityEvent("banned_command_attempt", player, { command });
+          return validation;
+        }
+      }
+      const argValidation = this.validateCommandArguments(command, args);
+      if (!argValidation.isValid) {
+        validation.isValid = false;
+        validation.error = argValidation.error;
+        return validation;
+      }
+      const suspiciousPatterns = this.detectSuspiciousPatterns(args);
+      if (suspiciousPatterns.length > 0) {
+        validation.warnings.push(...suspiciousPatterns);
+        this.logSecurityEvent("suspicious_command_pattern", player, {
+          command,
+          args,
+          patterns: suspiciousPatterns
+        });
+      }
+      if (validation.isValid) {
+        this.commandCooldowns.set(cooldownKey, now);
+        if (this.commandCooldowns.size > 1e3) {
+          this.cleanupExpiredCooldowns(now);
+        }
+      }
+    } catch (error) {
+      performanceMonitor.recordError("command_validation", error.message);
+      validation.isValid = false;
+      validation.error = "Command validation failed due to internal error.";
+    }
+    return validation;
+  }
+  /**
+   * Validate command arguments
+   * @param command - Command name
+   * @param args - Command arguments
+   * @returns Validation result
+   */
+  validateCommandArguments(command, args) {
+    const result = { isValid: true, error: null };
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i];
+      if (arg.includes("&&") || arg.includes("||") || arg.includes(";")) {
+        result.isValid = false;
+        result.error = "Invalid command arguments detected.";
+        return result;
+      }
+      if (arg.includes("../") || arg.includes("..\\")) {
+        result.isValid = false;
+        result.error = "Invalid file path detected.";
+        return result;
+      }
+      if (command === "setlevel" && i === 0) {
+        const level = parseInt(arg);
+        if (isNaN(level) || level < VALIDATION.MIN_LEVEL || level > VALIDATION.MAX_LEVEL) {
+          result.isValid = false;
+          result.error = `Level must be between ${VALIDATION.MIN_LEVEL} and ${VALIDATION.MAX_LEVEL}.`;
+          return result;
+        }
+      }
+    }
+    return result;
+  }
+  /**
+   * Detect suspicious patterns in command arguments
+   * @param args - Command arguments
+   * @returns Array of suspicious patterns found
+   */
+  detectSuspiciousPatterns(args) {
+    const patterns = [];
+    const suspiciousStrings = [
+      "javascript:",
+      "data:",
+      "vbscript:",
+      "onload=",
+      "onerror=",
+      "<script",
+      "<\/script>",
+      "eval(",
+      "exec(",
+      "system(",
+      "127.0.0.1",
+      "localhost",
+      "0.0.0.0"
+    ];
+    args.forEach((arg) => {
+      suspiciousStrings.forEach((pattern) => {
+        if (arg.toLowerCase().includes(pattern)) {
+          patterns.push(`Suspicious pattern detected: ${pattern}`);
+        }
+      });
+    });
+    return patterns;
+  }
+  /**
+   * Check if player is rate limited
+   * @param player - Player to check
+   * @param action - Action being performed
+   * @param maxActions - Maximum actions allowed
+   * @param timeWindow - Time window in milliseconds
+   * @returns True if rate limited
+   */
+  isRateLimited(player, action, maxActions = 10, timeWindow = 6e4) {
+    const now = Date.now();
+    const key = `${player.name}_${action}`;
+    if (!this.suspiciousActivity.has(key)) {
+      this.suspiciousActivity.set(key, []);
+    }
+    const timestamps = this.suspiciousActivity.get(key);
+    const cutoff = now - timeWindow;
+    const recentTimestamps = timestamps.filter((ts) => ts > cutoff);
+    if (recentTimestamps.length >= maxActions) {
+      this.logSecurityEvent("rate_limit_exceeded", player, { action, maxActions, timeWindow });
+      return true;
+    }
+    recentTimestamps.push(now);
+    this.suspiciousActivity.set(key, recentTimestamps);
+    return false;
+  }
+  /**
+   * Clean up expired cooldowns
+   * @param now - Current timestamp
+   */
+  cleanupExpiredCooldowns(now) {
+    const cutoff = now - 6e4;
+    for (const [key, timestamp] of this.commandCooldowns.entries()) {
+      if (timestamp < cutoff) {
+        this.commandCooldowns.delete(key);
+      }
+    }
+  }
+  /**
+   * Log security event
+   * @param eventType - Type of security event
+   * @param player - Player involved
+   * @param details - Additional event details
+   */
+  logSecurityEvent(eventType, player, details = {}) {
+    const event = {
+      timestamp: Date.now(),
+      eventType,
+      playerId: player?.id,
+      playerName: player?.name,
+      details,
+      severity: this.getEventSeverity(eventType)
+    };
+    const logMessage = `[SECURITY] ${eventType}: Player ${player?.name || "Unknown"} - ${JSON.stringify(details)}`;
+    if (event.severity === "high") {
+      console.error(logMessage);
+    } else if (event.severity === "medium") {
+      console.warn(logMessage);
+    } else {
+      console.log(logMessage);
+    }
+    this.storeSecurityEvent(event);
+    performanceMonitor.recordEvent("securityEvents");
+  }
+  /**
+   * Get severity level for security event
+   * @param eventType - Type of event
+   * @returns Severity level (low, medium, high)
+   */
+  getEventSeverity(eventType) {
+    const highSeverity = [
+      "unauthorized_permission_grant",
+      "unauthorized_permission_revoke",
+      "banned_command_attempt",
+      "rate_limit_exceeded"
+    ];
+    const mediumSeverity = [
+      "suspicious_command_pattern",
+      "permission_granted",
+      "permission_revoked"
+    ];
+    if (highSeverity.includes(eventType))
+      return "high";
+    if (mediumSeverity.includes(eventType))
+      return "medium";
+    return "low";
+  }
+  /**
+   * Store security event for admin review
+   * @param event - Security event to store
+   */
+  storeSecurityEvent(event) {
+    if (!this.securityEvents) {
+      this.securityEvents = [];
+    }
+    this.securityEvents.push(event);
+    if (this.securityEvents.length > 1e3) {
+      this.securityEvents.shift();
+    }
+  }
+  /**
+   * Get recent security events
+   * @param count - Number of events to return
+   * @param severity - Filter by severity (optional)
+   * @returns Array of security events
+   */
+  getSecurityEvents(count = 50, severity = null) {
+    let events = this.securityEvents || [];
+    if (severity) {
+      events = events.filter((event) => event.severity === severity);
+    }
+    return events.slice(-count);
+  }
+  /**
+   * Get security statistics
+   * @returns Security statistics
+   */
+  getSecurityStats() {
+    const events = this.securityEvents || [];
+    const now = Date.now();
+    const lastHour = now - 60 * 60 * 1e3;
+    const recentEvents = events.filter((event) => event.timestamp > lastHour);
+    const stats = {
+      totalEvents: events.length,
+      recentEvents: recentEvents.length,
+      highSeverityEvents: recentEvents.filter((e) => e.severity === "high").length,
+      mediumSeverityEvents: recentEvents.filter((e) => e.severity === "medium").length,
+      lowSeverityEvents: recentEvents.filter((e) => e.severity === "low").length,
+      eventsPerHour: recentEvents.length,
+      activeRateLimits: this.suspiciousActivity.size,
+      activeCooldowns: this.commandCooldowns.size
+    };
+    return stats;
+  }
+  /**
+   * Clear security data (admin only)
+   * @param admin - Admin requesting the clear
+   * @returns True if cleared successfully
+   */
+  clearSecurityData(admin) {
+    if (!this.hasPermission(admin, this.permissionLevels.OWNER)) {
+      this.logSecurityEvent("unauthorized_security_clear", admin);
+      return false;
+    }
+    this.suspiciousActivity.clear();
+    this.commandCooldowns.clear();
+    this.securityEvents = [];
+    this.logSecurityEvent("security_data_cleared", admin);
+    return true;
+  }
+};
+var securityService = new SecurityService();
+
+// src/mobstacker-ui.ts
+var aaDatabase = new Database("AAValues");
+var MAX_ALLOWED_SPEED = 60;
+var MAX_ALLOWED_STACK = 5e3;
+var defaultAAValues = {
+  "1-10": { qty: 1, speed: 15, maxStack: 100 },
+  "11-20": { qty: 2, speed: 12, maxStack: 300 },
+  "21-30": { qty: 3, speed: 9, maxStack: 500 },
+  "31-31": { qty: 4, speed: 6, maxStack: 700 },
+  "32-32": { qty: 5, speed: 3, maxStack: 1e3 }
+};
+var aaLookup = Array.from({ length: 33 }, () => ({ qty: 0, speed: 0, maxStack: 100 }));
+function rebuildAALookup() {
+  try {
+    for (let i = 0; i < aaLookup.length; i++) {
+      aaLookup[i] = { qty: 0, speed: 0, maxStack: 100 };
+    }
+    aaDatabase.forEach((value, range) => {
+      if (!value)
+        return;
+      const { qty = 0, speed = 0, maxStack = 100 } = value;
+      const [min, max] = range.split("-").map(Number);
+      if (!isNaN(min) && !isNaN(max)) {
+        for (let lvl = min; lvl <= max && lvl < aaLookup.length; lvl++) {
+          aaLookup[lvl] = { qty, speed, maxStack };
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Failed to rebuild AA lookup:", error);
+    Object.entries(defaultAAValues).forEach(([range, data]) => {
+      const [min, max] = range.split("-").map(Number);
+      if (!isNaN(min) && !isNaN(max)) {
+        for (let lvl = min; lvl <= max && lvl < aaLookup.length; lvl++) {
+          aaLookup[lvl] = { ...data };
+        }
+      }
+    });
+  }
+}
+system3.run(() => {
+  system3.run(() => {
+    try {
+      if (aaDatabase.length === 0) {
+        Object.entries(defaultAAValues).forEach(([range, data]) => {
+          try {
+            aaDatabase.write(range, data);
+          } catch (error) {
+            console.error(`Failed to write default AA value for range ${range}:`, error);
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Failed to initialize AA database:", error);
+    }
+    rebuildAALookup();
+  });
+});
+function getAAValueForLevel(level) {
+  return aaLookup[level] || { qty: 0, speed: 0, maxStack: 100 };
+}
+world4.afterEvents.itemUse.subscribe((event) => {
+  const { source, itemStack } = event;
+  if (itemStack.typeId === "minecraft:blaze_rod" && source.hasTag("admin")) {
+    openAdminMenu(source);
+  }
+});
+function openAdminMenu(player) {
+  if (!player || !player.isValid) {
+    console.error(ERROR_MESSAGES.INVALID_PLAYER);
+    return;
+  }
+  if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+    player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+    securityService.logSecurityEvent("unauthorized_admin_access", player, {
+      attemptedAction: "openAdminMenu"
+    });
+    return;
+  }
+  const form = new ActionFormData2().title("Leefy Spawner Settings").body("\xA77Configure spawner behavior and performance settings\n\xA7c\u26A0 Performance settings require server/world restart").button("Spawner Settings", "textures/items/diamond").button("Entity Loot Tables", "textures/blocks/chest_front").button("Stack Radius", "textures/items/snowball").button("Loot Drop Rules", "textures/items/lever.png").button("Performance Settings \xA7c(Requires Restart)", "textures/items/clock_item").button("Spawner Statistics", "textures/items/book_normal").button("Teleport to Spawner", "textures/items/ender_pearl").button("Verify & Clean Database", "textures/items/book_normal").button(isLoggingEnabled() ? "Disable Logging" : "Enable Logging", "textures/items/paper");
+  form.show(player).then((r) => {
+    if (r.canceled)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      securityService.logSecurityEvent("unauthorized_admin_action", player, {
+        attemptedAction: `admin_menu_selection_${r.selection}`
+      });
+      return;
+    }
+    const commandValidation = securityService.validateCommand(player, "admin_action", [`selection_${r.selection}`]);
+    if (!commandValidation.isValid) {
+      player.sendMessage(`\xA7c${commandValidation.error}`);
+      return;
+    }
+    if (commandValidation.warnings.length > 0) {
+      commandValidation.warnings.forEach((warning) => {
+        console.warn(`Admin action warning for ${player.name}: ${warning}`);
+      });
+    }
+    system3.run(() => {
+      switch (r.selection) {
+        case 0:
+          openAAConfigForm(player);
+          break;
+        case 1:
+          openLootTableConfigForm(player);
+          break;
+        case 2:
+          openRadiusConfigForm(player);
+          break;
+        case 3:
+          openToggleLootDropForm(player);
+          break;
+        case 4:
+          openPerformanceConfigForm(player);
+          break;
+        case 5:
+          openSpawnerStatisticsForm(player);
+          break;
+        case 6:
+          openSpawnerTeleportForm(player);
+          break;
+        case 7:
+          verifyAndCleanSpawnerDatabase(player);
+          break;
+        case 8:
+          toggleLogging(player);
+          break;
+      }
+    });
+    securityService.logSecurityEvent("admin_action_executed", player, {
+      action: `selection_${r.selection}`,
+      warnings: commandValidation.warnings.length
+    });
+  }).catch((error) => {
+    console.error(`Error in openAdminMenu: ${error}`);
+    player.sendMessage("\xA7cAn error occurred while opening the admin menu.");
+    performanceMonitor.recordError("admin_menu_error", error instanceof Error ? error.message : String(error));
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openToggleLootDropForm(player) {
+  if (!player || !player.isValid)
+    return;
+  if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+    player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+    return;
+  }
+  const currentCap = configDatabase2.read("itemSpillCap") || 5;
+  const currentXpCap = configDatabase2.read("xpSpillCap") || 3;
+  const playerKillOnly = configDatabase2.read("playerKillOnly") ?? false;
+  new ModalFormData2().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", playerKillOnly).textField("Max item drops near stack:", "Enter integer (>=1)", `${currentCap}`).textField("Max XP orbs near stack:", "Enter integer (>=1)", `${currentXpCap}`).show(player).then((r) => {
+    if (r.canceled || !r.formValues)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    configDatabase2.write("playerKillOnly", r.formValues[0]);
+    const capInput = parseInt(r.formValues[1]);
+    if (!isNaN(capInput) && capInput >= 1)
+      configDatabase2.write("itemSpillCap", capInput);
+    const xpCapInput = parseInt(r.formValues[2]);
+    if (!isNaN(xpCapInput) && xpCapInput >= 1)
+      configDatabase2.write("xpSpillCap", xpCapInput);
+    player.sendMessage(`\xA7aLoot drop rules updated!`);
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openPerformanceConfigForm(player) {
+  if (!player || !player.isValid)
+    return;
+  if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+    player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+    return;
+  }
+  const currentActivationRadius = configDatabase2.read("performanceActivationRadius") || 50;
+  const currentMaxSpawns = configDatabase2.read("performanceMaxSpawns") || 25;
+  const currentRandomDelay = configDatabase2.read("performanceRandomDelay") ?? true;
+  const currentSpawnInterval = configDatabase2.read("performanceSpawnInterval") || 20;
+  const form = new ModalFormData2().title("Performance Settings").slider(
+    "\xA7bPlayer Activation Radius (blocks):\xA7r\n\xA77Distance players must be within to activate spawners.\n\xA77Lower = Better performance (spawners pause sooner)\n\xA7eDefault: 50 blocks\xA7r",
+    10,
+    128,
+    2,
+    currentActivationRadius
+  ).slider(
+    "\xA7bMax Spawns Per Cycle:\xA7r\n\xA77Maximum entities that can spawn per second.\n\xA77Lower = Smoother performance, slower spawning\n\xA7eDefault: 25 spawns/second\xA7r",
+    5,
+    100,
+    5,
+    currentMaxSpawns
+  ).toggle(
+    "\xA7bRandom Initial Spawn Delays:\xA7r\n\xA77Randomizes first spawn time (0-100% of interval).\n\xA77Prevents all spawners from syncing up.\n\xA7aRecommended: Enabled\xA7r",
+    currentRandomDelay
+  ).slider(
+    "\xA7bSpawn Check Interval (ticks):\xA7r\n\xA77How often to check spawners (20 ticks = 1 second).\n\xA77Lower = More responsive, higher CPU usage\n\xA7eDefault: 20 ticks\xA7r",
+    10,
+    100,
+    5,
+    currentSpawnInterval
+  );
+  form.show(player).then((r) => {
+    if (r.canceled || !r.formValues)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const parseOrPreserve = (raw, saved) => {
+      if (typeof raw === "number")
+        return raw;
+      const s = String(raw).trim();
+      if (s === "")
+        return saved;
+      const n = parseInt(s);
+      return isNaN(n) ? saved : n;
+    };
+    const activationRadius = parseOrPreserve(r.formValues[0], currentActivationRadius);
+    const maxSpawns = parseOrPreserve(r.formValues[1], currentMaxSpawns);
+    const randomDelay = r.formValues[2];
+    const spawnInterval = parseOrPreserve(r.formValues[3], currentSpawnInterval);
+    let updated = false;
+    let warnings = [];
+    if (activationRadius >= 10 && activationRadius <= 128) {
+      configDatabase2.write("performanceActivationRadius", activationRadius);
+      updated = true;
+    } else {
+      warnings.push("\xA7eInvalid activation radius - must be between 10-128 blocks");
+    }
+    if (maxSpawns >= 5 && maxSpawns <= 100) {
+      configDatabase2.write("performanceMaxSpawns", maxSpawns);
+      updated = true;
+    } else {
+      warnings.push("\xA7eInvalid max spawns - must be between 5-100");
+    }
+    configDatabase2.write("performanceRandomDelay", randomDelay);
+    updated = true;
+    if (spawnInterval >= 10 && spawnInterval <= 100) {
+      configDatabase2.write("performanceSpawnInterval", spawnInterval);
+      if (spawnInterval < 20) {
+        warnings.push("\xA7c\u26A0 Low spawn interval may increase CPU usage!");
+      }
+      updated = true;
+    } else {
+      warnings.push("\xA7eInvalid spawn interval - must be between 10-100 ticks");
+    }
+    if (updated) {
+      player.sendMessage("\xA7a\u2713 Performance settings saved to database!");
+      player.sendMessage("\xA7c\xA7l\u26A0 REQUIRES SERVER RESTART OR WORLD RESTART \u26A0");
+      player.sendMessage("\xA7c(Settings are cached at startup for maximum performance)");
+      player.sendMessage("\xA7e");
+      player.sendMessage("\xA7e\xBB Use \xA7f/reload \xA7eor restart world to apply changes");
+    }
+    warnings.forEach((warning) => player.sendMessage(warning));
+    if (warnings.length === 0 && updated) {
+      player.sendMessage("\xA77\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501");
+      player.sendMessage("\xA7bSettings Saved (Pending Restart):\xA7r");
+      player.sendMessage(`\xA77Activation Radius: \xA7e${activationRadius} blocks`);
+      player.sendMessage(`\xA77Max Spawns: \xA7e${maxSpawns}/second`);
+      player.sendMessage(`\xA77Random Delays: \xA7e${randomDelay ? "Enabled" : "Disabled"}`);
+      player.sendMessage(`\xA77Check Interval: \xA7e${spawnInterval} ticks`);
+      player.sendMessage("\xA77\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501");
+      player.sendMessage("\xA7c\xA7l\xBB RESTART REQUIRED TO ACTIVATE \xAB");
+    }
+  }).catch((error) => {
+    console.error(`Error in openPerformanceConfigForm: ${error}`);
+    player.sendMessage("\xA7cAn error occurred while updating performance settings.");
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openRadiusConfigForm(player) {
+  if (!player || !player.isValid) {
+    console.error("Invalid player provided to openRadiusConfigForm");
+    return;
+  }
+  const radius = configDatabase2.read("stackRadius") || 50;
+  new ModalFormData2().title("Configure Stack Radius").slider("Stacking Radius (blocks):", 1, 100, 1, radius).show(player).then((r) => {
+    if (r.canceled || !r.formValues)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      securityService.logSecurityEvent("unauthorized_config_change", player, {
+        configType: "radius"
+      });
+      return;
+    }
+    const newRadius = typeof r.formValues[0] === "number" ? r.formValues[0] : parseInt(r.formValues[0]);
+    if (!isNaN(newRadius) && newRadius > 0 && newRadius <= 100) {
+      configDatabase2.write("stackRadius", newRadius);
+      player.sendMessage(`\xA7aStacking radius updated to ${newRadius}!`);
+      securityService.logSecurityEvent("config_updated", player, {
+        configType: "stackRadius",
+        oldValue: UI.DEFAULT_STACK_RADIUS,
+        newValue: newRadius
+      });
+    } else {
+      player.sendMessage(ERROR_MESSAGES.INVALID_RADIUS);
+      securityService.logSecurityEvent("invalid_config_value", player, {
+        configType: "stackRadius",
+        attemptedValue: r.formValues[0]
+      });
+    }
+  }).catch((error) => {
+    console.error(`Error in openRadiusConfigForm: ${error}`);
+    player.sendMessage("\xA7cAn error occurred while updating the configuration.");
+    performanceMonitor.recordError("radius_config_error", error instanceof Error ? error.message : String(error));
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openLootTableConfigForm(player) {
+  if (!player || !player.isValid)
+    return;
+  if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+    player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+    return;
+  }
+  const form = new ActionFormData2().title("Loot Table Configuration").body("Select an entity to configure its loot table:");
+  const sortedMobs = [...validMobs].sort((a, b) => a.displayName.localeCompare(b.displayName));
+  sortedMobs.forEach((mob) => {
+    const iconPath = getSpawnerIconPath(mob.typeId, mob.displayName);
+    form.button(`Spawner ${mob.displayName}`, iconPath);
+  });
+  form.show(player).then((r) => {
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    if (!r.canceled && r.selection !== void 0)
+      openEntityLootConfigForm(player, sortedMobs[r.selection].typeId);
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openEntityLootConfigForm(player, entityId) {
+  if (!player || !player.isValid)
+    return;
+  if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+    player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+    return;
+  }
+  const lootManager = lootManagerInstance;
+  const table = lootManager.entities[entityId] || {};
+  const form = new ActionFormData2().title(entityId).body("Select an action:");
+  Object.keys(table).forEach((itemId) => form.button(`Edit ${itemId}`));
+  form.button("Add New Item", "textures/ui/plus.png");
+  form.button("XP Manager", "textures/items/experience_bottle.png");
+  form.show(player).then((r) => {
+    if (r.canceled || r.selection === void 0)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const itemCount = Object.keys(table).length;
+    if (r.selection < itemCount)
+      openEditLootItemForm(player, entityId, Object.keys(table)[r.selection]);
+    else if (r.selection === itemCount)
+      openAddNewLootItemForm(player, entityId);
+    else if (r.selection === itemCount + 1)
+      openXPDropManagerForm(player, entityId);
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openXPDropManagerForm(player, entityId) {
+  if (!player || !player.isValid)
+    return;
+  if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+    player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+    return;
+  }
+  const config = xpDropDatabase.read(entityId) || {};
+  new ModalFormData2().title(`XP Manager: ${entityId}`).textField("XP Amount:", "XP to drop on death", `${config.amount ?? 1}`).slider("Drop Chance (%)", 1, 100, 1, config.chance ?? 100).show(player).then((r) => {
+    if (r.canceled || !r.formValues)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const amount = parseInt(r.formValues[0]);
+    const chance = r.formValues[1];
+    if (!isNaN(amount) && amount >= 0) {
+      xpDropDatabase.write(entityId, { amount, chance });
+      player.sendMessage(`\xA7aXP drop updated for ${entityId}.`);
+    } else
+      player.sendMessage("\xA7cInvalid amount.");
+    openEntityLootConfigForm(player, entityId);
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openAddNewLootItemForm(player, entityId) {
+  if (!player || !player.isValid)
+    return;
+  if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+    player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+    return;
+  }
+  const lootManager = lootManagerInstance;
+  const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
+  new ModalFormData2().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", "").textField("Chance:", "[0.01-100]", "100").toggle("Enchantable?", false).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", "50").toggle("Stackable?", true).toggle("Random Durability?", false).show(player).then((r) => {
+    if (r.canceled || !r.formValues)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const [id, chance, ench, catIdx, enchChance, stack, dura] = r.formValues;
+    const pChance = parseFloat(chance);
+    if (!id || isNaN(pChance)) {
+      player.sendMessage("\xA7cInvalid Item ID or Chance.");
+      return;
+    }
+    if (!lootManager.entities[entityId])
+      lootManager.entities[entityId] = {};
+    lootManager.entities[entityId][id] = {
+      chance: pChance,
+      enchantments: ench && categories[catIdx] !== "None" ? { chance: parseFloat(enchChance), category: categories[catIdx] } : void 0,
+      stackable: stack,
+      randomdurability: dura
+    };
+    lootManager.saveLootTable(entityId);
+    player.sendMessage(`\xA7aAdded ${id} to ${entityId}'s loot table.`);
+    openEntityLootConfigForm(player, entityId);
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openEditLootItemForm(player, entityId, itemId) {
+  if (!player || !player.isValid)
+    return;
+  if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+    player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+    return;
+  }
+  const lootManager = lootManagerInstance;
+  const config = lootManager.entities[entityId][itemId];
+  const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
+  const catIdx = config.enchantments ? categories.indexOf(config.enchantments.category) : 0;
+  new ModalFormData2().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", `${config.chance}`).toggle("Enchantable?", !!config.enchantments).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", `${config.enchantments?.chance ?? 50}`).toggle("Stackable?", config.stackable !== false).toggle("Random Durability?", config.randomdurability === true).toggle("\xA7cDELETE THIS ITEM?\xA7r", false).show(player).then((r) => {
+    if (r.canceled || !r.formValues)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const [chance, ench, catIdxSelected, enchChance, stack, dura, del] = r.formValues;
+    if (del)
+      delete lootManager.entities[entityId][itemId];
+    else {
+      const pChance = parseFloat(chance);
+      if (isNaN(pChance)) {
+        player.sendMessage("\xA7cInvalid Chance.");
+        return;
+      }
+      config.chance = pChance;
+      config.enchantments = ench && categories[catIdxSelected] !== "None" ? { chance: parseFloat(enchChance), category: categories[catIdxSelected] } : void 0;
+      config.stackable = stack;
+      config.randomdurability = dura;
+    }
+    lootManager.saveLootTable(entityId);
+    player.sendMessage(`\xA7aLoot table for ${entityId} updated.`);
+    openEntityLootConfigForm(player, entityId);
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openAAConfigForm(player) {
+  if (!player || !player.isValid) {
+    console.error(ERROR_MESSAGES.INVALID_PLAYER);
+    return;
+  }
+  if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+    player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+    securityService.logSecurityEvent("unauthorized_aa_config", player);
+    return;
+  }
+  const form = new ModalFormData2().title("Spawner Settings");
+  const entries = [];
+  aaDatabase.forEach((val, key) => entries.push([key, val]));
+  form.textField("Add New Range:", "e.g., 1-10 or 33-33", "");
+  form.textField("New Range - Quantity:", "e.g., 1", "");
+  form.textField("New Range - Speed (sec):", "e.g., 10", "");
+  form.textField("New Range - Max Stack:", "e.g., 100", "");
+  entries.forEach(([range, { qty, speed, maxStack }]) => {
+    form.textField(`Qty for ${range}:`, `Update`, `${qty}`);
+    form.textField(`Speed for ${range}:`, `Update`, `${speed}`);
+    form.textField(`Max Stack for ${range}:`, `Update`, `${maxStack}`);
+    form.toggle(`\xA7cRemove Range ${range}?\xA7r`, false);
+  });
+  form.show(player).then((r) => {
+    if (r.canceled || !r.formValues)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const vals = r.formValues;
+    if (typeof vals[0] === "string" && vals[0].trim()) {
+      let range = vals[0].trim();
+      if (!range.includes("-"))
+        range = `${range}-${range}`;
+      const parseOrDefault = (raw, fallback) => {
+        const s = String(raw).trim();
+        if (s === "")
+          return fallback;
+        const n = parseInt(s);
+        return isNaN(n) ? fallback : n;
+      };
+      aaDatabase.write(range, {
+        qty: Math.max(1, parseOrDefault(vals[1], 1)),
+        speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrDefault(vals[2], 10))),
+        maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrDefault(vals[3], 100)))
+      });
+    }
+    let offset = 4;
+    entries.forEach(([range, currentVal]) => {
+      if (vals[offset + 3]) {
+        aaDatabase.delete(range);
+      } else {
+        const savedQty = currentVal?.qty ?? 1;
+        const savedSpeed = currentVal?.speed ?? 10;
+        const savedMaxStack = currentVal?.maxStack ?? 100;
+        const parseOrPreserve = (raw, saved) => {
+          const s = String(raw).trim();
+          if (s === "")
+            return saved;
+          const n = parseInt(s);
+          return isNaN(n) ? saved : n;
+        };
+        aaDatabase.write(range, {
+          qty: Math.max(1, parseOrPreserve(vals[offset], savedQty)),
+          speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrPreserve(vals[offset + 1], savedSpeed))),
+          maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrPreserve(vals[offset + 2], savedMaxStack)))
+        });
+      }
+      offset += 4;
+    });
+    rebuildAALookup();
+    clearSpawnerParseCache();
+    player.sendMessage("\xA7aSpawner settings updated!");
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function toggleLogging(player) {
+  try {
+    if (!player || !player.isValid) {
+      console.error("Invalid player provided to toggleLogging");
+      return;
+    }
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    if (isLoggingEnabled()) {
+      disableLogging();
+      player.sendMessage("\xA7cLogging has been disabled for all spawner activities.");
+    } else {
+      enableLogging();
+      player.sendMessage("\xA7aLogging has been enabled for all spawner activities.");
+    }
+    system3.run(() => openAdminMenu(player));
+  } catch (error) {
+    console.error(`Error in toggleLogging: ${error}`);
+    player.sendMessage("\xA7cAn error occurred while toggling logging.");
+  }
+}
+function openSpawnerStatisticsForm(player) {
+  try {
+    if (!player || !player.isValid) {
+      console.error("Invalid player provided to openSpawnerStatisticsForm");
+      return;
+    }
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    debugLog2("[MOBSTACKER] Loading database stats to merge with local data");
+    loadSpawnerStatistics();
+    debugLog2(`Stats available: ${spawnerStatistics.entitiesKilled.size} entities, ${spawnerStatistics.playerStats.size} players`);
+    calculateSpawnerTotals();
+    const totalKills = Array.from(spawnerStatistics.entitiesKilled.values()).reduce((sum, kills) => sum + kills, 0);
+    const onlinePlayersCount = world4.getAllPlayers().length;
+    const uniquePlayersCount = spawnerStatistics.playerStats.size;
+    const totalKillsFormatted = totalKills.toLocaleString();
+    const uptimeMinutes = Math.floor((Date.now() - (performanceMetrics.lastReset || Date.now())) / 1e3 / 60);
+    const uptimeHours = Math.floor(uptimeMinutes / 60);
+    const uptimeDisplay = uptimeHours > 0 ? `${uptimeHours}h ${uptimeMinutes % 60}m` : `${uptimeMinutes}m`;
+    const serverLoad = spawnerStatistics.totalSpawners > 0 ? Math.min(100, Math.max(0, spawnerStatistics.totalEntities / spawnerStatistics.totalSpawners * 25)).toFixed(1) : "0";
+    const minecraftTickTime = 50;
+    const tickEfficiency = performanceMetrics.averageProcessingTime > 0 ? Math.min(100, performanceMetrics.averageProcessingTime / minecraftTickTime * 100).toFixed(1) : "0";
+    const memoryUsage = getMemoryUsage();
+    let memoryLevel;
+    if (memoryUsage < 50) {
+      memoryLevel = "Low";
+    } else if (memoryUsage < 150) {
+      memoryLevel = "Medium";
+    } else if (memoryUsage < 300) {
+      memoryLevel = "High";
+    } else {
+      memoryLevel = "Very High";
+    }
+    const topMobs = Array.from(spawnerStatistics.entitiesKilled.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const topPlayers = Array.from(spawnerStatistics.playerStats.entries()).sort((a, b) => (b[1].entitiesKilled || 0) - (a[1].entitiesKilled || 0)).slice(0, 10);
+    const totalSpawnersPlaced = spawnerDatabase.length;
+    const loadedSpawnersCount = spawnerStatistics.totalSpawners;
+    let bodyText = `\xA76\xA7lSERVER STATISTICS\xA7r
+
+`;
+    bodyText += `\xA7bSpawner Blocks Placed (Total): \xA7f${totalSpawnersPlaced.toLocaleString()}
+`;
+    bodyText += `\xA7bLoaded/Ticking Spawners: \xA7f${loadedSpawnersCount.toLocaleString()}
+`;
+    bodyText += `\xA7bLoaded Mob Stacks (Physical): \xA7f${spawnerStatistics.totalEntities.toLocaleString()}
+`;
+    bodyText += `\xA7bLoaded Mobs (Total inside Stacks): \xA7f${spawnerStatistics.totalVirtualEntities.toLocaleString()}
+`;
+    bodyText += `\xA7bOnline Players: \xA7f${onlinePlayersCount}
+`;
+    bodyText += `\xA7bPlayers with Kill History: \xA7f${uniquePlayersCount}
+`;
+    bodyText += `\xA7bActive Spawner Chunks: \xA7f${ACTIVE_CHUNKS.size}
+`;
+    bodyText += `\xA7bServer Load (Entity Density): \xA7f${serverLoad}% \xA77(Target < 4 mobs/spawner)
+`;
+    bodyText += `\xA7bServer Uptime: \xA7f${uptimeDisplay}
+`;
+    bodyText += `\xA7bMemory Usage (Internal Units): \xA7f${memoryLevel} (${memoryUsage.toLocaleString()} / 200 warning)
+`;
+    bodyText += `\xA7bTick Usage (CPU load): \xA7f${tickEfficiency}% (${performanceMetrics.averageProcessingTime.toFixed(2)}ms of 50ms tick)
+`;
+    bodyText += `\xA7bTotal Kills: \xA7f${totalKillsFormatted}
+
+`;
+    bodyText += `\xA76\xA7lTOP 10 MOST KILLED MOBS\xA7r
+`;
+    if (topMobs.length > 0) {
+      topMobs.forEach((mob, index) => {
+        const mobName = getMobDisplayName(mob[0]) || "Unknown";
+        const rank = index + 1;
+        bodyText += `\xA77${rank}. \xA7f${mobName} \xA77(${mob[1].toLocaleString()} kills)
+`;
+      });
+    } else {
+      bodyText += `\xA77No kills recorded yet
+`;
+    }
+    bodyText += `
+`;
+    bodyText += `\xA76\xA7lTOP 10 KILLERS\xA7r
+`;
+    if (topPlayers.length > 0) {
+      topPlayers.forEach((playerEntry, index) => {
+        const rank = index + 1;
+        const totalKillsCount = playerEntry[1].entitiesKilled?.toLocaleString() || 0;
+        bodyText += `\xA77${rank}. \xA7f${playerEntry[0]} \xA77(${totalKillsCount} total kills)
+`;
+        const playerTopKills = getPlayerTopKills(playerEntry[1], 3);
+        playerTopKills.forEach((killType) => {
+          bodyText += `   \xA78- \xA77${killType.displayName}: ${killType.count.toLocaleString()}
+`;
+        });
+        bodyText += `
+`;
+      });
+    } else {
+      bodyText += `\xA77No player kills recorded yet
+`;
+    }
+    const form = new ActionFormData2().title("\xA78Spawner Server Statistics").body(bodyText).button("\xA78Close", "textures/ui/cancel").button("\xA7bView Player Stats", "textures/items/name_tag").button("\xA7cReset All Statistics", "textures/ui/realms_red_x");
+    form.show(player).then((response) => {
+      if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+        player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+        return;
+      }
+      if (response.canceled || response.selection === 0)
+        return;
+      if (response.selection === 1) {
+        openPlayerStatsSelectionForm(player);
+        return;
+      }
+      if (response.selection === 2) {
+        const confirmForm = new ModalFormData2().title("Confirm Reset").textField("Confirm", "Type 'RESET' to confirm", { defaultValue: "" }).submitButton("CONFIRM");
+        confirmForm.show(player).then((confirmResponse) => {
+          if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+            player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+            return;
+          }
+          if (confirmResponse.canceled || !confirmResponse.formValues)
+            return;
+          const confirmationText = confirmResponse.formValues[0]?.toUpperCase().trim();
+          if (confirmationText === "RESET") {
+            resetSpawnerStatistics();
+            player.sendMessage("\xA7a\u2713 All statistics have been reset successfully!");
+          } else {
+            player.sendMessage("\xA7cReset cancelled - confirmation code was incorrect.");
+          }
+        }).catch((error) => {
+          console.error(`Error in spawner stats reset confirmation: ${error}`);
+        });
+      }
+    }).catch((error) => {
+      console.error(`Error in openSpawnerStatisticsForm: ${error}`);
+      player.sendMessage("\xA7cAn error occurred while showing statistics.");
+    });
+  } catch (error) {
+    console.error(`Critical error in openSpawnerStatisticsForm: ${error}`);
+    player.sendMessage("\xA7cA critical error occurred. Please try again.");
+  }
+}
+function openSpawnerTeleportForm(player) {
+  try {
+    if (!player || !player.isValid) {
+      console.error("Invalid player provided to openSpawnerTeleportForm");
+      return;
+    }
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const playerSpawners = /* @__PURE__ */ new Map();
+    const allSpawners = {};
+    const allSpawnerKeys = spawnerDatabase.keys();
+    for (const key of allSpawnerKeys) {
+      const spawnerData = spawnerDatabase.read(key);
+      if (spawnerData && spawnerData.placedBy) {
+        const playerName = spawnerData.placedBy;
+        if (!playerSpawners.has(playerName)) {
+          playerSpawners.set(playerName, []);
+        }
+        const details = {
+          location: key,
+          typeId: spawnerData.typeId,
+          placedAt: spawnerData.placedAt
+        };
+        playerSpawners.get(playerName).push(details);
+        allSpawners[key] = spawnerData;
+      }
+    }
+    if (playerSpawners.size === 0) {
+      player.sendMessage("\xA7cNo active spawners found in the database.");
+      return;
+    }
+    const totalSpawners = Array.from(playerSpawners.values()).reduce((sum, spawners) => sum + spawners.length, 0);
+    const sortedPlayers = Array.from(playerSpawners.entries()).sort((a, b) => b[1].length - a[1].length);
+    const form = new ActionFormData2().title("Spawner Teleport System").body(`Database size: ${totalSpawners} spawners across ${playerSpawners.size} players. Select a player to view their spawners:`);
+    form.button("\u{1F50D} Search by Location", "textures/ui/magnifying_glass");
+    sortedPlayers.forEach(([playerName, spawners]) => {
+      form.button(`\u{1F464} ${playerName} (${spawners.length} spawners)`, "textures/items/name_tag");
+    });
+    form.show(player).then((r) => {
+      if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+        player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+        return;
+      }
+      if (r.canceled || r.selection === void 0)
+        return;
+      if (r.selection === 0) {
+        openLocationSearchForm(player, allSpawners);
+        return;
+      }
+      const selectedPlayerData = sortedPlayers[r.selection - 1];
+      if (selectedPlayerData) {
+        const [selectedPlayer, spawners] = selectedPlayerData;
+        openSpawnerSelectionForm(player, selectedPlayer, spawners);
+      }
+    }).catch((error) => {
+      console.error(`Error in openSpawnerTeleportForm: ${error}`);
+      player.sendMessage("\xA7cAn error occurred while showing the spawner teleport form.");
+    });
+  } catch (error) {
+    console.error(`Critical error in openSpawnerTeleportForm: ${error}`);
+    player.sendMessage("\xA7cA critical error occurred. Please try again.");
+  }
+}
+function openSpawnerSelectionForm(player, playerName, spawners) {
+  try {
+    if (!player || !player.isValid)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const validSpawners = spawners.filter((spawner) => spawner !== void 0 && spawner !== null);
+    const spawnerDetails = validSpawners.map((spawner) => {
+      let x = 0, y = 0, z = 0;
+      try {
+        if (spawner.location && typeof spawner.location === "string") {
+          const coords = spawner.location.split(",").map((coord) => parseFloat(coord.trim()));
+          if (coords.length >= 3 && coords.every((coord) => !isNaN(coord))) {
+            [x, y, z] = coords;
+          }
+        }
+      } catch (error) {
+        debugLog2(`Error parsing location for spawner: ${spawner.location}, error: ${error}`);
+      }
+      const typeId = spawner.typeId || "unknown_spawner";
+      const levelMatch = typeId.match(/spawner(\d+)/);
+      const level = levelMatch ? parseInt(levelMatch[1]) : 1;
+      const mobType = typeId.replace("mrleefy:", "").replace(/spawner\d+/, "").replace(/_/g, "");
+      const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || "Unknown";
+      const info = getEntitiesInfoNearSpawner(x, y, z);
+      return {
+        ...spawner,
+        displayName,
+        level,
+        physicalEntities: info.physicalCount,
+        virtualEntities: info.virtualCount,
+        x,
+        y,
+        z
+      };
+    });
+    const totalPhysical = spawnerDetails.reduce((sum, s) => sum + (s.physicalEntities || 0), 0);
+    const totalVirtual = spawnerDetails.reduce((sum, s) => sum + (s.virtualEntities || 0), 0);
+    const avgLevel = spawnerDetails.length > 0 ? spawnerDetails.reduce((sum, s) => sum + (s.level || 1), 0) / spawnerDetails.length : 0;
+    const form = new ActionFormData2().title(`${playerName}'s Spawners`).body(`Total: ${spawnerDetails.length} spawners | Active: ${totalPhysical} stacks (${totalVirtual} mobs) | Avg Level: ${avgLevel.toFixed(1)}`);
+    spawnerDetails.forEach((spawner) => {
+      const status = spawner.physicalEntities > 0 ? `\xA7a[Active: ${spawner.physicalEntities} stack (${spawner.virtualEntities} mobs)]` : "\xA78[Idle]";
+      const iconPath = getSpawnerIconPath(spawner.typeId, spawner.displayName);
+      form.button(`${status} \xA77Lvl ${spawner.level} \xA7f${spawner.displayName}
+\xA78Coord: ${spawner.x}, ${spawner.y}, ${spawner.z}`, iconPath);
+    });
+    form.button("\xA76\u{1F4CA} View Player Statistics", "textures/ui/book_normal");
+    form.show(player).then((r) => {
+      if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+        player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+        return;
+      }
+      if (r.canceled || r.selection === void 0)
+        return;
+      if (r.selection === spawnerDetails.length) {
+        openSpawnerInfoForm(player, playerName, spawnerDetails);
+        return;
+      }
+      const selectedDetail = spawnerDetails[r.selection];
+      if (selectedDetail) {
+        teleportToSpawner(player, selectedDetail.x, selectedDetail.y, selectedDetail.z);
+      }
+    }).catch((error) => {
+      console.error(`Error in openSpawnerSelectionForm: ${error}`);
+      player.sendMessage("\xA7cAn error occurred while opening selection form.");
+    });
+  } catch (error) {
+    console.error(`Critical error in openSpawnerSelectionForm: ${error}`);
+    player.sendMessage("\xA7cA critical error occurred. Please try again.");
+  }
+}
+function teleportToSpawner(player, x, y, z) {
+  try {
+    if (!player || !player.isValid)
+      return;
+    player.sendMessage(`\xA7aTeleporting to spawner at ${x}, ${y}, ${z}...`);
+    system3.run(() => {
+      try {
+        const dimension = player.dimension;
+        player.teleport({ x: x + 0.5, y: y + 1.5, z: z + 0.5 }, { dimension });
+      } catch (teleportError) {
+        console.error(`Teleport logic failed: ${teleportError}`);
+        player.sendMessage(`\xA7cTeleport failed. Check if coordinate is in a loaded area or try again.`);
+      }
+    });
+  } catch (error) {
+    console.error(`Error in teleportToSpawner: ${error}`);
+    player.sendMessage("\xA7cA critical error occurred during teleportation.");
+  }
+}
+function extractStackSize(nameTag) {
+  if (!nameTag)
+    return 1;
+  const match = nameTag.match(/x(\d+)/);
+  return match ? parseInt(match[1], 10) : 1;
+}
+function getEntitiesInfoNearSpawner(x, y, z) {
+  try {
+    const overworld = world4.getDimension("overworld");
+    const location = { x, y, z };
+    const nearbyEntities = overworld.getEntities({
+      location,
+      maxDistance: 10
+    });
+    let physicalCount = 0;
+    let virtualCount = 0;
+    nearbyEntities.forEach((entity) => {
+      if (entity?.isValid && entity.typeId.startsWith("mrleefy:")) {
+        if (entity.nameTag && entity.nameTag.includes("x")) {
+          physicalCount++;
+          virtualCount += extractStackSize(entity.nameTag);
+        }
+      }
+    });
+    return { physicalCount, virtualCount };
+  } catch (error) {
+    return { physicalCount: 0, virtualCount: 0 };
+  }
+}
+function openLocationSearchForm(player, allSpawners) {
+  try {
+    if (!player || !player.isValid)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const playerLocation = player.location;
+    const playerX = Math.round(playerLocation.x);
+    const playerZ = Math.round(playerLocation.z);
+    const form = new ModalFormData2().title("Search Spawners by Location").toggle("Use current location", true).textField("X Coordinate", "Enter X coordinate", playerX.toString()).textField("Z Coordinate", "Enter Z coordinate", playerZ.toString()).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", true);
+    form.show(player).then((r) => {
+      if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+        player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+        return;
+      }
+      if (r.canceled || !r.formValues)
+        return;
+      const useCurrentLocation = r.formValues[0];
+      const enteredX = r.formValues[1];
+      const enteredZ = r.formValues[2];
+      const radius = r.formValues[3];
+      const includeInactive = r.formValues[4];
+      const searchX = useCurrentLocation ? playerX : parseInt(enteredX);
+      const searchZ = useCurrentLocation ? playerZ : parseInt(enteredZ);
+      if (isNaN(searchX) || isNaN(searchZ)) {
+        player.sendMessage("\xA7cInvalid coordinates entered.");
+        return;
+      }
+      const results = [];
+      Object.entries(allSpawners).forEach(([coordinates, data]) => {
+        try {
+          const [x, y, z] = coordinates.split(",").map((coord) => parseFloat(coord.trim()));
+          const distance = Math.sqrt(Math.pow(x - searchX, 2) + Math.pow(z - searchZ, 2));
+          if (distance <= radius) {
+            const info = getEntitiesInfoNearSpawner(x, y, z);
+            if (info.physicalCount > 0 || includeInactive) {
+              results.push({
+                coordinates,
+                data,
+                distance,
+                physicalCount: info.physicalCount,
+                virtualCount: info.virtualCount,
+                x,
+                y,
+                z
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Error matching distance search coords:", e);
+        }
+      });
+      results.sort((a, b) => a.distance - b.distance);
+      openLocationResultsForm(player, results, searchX, searchZ, radius);
+    }).catch((error) => {
+      console.error(`Error in openLocationSearchForm: ${error}`);
+      player.sendMessage("\xA7cAn error occurred during search.");
+    });
+  } catch (error) {
+    console.error(`Critical error in openLocationSearchForm: ${error}`);
+    player.sendMessage("\xA7cA critical error occurred. Please try again.");
+  }
+}
+function openLocationResultsForm(player, spawners, searchX, searchZ, radius) {
+  try {
+    if (!player || !player.isValid)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const validSpawners = [];
+    const form = new ActionFormData2().title("Search Results").body(`Found ${spawners.length} spawners within ${radius} blocks of ${searchX}, ${searchZ}:`);
+    spawners.forEach((result) => {
+      const spawner = result.data;
+      const status = result.physicalCount > 0 ? `\xA7a[Active: ${result.physicalCount} stack (${result.virtualCount} mobs)]` : "\xA78[Idle]";
+      const typeId = spawner.typeId || "unknown";
+      const levelMatch = typeId.match(/spawner(\d+)/);
+      const level = levelMatch ? levelMatch[1] : "1";
+      const mobType = typeId.replace("mrleefy:", "").replace(/spawner\d+/, "").replace(/_/g, "");
+      const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || "Unknown";
+      const iconPath = getSpawnerIconPath(typeId, displayName);
+      form.button(`${status} \xA77Lvl ${level} \xA7f${displayName}
+\xA77Player: ${spawner.placedBy || "Unknown"} (${Math.round(result.distance)}m away)`, iconPath);
+      validSpawners.push(result);
+    });
+    form.show(player).then((r) => {
+      if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+        player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+        return;
+      }
+      if (r.canceled || r.selection === void 0)
+        return;
+      const selectedSpawner = validSpawners[r.selection];
+      if (selectedSpawner) {
+        teleportToSpawner(player, selectedSpawner.x, selectedSpawner.y, selectedSpawner.z);
+      }
+    }).catch((error) => {
+      console.error(`Error in openLocationResultsForm: ${error}`);
+      player.sendMessage("\xA7cAn error occurred while selecting spawner from search results.");
+    });
+  } catch (error) {
+    console.error(`Critical error in openLocationResultsForm: ${error}`);
+    player.sendMessage("\xA7cA critical error occurred. Please try again.");
+  }
+}
+function getMobDisplayName(entityTypeId) {
+  const found = validMobs.find((m) => m.typeId === entityTypeId);
+  if (found) {
+    return found.displayName;
+  }
+  const name = entityTypeId.replace("mrleefy:", "").replace("still", "");
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+function getSpawnerIconPath(typeId, displayName) {
+  const cleanTypeId = typeId.replace(/\d+$/, "");
+  const crawlerBlockMap = {
+    "mrleefy:coalcrawlerspawner": "textures/blocks/iron",
+    "mrleefy:ironcrawlerspawner": "textures/blocks/ironcrawlerspawner",
+    "mrleefy:goldcrawlerspawner": "textures/blocks/goldcrawlerspawner",
+    "mrleefy:diamondcrawlerspawner": "textures/blocks/diamondcrawlerspawner",
+    "mrleefy:glowstonecrawlerspawner": "textures/blocks/gold",
+    "mrleefy:obsidiancrawlerspawner": "textures/blocks/diamond",
+    "mrleefy:icecrawlerspawner": "textures/blocks/emerald",
+    "mrleefy:spongecrawlerspawner": "textures/blocks/netherite",
+    "mrleefy:lapiscrawlerspawner": "textures/blocks/lapis",
+    "mrleefy:redstonecrawlerspawner": "textures/blocks/redstone",
+    "mrleefy:coppercrawlerspawner": "textures/blocks/copper",
+    "mrleefy:quartzcrawlerspawner": "textures/blocks/quartz",
+    "mrleefy:amethystcrawlerspawner": "textures/blocks/amethyst",
+    // Also map still crawler types
+    "mrleefy:coalcrawlerstill": "textures/blocks/iron",
+    "mrleefy:ironcrawlerstill": "textures/blocks/ironcrawlerspawner",
+    "mrleefy:goldcrawlerstill": "textures/blocks/goldcrawlerspawner",
+    "mrleefy:diamondcrawlerstill": "textures/blocks/diamondcrawlerspawner",
+    "mrleefy:glowstonecrawlerstill": "textures/blocks/gold",
+    "mrleefy:obsidiancrawlerstill": "textures/blocks/diamond",
+    "mrleefy:icecrawlerstill": "textures/blocks/emerald",
+    "mrleefy:spongecrawlerstill": "textures/blocks/netherite",
+    "mrleefy:lapiscrawlerstill": "textures/blocks/lapis",
+    "mrleefy:redstonecrawlerstill": "textures/blocks/redstone",
+    "mrleefy:coppercrawlerstill": "textures/blocks/copper",
+    "mrleefy:quartzcrawlerstill": "textures/blocks/quartz",
+    "mrleefy:amethystcrawlerstill": "textures/blocks/amethyst"
+  };
+  if (crawlerBlockMap[cleanTypeId]) {
+    return `${crawlerBlockMap[cleanTypeId]}.png`;
+  }
+  let iconName = displayName.toLowerCase().replace(/ /g, "_");
+  if (iconName === "wither_skeleton")
+    iconName = "witherskeleton";
+  return `textures/blocks/icons/${iconName}.png`;
+}
+function verifyAndCleanSpawnerDatabase(player) {
+  try {
+    if (!player || !player.isValid) {
+      console.error("Invalid player provided to verifyAndCleanSpawnerDatabase");
+      return;
+    }
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const confirmForm = new MessageFormData().title("\xA74\xA7lDatabase Cleanup Warning").body(
+      "\xA7c\xA7lWARNING:\xA7r\n\nThis operation will verify all spawners stored in the database by temporarily loading their chunks via ticking areas.\n\n\xA7eWhat it does:\xA7r\n\u2022 Checks if a spawner block actually exists at each stored location.\n\u2022 Deletes old spawner coordinates from the database if the block is gone.\n\u2022 Removes any orphaned/stuck stacked entities at those locations.\n\n\xA7cThis may cause temporary server lag during the scan.\xA7r\n\nAre you sure you want to proceed?"
+    ).button1("\xA7aYes, Start Scan").button2("\xA7cNo, Cancel");
+    confirmForm.show(player).then((r) => {
+      if (r.canceled || r.selection !== 0) {
+        player.sendMessage("\xA7eDatabase cleanup cancelled.");
+        return;
+      }
+      player.sendMessage("\xA7aStarting database verification and cleanup...");
+      player.sendMessage("\xA77This process runs in batches to prevent lag.");
+      const overworld = world4.getDimension("overworld");
+      const allSpawnerKeys = spawnerDatabase.keys();
+      const totalCount = allSpawnerKeys.length;
+      let currentIndex = 0;
+      let verifiedSpawners = 0;
+      let removedBlocks = 0;
+      let removedEntities = 0;
+      let processedCount = 0;
+      const BATCH_SIZE = 5;
+      const processBatch = () => {
+        const batchLimit = Math.min(currentIndex + BATCH_SIZE, totalCount);
+        for (let i = currentIndex; i < batchLimit; i++) {
+          const coordinates = allSpawnerKeys[i];
+          try {
+            const [x, y, z] = coordinates.split(",").map((coord) => parseFloat(coord.trim()));
+            const tickingAreaName = `db_verify_${x}_${y}_${z}`;
+            player.runCommand(`tickingarea add ${x - 2} ${y - 2} ${z - 2} ${x + 2} ${y + 2} ${z + 2} ${tickingAreaName} true`);
+            system3.runTimeout(() => {
+              try {
+                const block = overworld.getBlock({ x, y, z });
+                if (!block || !(block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner") && !block.typeId.endsWith("_display"))) {
+                  spawnerDatabase.delete(coordinates);
+                  removedBlocks++;
+                  debugLog2(`[CLEANUP] Deleted stale spawner coordinates from DB: ${coordinates}`);
+                  const nearbyEntities = overworld.getEntities({
+                    location: { x, y, z },
+                    maxDistance: 8
+                  });
+                  nearbyEntities.forEach((entity) => {
+                    if (entity?.isValid && entity.typeId.startsWith("mrleefy:") && entity.typeId.endsWith("still")) {
+                      entity.remove();
+                      removedEntities++;
+                      debugLog2(`[CLEANUP] Removed orphaned spawnrule entity: ${entity.typeId} at ${coordinates}`);
+                    }
+                  });
+                } else {
+                  verifiedSpawners++;
+                }
+                try {
+                  player.runCommand(`tickingarea remove ${tickingAreaName}`);
+                } catch (e) {
+                }
+              } catch (blockError) {
+                console.error(`Error checking block at ${coordinates}:`, blockError);
+                try {
+                  player.runCommand(`tickingarea remove ${tickingAreaName}`);
+                } catch (e) {
+                }
+              }
+              processedCount++;
+              if (processedCount % 10 === 0 || processedCount === totalCount) {
+                player.sendMessage(`\xA77Progress: ${processedCount}/${totalCount} spawners checked...`);
+              }
+              if (currentIndex + BATCH_SIZE < totalCount) {
+                currentIndex += BATCH_SIZE;
+                system3.runTimeout(() => {
+                  processBatch();
+                }, 20);
+              } else if (processedCount === totalCount) {
+                reportVerificationResults(player, verifiedSpawners, removedBlocks, removedEntities);
+              }
+            }, 2);
+          } catch (error) {
+            console.error(`Error processing spawner at ${coordinates}:`, error);
+            processedCount++;
+          }
+        }
+      };
+      if (totalCount > 0) {
+        processBatch();
+      } else {
+        player.sendMessage("\xA7eNo spawners found in database.");
+      }
+    }).catch((confirmError) => {
+      console.error(`Error in cleanup confirmation form: ${confirmError}`);
+    });
+  } catch (error) {
+    console.error(`Error in verifyAndCleanSpawnerDatabase: ${error}`);
+    player.sendMessage("\xA7cAn error occurred while verifying the database.");
+  }
+}
+function reportVerificationResults(player, verifiedSpawners, removedBlocks, removedEntities) {
+  try {
+    player.sendMessage(`\xA7a\u2713 Database verification complete!`);
+    player.sendMessage(`\xA77Verified: \xA7a${verifiedSpawners} \xA77spawners`);
+    if (removedBlocks > 0) {
+      player.sendMessage(`\xA77Removed: \xA7c${removedBlocks} \xA77stale database entries`);
+    }
+    if (removedEntities > 0) {
+      player.sendMessage(`\xA77Cleaned: \xA7c${removedEntities} \xA77orphaned spawnrule entities`);
+    }
+    if (removedBlocks === 0 && removedEntities === 0) {
+      player.sendMessage(`\xA7aDatabase is clean - no issues found!`);
+    }
+  } catch (error) {
+    console.error(`Error reporting verification results: ${error}`);
+  }
+}
+function openPlayerStatsSelectionForm(player) {
+  try {
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const playerSpawners = /* @__PURE__ */ new Map();
+    const allSpawnerKeys = spawnerDatabase.keys();
+    for (const key of allSpawnerKeys) {
+      const spawnerData = spawnerDatabase.read(key);
+      if (spawnerData && spawnerData.placedBy) {
+        const playerName = spawnerData.placedBy;
+        if (!playerSpawners.has(playerName)) {
+          playerSpawners.set(playerName, []);
+        }
+        playerSpawners.get(playerName).push({
+          location: key,
+          typeId: spawnerData.typeId,
+          placedAt: spawnerData.placedAt,
+          entitiesKilled: spawnerData.entitiesKilled || 0
+        });
+      }
+    }
+    if (playerSpawners.size === 0) {
+      player.sendMessage("\xA7cNo spawner data found in the database.");
+      return;
+    }
+    const sortedPlayers = Array.from(playerSpawners.entries()).sort((a, b) => b[1].length - a[1].length);
+    const form = new ActionFormData2().title("Select Player for Detailed Stats").body(`Found ${playerSpawners.size} players with spawners. Select a player to view their detailed spawner information:`);
+    for (const [playerName, spawners] of sortedPlayers) {
+      let totalPhysical = 0;
+      let totalVirtual = 0;
+      spawners.forEach((spawner) => {
+        const [x, y, z] = spawner.location.split(",").map(Number);
+        const info = getEntitiesInfoNearSpawner(x, y, z);
+        totalPhysical += info.physicalCount;
+        totalVirtual += info.virtualCount;
+      });
+      const avgLevel = spawners.reduce((sum, spawner) => {
+        const levelMatch = spawner.typeId.match(/spawner(\d+)/);
+        return sum + (levelMatch ? parseInt(levelMatch[1]) : 1);
+      }, 0) / spawners.length;
+      form.button(`\xA7e${playerName}
+\xA78${spawners.length} spawners \u2022 ${totalPhysical} stacks (${totalVirtual} mobs) \u2022 Avg Level ${avgLevel.toFixed(1)}`, "textures/items/name_tag");
+    }
+    form.show(player).then((r) => {
+      if (r.canceled || r.selection === void 0)
+        return;
+      if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+        player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+        return;
+      }
+      const selectedPlayerData = sortedPlayers[r.selection];
+      if (selectedPlayerData) {
+        const [selectedPlayer, spawners] = selectedPlayerData;
+        const spawnerDetails = spawners.map((spawner) => {
+          let x = 0, y = 0, z = 0;
+          try {
+            if (spawner.location && typeof spawner.location === "string") {
+              const coords = spawner.location.split(",").map((coord) => parseFloat(coord.trim()));
+              if (coords.length >= 3 && coords.every((coord) => !isNaN(coord))) {
+                [x, y, z] = coords;
+              }
+            }
+          } catch (error) {
+            debugLog2(`Error parsing location for spawner: ${spawner.location}, error: ${error}`);
+          }
+          const typeId = spawner.typeId || "unknown_spawner";
+          const levelMatch = typeId.match(/spawner(\d+)/);
+          const level = levelMatch ? parseInt(levelMatch[1]) : 1;
+          const mobType = typeId.replace("mrleefy:", "").replace(/spawner\d+/, "").replace(/_/g, "");
+          const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || "Unknown";
+          const info = getEntitiesInfoNearSpawner(x, y, z);
+          return {
+            ...spawner,
+            displayName,
+            level,
+            physicalEntities: info.physicalCount,
+            virtualEntities: info.virtualCount,
+            x,
+            y,
+            z
+          };
+        });
+        openSpawnerInfoForm(player, selectedPlayer, spawnerDetails);
+      }
+    }).catch((error) => {
+      console.error(`Error in openPlayerStatsSelectionForm: ${error}`);
+      player.sendMessage("\xA7cAn error occurred while showing player selection.");
+    });
+  } catch (error) {
+    console.error(`Critical error in openPlayerStatsSelectionForm: ${error}`);
+    player.sendMessage("\xA7cA critical error occurred. Please try again.");
+  }
+}
+function openSpawnerInfoForm(player, playerName, spawnerDetails) {
+  try {
+    if (!player || !player.isValid)
+      return;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const totalSpawners = spawnerDetails.length;
+    const totalPhysicalEntities = spawnerDetails.reduce((sum, s) => sum + s.physicalEntities, 0);
+    const totalVirtualEntities = spawnerDetails.reduce((sum, s) => sum + s.virtualEntities, 0);
+    const avgLevel = totalSpawners > 0 ? spawnerDetails.reduce((sum, s) => sum + s.level, 0) / totalSpawners : 0;
+    const activeSpawners = spawnerDetails.filter((s) => s.physicalEntities > 0).length;
+    const totalKills = spawnerDetails.reduce((sum, s) => sum + (s.entitiesKilled || 0), 0);
+    const typeDistribution = {};
+    spawnerDetails.forEach((spawner) => {
+      const type = spawner.displayName;
+      typeDistribution[type] = (typeDistribution[type] || 0) + 1;
+    });
+    const topType = Object.entries(typeDistribution).sort((a, b) => b[1] - a[1])[0];
+    let infoText = `**${playerName}'s Spawner Overview**
+
+`;
+    infoText += `**Summary:**
+`;
+    infoText += `\u2022 Total Spawners: ${totalSpawners}
+`;
+    infoText += `\u2022 Active Spawners: ${activeSpawners}/${totalSpawners} (${totalSpawners > 0 ? (activeSpawners / totalSpawners * 100).toFixed(1) : "0.0"}%)
+`;
+    infoText += `\u2022 Total Mob Stacks Nearby: ${totalPhysicalEntities} (Physical entities alive)
+`;
+    infoText += `\u2022 Total Mobs inside Stacks: ${totalVirtualEntities} (Sum of stack sizes)
+`;
+    infoText += `\u2022 Average Level: ${avgLevel.toFixed(1)}
+`;
+    infoText += `\u2022 Total Kills: ${totalKills}
+
+`;
+    infoText += `**Spawner Types:**
+`;
+    Object.entries(typeDistribution).sort((a, b) => b[1] - a[1]).forEach(([type, count]) => {
+      infoText += `\u2022 ${type}: ${count}
+`;
+    });
+    infoText += `
+Top Performer: ${topType ? `${topType[0]} (${topType[1]} spawners)` : "None"}
+
+`;
+    infoText += `Individual Spawner Details:
+`;
+    spawnerDetails.sort((a, b) => b.physicalEntities - a.physicalEntities).slice(0, 5).forEach((spawner, index) => {
+      const status = spawner.physicalEntities > 0 ? "[ACTIVE]" : "[IDLE]";
+      const placedTime = spawner.hasOwnProperty("placedAt") && spawner.placedAt ? new Date(spawner.placedAt).toLocaleDateString() : "Unknown";
+      infoText += `${index + 1}. ${status} ${spawner.displayName} Level ${spawner.level} Cord: ${spawner.x}, ${spawner.y}, ${spawner.z}
+`;
+      infoText += `   ${spawner.physicalEntities} stacks (${spawner.virtualEntities} mobs) \u2022 ${spawner.entitiesKilled || 0} kills \u2022 Placed: ${placedTime}
+`;
+    });
+    const form = new ActionFormData2().title(`${playerName}'s Spawner Information`).body(infoText).button("\xA7cClose");
+    form.show(player).then((response) => {
+    }).catch((error) => {
+      console.error(`Error in openSpawnerInfoForm: ${error}`);
+      player.sendMessage("\xA7cAn error occurred while showing spawner information.");
+    });
+  } catch (error) {
+    console.error(`Critical error in openSpawnerInfoForm: ${error}`);
+    player.sendMessage("\xA7cA critical error occurred. Please try again.");
+  }
+}
+
+// src/mobstacker-core.ts
+var performanceMetrics = {
+  stackingOperations: 0,
+  entitySpawns: 0,
+  entityRemovals: 0,
+  averageProcessingTime: 0,
+  lastReset: Date.now(),
+  peakMemoryUsage: 0,
+  warningCount: 0,
+  criticalCount: 0
+};
+var spawnerStatistics = {
+  totalSpawners: 0,
+  totalEntities: 0,
+  // physical stacks
+  totalVirtualEntities: 0,
+  // virtual mobs
+  entitiesKilled: /* @__PURE__ */ new Map(),
+  // Per entity type
+  spawnerUptime: /* @__PURE__ */ new Map(),
+  // Per spawner location
+  playerStats: /* @__PURE__ */ new Map(),
+  // Per player statistics
+  lastStatsUpdate: Date.now()
+};
+var STATS_MEMORY_LIMITS = {
+  MAX_ENTITY_TYPES: 1e3,
+  // Max entity types to track
+  MAX_PLAYER_ENTRIES: 500,
+  // Max players to track
+  MAX_SPAWNER_ENTRIES: 2e3,
+  // Max spawner locations to track
+  STATS_CLEANUP_INTERVAL: 36e5,
+  // 1 hour in milliseconds
+  PLAYER_INACTIVITY_THRESHOLD: 30 * 24 * 60 * 60 * 1e3
+  // 30 days
+};
+var LOGGING_ENABLED = false;
+var originalConsoleLog = console.log;
+var originalConsoleError = console.error;
+console.log = function(...args) {
+  if (LOGGING_ENABLED) {
+    originalConsoleLog.apply(console, args);
+  }
+};
+console.error = function(...args) {
+  if (LOGGING_ENABLED) {
+    originalConsoleError.apply(console, args);
+  }
+};
+function debugLog2(message, ...args) {
+  if (LOGGING_ENABLED) {
+    console.log(`[DEBUG] ${message}`, ...args);
+  }
+}
+function enableLogging() {
+  LOGGING_ENABLED = true;
+  originalConsoleLog("[MOBSTACKER] Logging enabled");
+}
+function disableLogging() {
+  originalConsoleLog("[MOBSTACKER] Logging disabled");
+  LOGGING_ENABLED = false;
+}
+function isLoggingEnabled() {
+  return LOGGING_ENABLED;
+}
+var entitySpawnerMap = /* @__PURE__ */ new Map();
+function cleanupStatistics() {
+  const now = Date.now();
+  if (spawnerStatistics.entitiesKilled.size > STATS_MEMORY_LIMITS.MAX_ENTITY_TYPES) {
+    const entries = Array.from(spawnerStatistics.entitiesKilled.entries());
+    entries.sort((a, b) => b[1] - a[1]);
+    spawnerStatistics.entitiesKilled.clear();
+    entries.slice(0, STATS_MEMORY_LIMITS.MAX_ENTITY_TYPES).forEach(([entityType, kills]) => {
+      spawnerStatistics.entitiesKilled.set(entityType, kills);
+    });
+  }
+  if (spawnerStatistics.spawnerUptime.size > STATS_MEMORY_LIMITS.MAX_SPAWNER_ENTRIES) {
+    const entries = Array.from(spawnerStatistics.spawnerUptime.entries());
+    entries.sort((a, b) => b[1] - a[1]);
+    spawnerStatistics.spawnerUptime.clear();
+    entries.slice(0, STATS_MEMORY_LIMITS.MAX_SPAWNER_ENTRIES).forEach(([location, uptime]) => {
+      spawnerStatistics.spawnerUptime.set(location, uptime);
+    });
+  }
+  if (spawnerStatistics.playerStats.size > STATS_MEMORY_LIMITS.MAX_PLAYER_ENTRIES) {
+    const cutoffTime = now - STATS_MEMORY_LIMITS.PLAYER_INACTIVITY_THRESHOLD;
+    for (const [playerName, stats] of spawnerStatistics.playerStats.entries()) {
+      if (stats.lastActivity && stats.lastActivity < cutoffTime) {
+        spawnerStatistics.playerStats.delete(playerName);
+      }
+    }
+  }
+  debugLog2(`Statistics cleanup: entities=${spawnerStatistics.entitiesKilled.size}, players=${spawnerStatistics.playerStats.size}, spawners=${spawnerStatistics.spawnerUptime.size}`);
+}
+function updateSpawnerStatisticsDirect(entityTypeId, locationKey, player) {
+  const currentKills = spawnerStatistics.entitiesKilled.get(entityTypeId) || 0;
+  spawnerStatistics.entitiesKilled.set(entityTypeId, currentKills + 1);
+  const currentUptime = spawnerStatistics.spawnerUptime.get(locationKey) || 0;
+  spawnerStatistics.spawnerUptime.set(locationKey, currentUptime + 1);
+  updateSpawnerMetadata(locationKey, entityTypeId, player);
+  if (player) {
+    const playerName = player.name || player.nameTag || "Unknown";
+    const playerStat = spawnerStatistics.playerStats.get(playerName) || {
+      entitiesKilled: 0,
+      spawnersPlaced: 0,
+      killsByType: {},
+      lastActivity: Date.now()
+    };
+    playerStat.entitiesKilled++;
+    playerStat.lastActivity = Date.now();
+    playerStat.killsByType[entityTypeId] = (playerStat.killsByType[entityTypeId] || 0) + 1;
+    spawnerStatistics.playerStats.set(playerName, playerStat);
+  }
+}
+var pendingSpawnerMetadata = /* @__PURE__ */ new Map();
+function updateSpawnerMetadata(locationKey, entityTypeId, player) {
+  try {
+    let pending = pendingSpawnerMetadata.get(locationKey);
+    if (!pending) {
+      pending = {
+        entityTypeId,
+        kills: 0,
+        playersKilled: {},
+        lastKill: Date.now()
+      };
+      pendingSpawnerMetadata.set(locationKey, pending);
+    }
+    pending.kills++;
+    pending.lastKill = Date.now();
+    if (player) {
+      const playerName = player.name || player.nameTag || "Unknown";
+      pending.playersKilled[playerName] = (pending.playersKilled[playerName] || 0) + 1;
+    }
+  } catch (error) {
+    console.error(`Error buffering spawner metadata for ${locationKey}:`, error);
+  }
+}
+function flushPendingSpawnerMetadata() {
+  if (pendingSpawnerMetadata.size === 0)
+    return;
+  for (const [locationKey, pending] of pendingSpawnerMetadata.entries()) {
+    try {
+      const existingData = spawnerDatabase2.read(locationKey) || {
+        entitiesKilled: 0,
+        killsByType: {},
+        playersKilled: {},
+        lastKill: 0,
+        lastAccessed: 0
+      };
+      existingData.entitiesKilled += pending.kills;
+      existingData.lastKill = pending.lastKill;
+      existingData.lastAccessed = Date.now();
+      if (!existingData.killsByType) {
+        existingData.killsByType = {};
+      }
+      existingData.killsByType[pending.entityTypeId] = (existingData.killsByType[pending.entityTypeId] || 0) + pending.kills;
+      if (!existingData.playersKilled) {
+        existingData.playersKilled = {};
+      }
+      for (const [playerName, count] of Object.entries(pending.playersKilled)) {
+        existingData.playersKilled[playerName] = (existingData.playersKilled[playerName] || 0) + count;
+      }
+      spawnerDatabase2.write(locationKey, existingData);
+    } catch (error) {
+      console.error(`Error saving spawner metadata for ${locationKey}:`, error);
+    }
+  }
+  pendingSpawnerMetadata.clear();
+  debugLog2("[MOBSTACKER] Flushed pending spawner metadata to database");
+}
+system4.runInterval(() => {
+  try {
+    cleanupStatistics();
+    flushPendingSpawnerMetadata();
+    saveSpawnerStatistics();
+  } catch (error) {
+    console.error("Error in persistent statistics sync:", error);
+  }
+}, 30 * 20);
+function saveSpawnerStatistics() {
+  try {
+    const entitiesKilledEntries = spawnerStatistics.entitiesKilled instanceof Map ? Array.from(spawnerStatistics.entitiesKilled.entries()) : [];
+    const spawnerUptimeEntries = spawnerStatistics.spawnerUptime instanceof Map ? Array.from(spawnerStatistics.spawnerUptime.entries()) : [];
+    const playerStatsEntries = spawnerStatistics.playerStats instanceof Map ? Array.from(spawnerStatistics.playerStats.entries()) : [];
+    const statsObj = {
+      entitiesKilled: entitiesKilledEntries,
+      spawnerUptime: spawnerUptimeEntries,
+      playerStats: playerStatsEntries,
+      lastStatsUpdate: spawnerStatistics.lastStatsUpdate
+    };
+    configDatabase2.write("spawnerStatistics", statsObj);
+  } catch (error) {
+    console.error("Failed to save spawner statistics:", error);
+  }
+}
+function loadSpawnerStatistics() {
+  try {
+    const statsObj = configDatabase2.read("spawnerStatistics");
+    if (statsObj) {
+      if (statsObj.entitiesKilled && Array.isArray(statsObj.entitiesKilled)) {
+        spawnerStatistics.entitiesKilled = new Map(statsObj.entitiesKilled);
+      } else if (statsObj.entitiesKilled && typeof statsObj.entitiesKilled === "object") {
+        spawnerStatistics.entitiesKilled = new Map(Object.entries(statsObj.entitiesKilled));
+      } else {
+        spawnerStatistics.entitiesKilled = /* @__PURE__ */ new Map();
+      }
+      if (statsObj.spawnerUptime && Array.isArray(statsObj.spawnerUptime)) {
+        spawnerStatistics.spawnerUptime = new Map(statsObj.spawnerUptime);
+      } else if (statsObj.spawnerUptime && typeof statsObj.spawnerUptime === "object") {
+        spawnerStatistics.spawnerUptime = new Map(Object.entries(statsObj.spawnerUptime));
+      } else {
+        spawnerStatistics.spawnerUptime = /* @__PURE__ */ new Map();
+      }
+      if (statsObj.playerStats && Array.isArray(statsObj.playerStats)) {
+        spawnerStatistics.playerStats = new Map(statsObj.playerStats);
+      } else if (statsObj.playerStats && typeof statsObj.playerStats === "object") {
+        spawnerStatistics.playerStats = new Map(Object.entries(statsObj.playerStats));
+      } else {
+        spawnerStatistics.playerStats = /* @__PURE__ */ new Map();
+      }
+      spawnerStatistics.lastStatsUpdate = statsObj.lastStatsUpdate || Date.now();
+    } else {
+      if (!(spawnerStatistics.entitiesKilled instanceof Map))
+        spawnerStatistics.entitiesKilled = /* @__PURE__ */ new Map();
+      if (!(spawnerStatistics.spawnerUptime instanceof Map))
+        spawnerStatistics.spawnerUptime = /* @__PURE__ */ new Map();
+      if (!(spawnerStatistics.playerStats instanceof Map))
+        spawnerStatistics.playerStats = /* @__PURE__ */ new Map();
+    }
+  } catch (error) {
+    console.error("Failed to load spawner statistics:", error);
+    if (!(spawnerStatistics.entitiesKilled instanceof Map))
+      spawnerStatistics.entitiesKilled = /* @__PURE__ */ new Map();
+    if (!(spawnerStatistics.spawnerUptime instanceof Map))
+      spawnerStatistics.spawnerUptime = /* @__PURE__ */ new Map();
+    if (!(spawnerStatistics.playerStats instanceof Map))
+      spawnerStatistics.playerStats = /* @__PURE__ */ new Map();
+  }
+}
+function resetSpawnerStatistics() {
+  try {
+    if (!(spawnerStatistics.entitiesKilled instanceof Map)) {
+      spawnerStatistics.entitiesKilled = /* @__PURE__ */ new Map();
+    } else {
+      spawnerStatistics.entitiesKilled.clear();
+    }
+    if (!(spawnerStatistics.spawnerUptime instanceof Map)) {
+      spawnerStatistics.spawnerUptime = /* @__PURE__ */ new Map();
+    } else {
+      spawnerStatistics.spawnerUptime.clear();
+    }
+    if (!(spawnerStatistics.playerStats instanceof Map)) {
+      spawnerStatistics.playerStats = /* @__PURE__ */ new Map();
+    } else {
+      spawnerStatistics.playerStats.clear();
+    }
+    spawnerStatistics.totalSpawners = 0;
+    spawnerStatistics.totalEntities = 0;
+    spawnerStatistics.lastStatsUpdate = Date.now();
+    saveSpawnerStatistics();
+  } catch (error) {
+    console.error("Failed to reset spawner statistics:", error);
+  }
+}
+function getPlayerTopKills(playerStat, count = 3) {
+  if (!playerStat || !playerStat.killsByType)
+    return [];
+  return Object.entries(playerStat.killsByType).sort((a, b) => b[1] - a[1]).slice(0, count).map(([typeId, killsCount]) => ({
+    displayName: mobDisplayNameMap.get(typeId) || typeId.replace("mrleefy:", ""),
+    count: killsCount
+  }));
+}
+function calculateSpawnerTotals() {
+  const dimensions = ["overworld", "nether", "the_end"];
+  let spawnerCount = 0;
+  let physicalCount = 0;
+  let virtualCount = 0;
+  const validMobs2 = [
+    "mrleefy:blazestill",
+    "mrleefy:cowstill",
+    "mrleefy:sheepstill",
+    "mrleefy:pigstill",
+    "mrleefy:chickenstill",
+    "mrleefy:emeraldgolemstill",
+    "mrleefy:netheritegolemstill",
+    "mrleefy:irongolemstill",
+    "mrleefy:diamondgolemstill",
+    "mrleefy:goldgolemstill",
+    "mrleefy:endermanstill",
+    "mrleefy:creeperstill",
+    "mrleefy:magmacubestill",
+    "mrleefy:guardianstill",
+    "mrleefy:witherskeletonstill",
+    "mrleefy:zombiestill",
+    "mrleefy:witherstill",
+    "mrleefy:spiderstill",
+    "mrleefy:slimestill",
+    "mrleefy:vindicatorstill",
+    "mrleefy:skeletonstill",
+    "mrleefy:shulkerstill",
+    "mrleefy:breezestill",
+    "mrleefy:piglinbrutestill",
+    "mrleefy:wardenstill",
+    "mrleefy:ravagerstill",
+    "mrleefy:snowmanstill",
+    // Crawlers
+    "mrleefy:coalcrawlerstill",
+    "mrleefy:glowstonecrawlerstill",
+    "mrleefy:obsidiancrawlerstill",
+    "mrleefy:icecrawlerstill",
+    "mrleefy:spongecrawlerstill",
+    "mrleefy:lapiscrawlerstill",
+    "mrleefy:redstonecrawlerstill",
+    "mrleefy:coppercrawlerstill",
+    "mrleefy:quartzcrawlerstill",
+    "mrleefy:amethystcrawlerstill"
+  ];
+  for (const dimId of dimensions) {
+    try {
+      const dim = world5.getDimension(dimId);
+      if (dim) {
+        const spawnruleEntities = dim.getEntities({ type: ENTITIES.SPAWNRULE_ENTITY_TYPE });
+        spawnerCount += spawnruleEntities.length;
+        for (const mobType of validMobs2) {
+          const entities = dim.getEntities({ type: mobType });
+          entities.forEach((entity) => {
+            if (entity?.isValid) {
+              physicalCount++;
+              if (entity.nameTag && entity.nameTag.includes("x")) {
+                const match = entity.nameTag.match(/x(\d+)/);
+                const count = match ? parseInt(match[1], 10) : 1;
+                virtualCount += count;
+              } else {
+                virtualCount += 1;
+              }
+            }
+          });
+        }
+      }
+    } catch (e) {
+    }
+  }
+  spawnerStatistics.totalSpawners = spawnerCount;
+  spawnerStatistics.totalEntities = physicalCount;
+  spawnerStatistics.totalVirtualEntities = virtualCount;
+  spawnerStatistics.lastStatsUpdate = Date.now();
+}
+var PERFORMANCE_THRESHOLDS = {
+  MAX_PROCESSING_TIME: 50,
+  // ms per tick
+  MAX_ENTITIES_PER_TICK: 100,
+  MEMORY_WARNING: 200,
+  // High memory usage threshold
+  MEMORY_CRITICAL: 400,
+  // Critical memory usage threshold
+  SPAWN_TIME_WARNING: 10,
+  // seconds
+  CLEANUP_TIME_WARNING: 5
+  // seconds
+};
+function getMemoryUsage() {
+  const baseChunkLoad = ACTIVE_CHUNKS.size * 10;
+  const entityLoad = entitySpawnerMap.size * 2;
+  const timerLoad = (lastSpawnTime.size + lastKilled.size) * 1;
+  const cacheLoad = Math.min(cacheManager.getStats().config?.size || 0, 20);
+  return baseChunkLoad + entityLoad + timerLoad + cacheLoad;
+}
+function checkPerformanceHealth() {
+  const memoryUsage = getMemoryUsage();
+  performanceMetrics.peakMemoryUsage = Math.max(performanceMetrics.peakMemoryUsage, memoryUsage);
+  if (memoryUsage > PERFORMANCE_THRESHOLDS.MEMORY_CRITICAL) {
+    debugLog2(`[PERFORMANCE] CRITICAL: High memory usage detected: ${memoryUsage} units`);
+    performanceMetrics.criticalCount++;
+  } else if (memoryUsage > PERFORMANCE_THRESHOLDS.MEMORY_WARNING) {
+    debugLog2(`[PERFORMANCE] WARNING: Elevated memory usage: ${memoryUsage} units`);
+    performanceMetrics.warningCount++;
+  }
+  const entityCount = lastSpawnTime.size + lastKilled.size;
+  if (entityCount > PERFORMANCE_THRESHOLDS.MAX_ENTITIES_PER_TICK * 10) {
+    debugLog2(`[PERFORMANCE] WARNING: High entity tracking count: ${entityCount}`);
+  }
+}
+function logPerformanceReport() {
+  const memoryUsage = getMemoryUsage();
+  const cacheStats = cacheManager.getStats();
+  debugLog2(`[PERFORMANCE REPORT]
+    Memory Usage: ${memoryUsage} units (Peak: ${performanceMetrics.peakMemoryUsage})
+    Maps - SpawnTime: ${lastSpawnTime.size}, Killed: ${lastKilled.size}, Deaths: ${processedDeaths.size}
+    Chunks: ${ACTIVE_CHUNKS.size}
+    Cache - Config: ${cacheStats.config?.size || 0}
+    Warnings: ${performanceMetrics.warningCount}, Critical: ${performanceMetrics.criticalCount}
+    Operations: ${performanceMetrics.stackingOperations}`);
+}
+system4.runInterval(() => {
+  const now = Date.now();
+  const elapsedMinutes = (now - performanceMetrics.lastReset) / 6e4;
+  if (elapsedMinutes >= 5) {
+    logPerformanceReport();
+    performanceMetrics.lastReset = now;
+    performanceMetrics.averageProcessingTime = 0;
+    performanceMetrics.stackingOperations = 0;
+    performanceMetrics.entitySpawns = 0;
+    performanceMetrics.entityRemovals = 0;
+    performanceMetrics.warningCount = 0;
+    performanceMetrics.criticalCount = 0;
+  }
+  checkPerformanceHealth();
+}, 300 * 20);
+var configDatabase2 = new Database("ConfigValues");
+var xpDropDatabase = new Database("XPDropValues");
+var spawnerDatabase2 = new Database("SpawnerLocations");
+var UnifiedCacheManager = class {
+  constructor() {
+    __publicField(this, "caches", /* @__PURE__ */ new Map());
+    __publicField(this, "cacheConfigs", /* @__PURE__ */ new Map());
+    this.caches = /* @__PURE__ */ new Map();
+    this.cacheConfigs = /* @__PURE__ */ new Map();
+  }
+  // Register a cache with specific configuration
+  registerCache(cacheName, duration, maxSize = null) {
+    this.caches.set(cacheName, /* @__PURE__ */ new Map());
+    this.cacheConfigs.set(cacheName, { duration, maxSize, lastUpdate: 0 });
+  }
+  // Get cached value with automatic refresh
+  get(cacheName, key, fetchFunction, defaultValue = null) {
+    const cache = this.caches.get(cacheName);
+    const config = this.cacheConfigs.get(cacheName);
+    if (!cache || !config)
+      return defaultValue;
+    const now = Date.now();
+    if (now - config.lastUpdate > config.duration || !cache.has(key)) {
+      config.lastUpdate = now;
+      const value = fetchFunction();
+      cache.set(key, value);
+      if (config.maxSize && cache.size > config.maxSize) {
+        const entries = Array.from(cache.entries());
+        const toRemove = entries.slice(0, cache.size - config.maxSize);
+        toRemove.forEach(([k]) => cache.delete(k));
+      }
+    }
+    return cache.get(key) ?? defaultValue;
+  }
+  // Manual cache update
+  set(cacheName, key, value) {
+    const cache = this.caches.get(cacheName);
+    if (cache) {
+      cache.set(key, value);
+    }
+  }
+  // Clear specific cache
+  clearCache(cacheName) {
+    const cache = this.caches.get(cacheName);
+    if (cache) {
+      cache.clear();
+    }
+  }
+  // Get cache statistics
+  getStats() {
+    const stats = {};
+    for (const [name, cache] of this.caches.entries()) {
+      stats[name] = {
+        size: cache.size,
+        config: this.cacheConfigs.get(name)
+      };
+    }
+    return stats;
+  }
+};
+var cacheManager = new UnifiedCacheManager();
+cacheManager.registerCache("config", 3e4);
+cacheManager.registerCache("entity", 5e3, 100);
+cacheManager.registerCache("xpDrop", 6e4);
+function validateAndClampConfig(key, value, defaultValue) {
+  switch (key) {
+    case "stackRadius":
+      return Math.max(VALIDATION.MIN_RADIUS, Math.min(VALIDATION.MAX_RADIUS, value || defaultValue));
+    case "itemSpillCap":
+      return Math.max(1, Math.min(ENTITIES.MAX_ITEM_SPILL_CAP, value || defaultValue));
+    case "xpSpillCap":
+      return Math.max(1, Math.min(ENTITIES.MAX_XP_SPILL_CAP, value || defaultValue));
+    default:
+      return value || defaultValue;
+  }
+}
+function getCachedConfig2(key, defaultValue) {
+  return cacheManager.get(
+    "config",
+    key,
+    () => {
+      const rawConfigs = {
+        "stackRadius": configDatabase2.read("stackRadius"),
+        "playerKillOnly": configDatabase2.read("playerKillOnly"),
+        "itemSpillCap": configDatabase2.read("itemSpillCap"),
+        "xpSpillCap": configDatabase2.read("xpSpillCap")
+      };
+      const configs = {
+        "stackRadius": validateAndClampConfig("stackRadius", rawConfigs.stackRadius, UI.DEFAULT_STACK_RADIUS),
+        "playerKillOnly": rawConfigs.playerKillOnly ?? false,
+        "itemSpillCap": validateAndClampConfig("itemSpillCap", rawConfigs.itemSpillCap, ENTITIES.DEFAULT_ITEM_SPILL_CAP),
+        "xpSpillCap": validateAndClampConfig("xpSpillCap", rawConfigs.xpSpillCap, ENTITIES.DEFAULT_XP_SPILL_CAP)
+      };
+      return configs[key];
+    },
+    defaultValue
+  );
+}
+globalThis.updateMobstackerCache = function(key, value) {
+  cacheManager.set("config", key, value);
+};
+var SMALLEST_INTERVAL = TIMING.SMALLEST_INTERVAL;
+var lastSpawnTime = /* @__PURE__ */ new Map();
+var lastKilled = /* @__PURE__ */ new Map();
+var cooldownMillis = TIMING.COOLDOWN_MILLIS;
+var nameTagConfig = UI.NAME_TAG_CONFIG;
+var processedDeaths = /* @__PURE__ */ new Set();
+var MAP_MEMORY_LIMITS = {
+  LAST_SPAWN_TIME: 5e3,
+  // Max 5000 spawn time entries
+  LAST_KILLED: 3e3,
+  // Max 3000 kill time entries
+  PROCESSED_DEATHS: 1e3,
+  // Max 1000 processed death IDs
+  ENTITY_SPAWNER_MAP: 1e4
+  // Max 10000 entity-spawner mappings
+};
+var MEMORY_CLEANUP_INTERVAL = 12e3;
+var ENTRY_MAX_AGE = 30 * 60 * 1e3;
+var validMobs = [
+  { typeId: "mrleefy:blazestill", displayName: "Blaze" },
+  { typeId: "mrleefy:cowstill", displayName: "Cow" },
+  { typeId: "mrleefy:sheepstill", displayName: "Sheep" },
+  { typeId: "mrleefy:pigstill", displayName: "Pig" },
+  { typeId: "mrleefy:chickenstill", displayName: "Chicken" },
+  { typeId: "mrleefy:emeraldgolemstill", displayName: "Emerald Golem" },
+  { typeId: "mrleefy:netheritegolemstill", displayName: "Netherite Golem" },
+  { typeId: "mrleefy:irongolemstill", displayName: "Iron Golem" },
+  { typeId: "mrleefy:diamondgolemstill", displayName: "Diamond Golem" },
+  { typeId: "mrleefy:goldgolemstill", displayName: "Gold Golem" },
+  { typeId: "mrleefy:endermanstill", displayName: "Enderman" },
+  { typeId: "mrleefy:creeperstill", displayName: "Creeper" },
+  { typeId: "mrleefy:magmacubestill", displayName: "MagmaCube" },
+  { typeId: "mrleefy:guardianstill", displayName: "Guardian" },
+  { typeId: "mrleefy:witherskeletonstill", displayName: "Wither Skeleton" },
+  { typeId: "mrleefy:zombiestill", displayName: "Zombie" },
+  { typeId: "mrleefy:villagerstill", displayName: "Villager" },
+  { typeId: "mrleefy:witherstill", displayName: "Wither" },
+  { typeId: "mrleefy:enderdragonstill", displayName: "Ender Dragon" },
+  { typeId: "mrleefy:spiderstill", displayName: "Spider" },
+  { typeId: "mrleefy:slimestill", displayName: "Slime" },
+  { typeId: "mrleefy:vindicatorstill", displayName: "Vindicator" },
+  { typeId: "mrleefy:skeletonstill", displayName: "Skeleton" },
+  { typeId: "mrleefy:shulkerstill", displayName: "Shulker" },
+  { typeId: "mrleefy:breezestill", displayName: "Breeze" },
+  { typeId: "mrleefy:piglinbrutestill", displayName: "PiglinBrute" },
+  { typeId: "mrleefy:wardenstill", displayName: "Warden" },
+  { typeId: "mrleefy:ravagerstill", displayName: "Ravager" },
+  { typeId: "mrleefy:snowmanstill", displayName: "Snow Golem" },
+  // --- Crawlers ---
+  { typeId: "mrleefy:coalcrawlerstill", displayName: "Coal Crawler" },
+  { typeId: "mrleefy:glowstonecrawlerstill", displayName: "Glowstone Crawler" },
+  { typeId: "mrleefy:obsidiancrawlerstill", displayName: "Obsidian Crawler" },
+  { typeId: "mrleefy:icecrawlerstill", displayName: "Ice Crawler" },
+  { typeId: "mrleefy:spongecrawlerstill", displayName: "Sponge Crawler" },
+  { typeId: "mrleefy:lapiscrawlerstill", displayName: "Lapis Crawler" },
+  { typeId: "mrleefy:redstonecrawlerstill", displayName: "Redstone Crawler" },
+  { typeId: "mrleefy:coppercrawlerstill", displayName: "Copper Crawler" },
+  { typeId: "mrleefy:quartzcrawlerstill", displayName: "Quartz Crawler" },
+  { typeId: "mrleefy:amethystcrawlerstill", displayName: "Amethyst Crawler" }
+];
+var mobDisplayNameMap = new Map(validMobs.map((m) => [m.typeId, m.displayName]));
+function extractStackNumber(nameTag) {
+  const match = nameTag?.match(/x(\d+)/);
+  return match ? parseInt(match[1], 10) : 1;
+}
+var validEntityTypes = new Set(validMobs.map((mob) => mob.typeId));
+var CHUNK_SIZE2 = 16;
+var ACTIVE_CHUNKS = /* @__PURE__ */ new Map();
+var CHUNK_CACHE_DURATION = 6e4;
+var lastChunkUpdate = 0;
+function getChunkKey(x, z) {
+  const chunkX = Math.floor(x / CHUNK_SIZE2);
+  const chunkZ = Math.floor(z / CHUNK_SIZE2);
+  return `${chunkX},${chunkZ}`;
+}
+function updateActiveChunks(spawnruleEntities) {
+  const now = Date.now();
+  if (now - lastChunkUpdate < CHUNK_CACHE_DURATION)
+    return;
+  ACTIVE_CHUNKS.clear();
+  const MAX_CHUNKS = 500;
+  let chunkCount = 0;
+  for (const entity of spawnruleEntities) {
+    if (entity?.isValid && entity.location && chunkCount < MAX_CHUNKS) {
+      const chunkKey = getChunkKey(entity.location.x, entity.location.z);
+      if (!ACTIVE_CHUNKS.has(chunkKey)) {
+        ACTIVE_CHUNKS.set(chunkKey, []);
+        chunkCount++;
+      }
+      ACTIVE_CHUNKS.get(chunkKey).push(entity);
+    }
+  }
+  lastChunkUpdate = now;
+}
+var consecutiveErrors = 0;
+var MAX_CONSECUTIVE_ERRORS = 5;
+function getPerformanceConfig() {
+  return {
+    PLAYER_ACTIVATION_RADIUS: configDatabase2.read("performanceActivationRadius") || 50,
+    MAX_SPAWNS_PER_CYCLE: configDatabase2.read("performanceMaxSpawns") || 25,
+    SPAWN_INTERVAL_TICKS: configDatabase2.read("performanceSpawnInterval") || 20,
+    INITIAL_DELAY_RANDOM: configDatabase2.read("performanceRandomDelay") ?? true,
+    MAXED_SPAWNER_RECHECK_MS: 3e4
+    // 30 seconds backup check
+  };
+}
+var PERFORMANCE_CONFIG = getPerformanceConfig();
+var maxedSpawners = /* @__PURE__ */ new Map();
+var entitySpawnerOwnership = /* @__PURE__ */ new Map();
+function clearMaxedSpawnerCache(x, y, z) {
+  const spawnerKey = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+  for (const [key] of maxedSpawners) {
+    if (key.endsWith(`:${spawnerKey}`)) {
+      maxedSpawners.delete(key);
+      debugLog2(`Cleared maxed cache for: ${key}`);
+    }
+  }
+}
+function clearSpawnerParseCache() {
+  spawnerParseCache.clear();
+  debugLog2(`[AASettings] Spawner spec cache cleared \u2014 all spawners will re-read updated settings on next tick.`);
+}
+var isProcessingJobRunning = false;
+var spawnerParseCache = /* @__PURE__ */ new Map();
+function getSpawnerSpecs(nameTag) {
+  let specs = spawnerParseCache.get(nameTag);
+  if (specs !== void 0)
+    return specs;
+  const parsedName = nameTag.replace(
+    /(_)|(spawner)/gi,
+    (match) => match === "_" ? "" : match.toLowerCase() === "spawner" ? "still" : ""
+  );
+  const matches = parsedName.match(/(?<entityType>[a-zA-Z]+)(?<level>\d{1,2})/);
+  if (!matches || !matches.groups) {
+    spawnerParseCache.set(nameTag, null);
+    return null;
+  }
+  const { entityType, level } = matches.groups;
+  const entityTypeId = `mrleefy:${entityType}`;
+  const levelNum = parseInt(level, 10);
+  if (!validEntityTypes.has(entityTypeId)) {
+    spawnerParseCache.set(nameTag, null);
+    return null;
+  }
+  const displayName = mobDisplayNameMap.get(entityTypeId);
+  if (!displayName) {
+    spawnerParseCache.set(nameTag, null);
+    return null;
+  }
+  const { qty, speed, maxStack } = getAAValueForLevel(levelNum);
+  if (qty === 0) {
+    spawnerParseCache.set(nameTag, null);
+    return null;
+  }
+  specs = { entityTypeId, levelNum, qty, speed, maxStack, displayName };
+  spawnerParseCache.set(nameTag, specs);
+  return specs;
+}
+function* spawnerProcessingJob() {
+  try {
+    const startTime = Date.now();
+    let tickStartTime = startTime;
+    const overworld = world5.getDimension("overworld");
+    const radius = getCachedConfig2("stackRadius", UI.DEFAULT_STACK_RADIUS);
+    const spawnruleEntities = overworld.getEntities({ type: ENTITIES.SPAWNRULE_ENTITY_TYPE });
+    updateActiveChunks(spawnruleEntities);
+    if (spawnruleEntities.length === 0) {
+      return;
+    }
+    const activePlayers = overworld.getPlayers();
+    const playerRadiusSq = PERFORMANCE_CONFIG.PLAYER_ACTIVATION_RADIUS * PERFORMANCE_CONFIG.PLAYER_ACTIVATION_RADIUS;
+    let spawnsThisCycle = 0;
+    let processedCount = 0;
+    let skippedNoPlayers = 0;
+    let skippedMaxed = 0;
+    for (const spawnruleEntity of spawnruleEntities) {
+      if (Date.now() - tickStartTime > 4) {
+        yield;
+        tickStartTime = Date.now();
+      }
+      if (!spawnruleEntity?.isValid)
+        continue;
+      const location = spawnruleEntity.location;
+      let playerNear = false;
+      for (const player of activePlayers) {
+        if (!player.isValid)
+          continue;
+        const pLoc = player.location;
+        const dx = pLoc.x - location.x;
+        const dy = pLoc.y - location.y;
+        const dz = pLoc.z - location.z;
+        if (dx * dx + dy * dy + dz * dz <= playerRadiusSq) {
+          playerNear = true;
+          break;
+        }
+      }
+      if (!playerNear) {
+        skippedNoPlayers++;
+        continue;
+      }
+      const nameTag = spawnruleEntity.nameTag;
+      if (!nameTag)
+        continue;
+      const specs = getSpawnerSpecs(nameTag);
+      if (!specs)
+        continue;
+      const { entityTypeId, levelNum, qty, speed, maxStack, displayName } = specs;
+      const spawnerKey = `${Math.floor(location.x)},${Math.floor(location.y)},${Math.floor(location.z)}`;
+      const spawnKey = `${entityTypeId}:${spawnerKey}`;
+      const now = Date.now();
+      if (maxedSpawners.has(spawnKey)) {
+        const lastMaxedCheck = maxedSpawners.get(spawnKey);
+        if (now - lastMaxedCheck < PERFORMANCE_CONFIG.MAXED_SPAWNER_RECHECK_MS) {
+          skippedMaxed++;
+          continue;
+        }
+      }
+      const lastSpawn = lastSpawnTime.get(spawnKey) || 0;
+      const lastKill = lastKilled.get(spawnKey) || 0;
+      const speedMillis = speed * 1e3;
+      if (lastSpawn === 0 && PERFORMANCE_CONFIG.INITIAL_DELAY_RANDOM) {
+        const randomDelay = Math.random() * speedMillis;
+        lastSpawnTime.set(spawnKey, now - randomDelay);
+        continue;
+      }
+      if (now - lastSpawn < speedMillis)
+        continue;
+      if (now - lastKill < cooldownMillis)
+        continue;
+      if (spawnsThisCycle >= PERFORMANCE_CONFIG.MAX_SPAWNS_PER_CYCLE) {
+        continue;
+      }
+      if (!spawnruleEntity.isValid)
+        continue;
+      let nearbyEntities;
+      try {
+        nearbyEntities = overworld.getEntities({
+          type: entityTypeId,
+          location,
+          maxDistance: radius
+        });
+      } catch (err) {
+        continue;
+      }
+      lastSpawnTime.set(spawnKey, now);
+      let primaryEntity = null;
+      let maxStackInArea = 0;
+      let totalStack = 0;
+      const extras = [];
+      for (const entity of nearbyEntities) {
+        if (!entity || !entity.isValid)
+          continue;
+        const stackSize = extractStackNumber(entity.nameTag || "");
+        totalStack += stackSize;
+        if (stackSize > maxStackInArea) {
+          if (primaryEntity)
+            extras.push(primaryEntity);
+          maxStackInArea = stackSize;
+          primaryEntity = entity;
+        } else {
+          extras.push(entity);
+        }
+      }
+      for (const entity of extras) {
+        try {
+          if (entity.isValid) {
+            entitySpawnerMap.delete(entity.id);
+            entitySpawnerOwnership.delete(entity.id);
+            entity.remove();
+            performanceMetrics.entityRemovals++;
+          }
+        } catch (error) {
+          debugLog2(`Failed to remove entity: ${error.message}`);
+        }
+      }
+      if (primaryEntity && primaryEntity.isValid) {
+        const newStackSize = Math.min(totalStack + qty, maxStack);
+        const currentStack = extractStackNumber(primaryEntity.nameTag || "");
+        if (currentStack !== newStackSize) {
+          try {
+            primaryEntity.nameTag = nameTagConfig.replace("#", newStackSize.toString()).replace("@", displayName);
+          } catch (err) {
+            debugLog2(`Failed to update primary entity nameTag: ${err.message}`);
+          }
+        }
+        if (newStackSize >= maxStack) {
+          maxedSpawners.set(spawnKey, now);
+          entitySpawnerOwnership.set(primaryEntity.id, spawnKey);
+        } else {
+          maxedSpawners.delete(spawnKey);
+        }
+      } else {
+        spawnNewStackedEntity(overworld, entityTypeId, location, qty, displayName);
+        spawnsThisCycle++;
+        maxedSpawners.delete(spawnKey);
+      }
+      processedCount++;
+    }
+    performanceMetrics.stackingOperations++;
+    const processingTime = Date.now() - startTime;
+    debugLog2(`Spawner cycle: processed=${processedCount}, spawned=${spawnsThisCycle}, skippedNoPlayers=${skippedNoPlayers}, skippedMaxed=${skippedMaxed}, time=${processingTime}ms`);
+    if (processingTime > PERFORMANCE_THRESHOLDS.MAX_PROCESSING_TIME) {
+      debugLog2(`[PERFORMANCE] Slow processing: ${processingTime}ms`);
+      performanceMetrics.warningCount++;
+    }
+    performanceMetrics.averageProcessingTime = performanceMetrics.averageProcessingTime === 0 ? processingTime : performanceMetrics.averageProcessingTime * 0.95 + processingTime * 0.05;
+  } catch (error) {
+    console.error(`[MOBSTACKER] Error in spawner job:`, error);
+  } finally {
+    isProcessingJobRunning = false;
+  }
+}
+var stackingIntervalFunction = () => {
+  if (isProcessingJobRunning) {
+    debugLog2("[MOBSTACKER] Stacking interval skipped - previous job still running");
+    return;
+  }
+  try {
+    isProcessingJobRunning = true;
+    system4.runJob(spawnerProcessingJob());
+    consecutiveErrors = 0;
+  } catch (error) {
+    isProcessingJobRunning = false;
+    consecutiveErrors++;
+    console.error(`[MOBSTACKER] Stacking error (attempt ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`, error);
+    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+      debugLog2(`[MOBSTACKER] Too many consecutive errors`);
+    }
+    performanceMetrics.criticalCount++;
+  }
+};
+var activeInterval = system4.runInterval(stackingIntervalFunction, PERFORMANCE_CONFIG.SPAWN_INTERVAL_TICKS);
+function enforceMapLimits() {
+  const now = Date.now();
+  const cutoffTime = now - ENTRY_MAX_AGE;
+  if (lastSpawnTime.size > MAP_MEMORY_LIMITS.LAST_SPAWN_TIME) {
+    let toRemoveCount = lastSpawnTime.size - MAP_MEMORY_LIMITS.LAST_SPAWN_TIME;
+    for (const key of lastSpawnTime.keys()) {
+      if (toRemoveCount <= 0)
+        break;
+      lastSpawnTime.delete(key);
+      toRemoveCount--;
+    }
+  }
+  for (const [key, timestamp] of lastSpawnTime.entries()) {
+    if (timestamp < cutoffTime) {
+      lastSpawnTime.delete(key);
+    }
+  }
+  if (lastKilled.size > MAP_MEMORY_LIMITS.LAST_KILLED) {
+    let toRemoveCount = lastKilled.size - MAP_MEMORY_LIMITS.LAST_KILLED;
+    for (const key of lastKilled.keys()) {
+      if (toRemoveCount <= 0)
+        break;
+      lastKilled.delete(key);
+      toRemoveCount--;
+    }
+  }
+  for (const [key, timestamp] of lastKilled.entries()) {
+    if (timestamp < cutoffTime) {
+      lastKilled.delete(key);
+    }
+  }
+  if (processedDeaths.size > MAP_MEMORY_LIMITS.PROCESSED_DEATHS) {
+    let toRemoveCount = processedDeaths.size - MAP_MEMORY_LIMITS.PROCESSED_DEATHS;
+    for (const value of processedDeaths.values()) {
+      if (toRemoveCount <= 0)
+        break;
+      processedDeaths.delete(value);
+      toRemoveCount--;
+    }
+  }
+  if (entitySpawnerMap.size > MAP_MEMORY_LIMITS.ENTITY_SPAWNER_MAP) {
+    let toRemoveCount = entitySpawnerMap.size - MAP_MEMORY_LIMITS.ENTITY_SPAWNER_MAP;
+    for (const key of entitySpawnerMap.keys()) {
+      if (toRemoveCount <= 0)
+        break;
+      entitySpawnerMap.delete(key);
+      toRemoveCount--;
+    }
+  }
+  if (entitySpawnerOwnership.size > MAP_MEMORY_LIMITS.ENTITY_SPAWNER_MAP) {
+    let toRemoveCount = entitySpawnerOwnership.size - MAP_MEMORY_LIMITS.ENTITY_SPAWNER_MAP;
+    for (const key of entitySpawnerOwnership.keys()) {
+      if (toRemoveCount <= 0)
+        break;
+      entitySpawnerOwnership.delete(key);
+      toRemoveCount--;
+    }
+  }
+  if (maxedSpawners.size > 2e3) {
+    let toRemoveCount = maxedSpawners.size - 2e3;
+    for (const key of maxedSpawners.keys()) {
+      if (toRemoveCount <= 0)
+        break;
+      maxedSpawners.delete(key);
+      toRemoveCount--;
+    }
+  }
+  if (spawnerParseCache.size > 1e3) {
+    let toRemoveCount = spawnerParseCache.size - 1e3;
+    for (const key of spawnerParseCache.keys()) {
+      if (toRemoveCount <= 0)
+        break;
+      spawnerParseCache.delete(key);
+      toRemoveCount--;
+    }
+  }
+}
+system4.runInterval(() => {
+  try {
+    enforceMapLimits();
+  } catch (error) {
+    console.error("Memory cleanup error:", error);
+  }
+}, MEMORY_CLEANUP_INTERVAL);
+function spawnNewStackedEntity(dimension, entityTypeId, location, qty, displayName) {
+  try {
+    const spawnLocation = {
+      x: location.x,
+      y: location.y + 0.5,
+      z: location.z
+    };
+    const newEntity = dimension.spawnEntity(entityTypeId, spawnLocation);
+    if (newEntity?.isValid) {
+      newEntity.nameTag = nameTagConfig.replace("#", qty.toString()).replace("@", displayName);
+      const spawnerKey = `${Math.floor(location.x)},${Math.floor(location.y)},${Math.floor(location.z)}`;
+      entitySpawnerMap.set(newEntity.id, spawnerKey);
+      performanceMetrics.entitySpawns++;
+    }
+  } catch (error) {
+    console.error(`Failed to spawn entity ${entityTypeId}: ${error}`);
+  }
+}
+var lastCleanupSize = 0;
+var cleanupInterval = system4.runInterval(() => {
+  const currentSize = processedDeaths.size;
+  if (currentSize > 0) {
+    processedDeaths.clear();
+    if (currentSize > 100 && lastCleanupSize > 100) {
+      system4.clearRun(cleanupInterval);
+      cleanupInterval = system4.runInterval(() => {
+        if (processedDeaths.size > 0)
+          processedDeaths.clear();
+      }, 300);
+    }
+  }
+  lastCleanupSize = currentSize;
+}, 600);
+if (!globalThis.__stackDieSubscribed) {
+  globalThis.__stackDieSubscribed = true;
+  world5.afterEvents.entityDie.subscribe((event) => {
+    const { deadEntity } = event;
+    if (deadEntity && validEntityTypes.has(deadEntity.typeId)) {
+      entitySpawnerMap.delete(deadEntity.id);
+      const spawnerKey = entitySpawnerOwnership.get(deadEntity.id);
+      if (spawnerKey) {
+        maxedSpawners.delete(spawnerKey);
+        entitySpawnerOwnership.delete(deadEntity.id);
+        debugLog2(`Spawner reactivated (death): ${spawnerKey}`);
+      }
+    }
+  });
+  world5.afterEvents.entityHurt.subscribe((event) => {
+    try {
+      const { hurtEntity, damageSource } = event;
+      if (!hurtEntity?.isValid)
+        return;
+      const health = hurtEntity.getComponent("health");
+      if (!health || health.currentValue > 0) {
+        const ownerSpawnKey2 = entitySpawnerOwnership.get(hurtEntity.id);
+        if (ownerSpawnKey2 && maxedSpawners.has(ownerSpawnKey2)) {
+          maxedSpawners.delete(ownerSpawnKey2);
+          debugLog2(`Spawner reactivated (hurt): ${ownerSpawnKey2}`);
+        }
+        return;
+      }
+      if (processedDeaths.has(hurtEntity.id))
+        return;
+      processedDeaths.add(hurtEntity.id);
+      const entityTypeId = hurtEntity.typeId;
+      if (!validEntityTypes.has(entityTypeId)) {
+        return;
+      }
+      const spawnerKey = entitySpawnerMap.get(hurtEntity.id);
+      const loc = hurtEntity.location;
+      const spawnerKeyFallback = `${Math.floor(loc.x)},${Math.floor(loc.y)},${Math.floor(loc.z)}`;
+      const finalSpawnerKey = spawnerKey || spawnerKeyFallback;
+      const killer = damageSource?.damagingEntity;
+      const killerPlayer = killer?.typeId === "minecraft:player" ? killer : void 0;
+      updateSpawnerStatisticsDirect(entityTypeId, finalSpawnerKey, killerPlayer);
+      debugLog2(`Tracked kill: ${entityTypeId} at ${finalSpawnerKey}`);
+      const ownerSpawnKey = entitySpawnerOwnership.get(hurtEntity.id);
+      if (ownerSpawnKey) {
+        maxedSpawners.delete(ownerSpawnKey);
+        entitySpawnerOwnership.delete(hurtEntity.id);
+        debugLog2(`Spawner reactivated (death): ${ownerSpawnKey}`);
+      }
+      const inheritedSpawnerKey = entitySpawnerMap.get(hurtEntity.id);
+      entitySpawnerMap.delete(hurtEntity.id);
+      if (!entityTypeId) {
+        debugLog2("Entity hurt event received without valid typeId");
+        return;
+      }
+      const displayName = mobDisplayNameMap.get(entityTypeId);
+      if (!displayName)
+        return;
+      const locKey = `${hurtEntity.location.x.toFixed(0)},${hurtEntity.location.y.toFixed(0)},${hurtEntity.location.z.toFixed(0)}`;
+      lastKilled.set(`${entityTypeId}:${locKey}`, Date.now());
+      const currentAmount = extractStackNumber(hurtEntity.nameTag);
+      if (currentAmount > 1) {
+        try {
+          const oldRotation = hurtEntity.getRotation();
+          const oldLocation = hurtEntity.location;
+          if (!oldLocation || typeof oldLocation.x !== "number") {
+            console.error(`Invalid location data for entity ${entityTypeId}`);
+            return;
+          }
+          const newEntity = hurtEntity.dimension.spawnEntity(entityTypeId, oldLocation);
+          if (newEntity && newEntity.isValid) {
+            newEntity.nameTag = nameTagConfig.replace("#", (currentAmount - 1).toString()).replace("@", displayName);
+            newEntity.setRotation(oldRotation);
+            if (inheritedSpawnerKey) {
+              entitySpawnerMap.set(newEntity.id, inheritedSpawnerKey);
+            }
+          } else {
+            console.error(`Failed to spawn replacement entity for ${entityTypeId}`);
+          }
+        } catch (e) {
+          console.error(`Failed to respawn stacked entity: ${e}`);
+        }
+      }
+      try {
+        const playerKillOnly = getCachedConfig2("playerKillOnly", false);
+        if (playerKillOnly && (!killer || killer.typeId !== "minecraft:player"))
+          return;
+        const xpSpillCap = getCachedConfig2("xpSpillCap", ENTITIES.DEFAULT_XP_SPILL_CAP);
+        if (hurtEntity.dimension.getEntities({ type: ENTITIES.XP_ORB_TYPE, location: hurtEntity.location, maxDistance: 3, closest: xpSpillCap }).length < xpSpillCap) {
+          const xpConfig = cacheManager.get("xpDrop", entityTypeId, () => xpDropDatabase.read(entityTypeId));
+          if (xpConfig && Math.random() * 100 < (xpConfig.chance ?? 100)) {
+            try {
+              hurtEntity.dimension.spawnEntity(ENTITIES.XP_ORB_TYPE, hurtEntity.location, { amount: xpConfig.amount ?? 1 });
+            } catch (e) {
+              console.error(`Error spawning XP orb for ${entityTypeId}: ${e}`);
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`Error in loot logic for ${entityTypeId}: ${e}`);
+      }
+    } catch (error) {
+      console.error(`Critical error in entity hurt handler: ${error}`);
+    }
+  });
+}
+
+// src/performance-monitor.ts
+var PerformanceMonitor = class {
+  constructor() {
+    __publicField(this, "metrics");
+    __publicField(this, "timingStack");
+    __publicField(this, "alerts");
+    __publicField(this, "thresholds");
+    __publicField(this, "_intervalId");
+    this.metrics = {
+      stackingOperations: 0,
+      entitySpawns: 0,
+      entityRemovals: 0,
+      averageProcessingTime: 0,
+      lootDrops: 0,
+      databaseReads: 0,
+      databaseWrites: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      errors: 0,
+      lastReset: Date.now()
+    };
+    this.timingStack = /* @__PURE__ */ new Map();
+    this.alerts = [];
+    this.thresholds = {
+      maxProcessingTime: 50,
+      // ms
+      maxErrorsPerMinute: 10,
+      maxMemoryUsage: PERFORMANCE.MAX_MAP_SIZE
+    };
+    this.startPeriodicMonitoring();
+  }
+  /**
+   * Start timing for an operation
+   * @param operation - Operation name
+   * @returns Timer ID
+   */
+  startTiming(operation) {
+    const timerId = `${operation}_${Date.now()}_${Math.random()}`;
+    this.timingStack.set(timerId, Date.now());
+    return timerId;
+  }
+  /**
+   * End timing for an operation and record the duration
+   * @param timerId - Timer ID from startTiming
+   * @param operation - Operation name (fallback)
+   * @returns Duration in milliseconds
+   */
+  endTiming(timerId, operation = "unknown") {
+    const startTime = this.timingStack.get(timerId);
+    if (!startTime) {
+      debugLog2(`PerformanceMonitor: Timer not found for ${timerId}`);
+      return 0;
+    }
+    const duration = Date.now() - startTime;
+    this.timingStack.delete(timerId);
+    this.metrics.stackingOperations++;
+    this.metrics.averageProcessingTime = (this.metrics.averageProcessingTime * (this.metrics.stackingOperations - 1) + duration) / this.metrics.stackingOperations;
+    if (duration > this.thresholds.maxProcessingTime) {
+      this.addAlert(`High processing time for ${operation}: ${duration.toFixed(2)}ms`);
+    }
+    return duration;
+  }
+  /**
+   * Record a performance event
+   * @param eventType - Type of event (e.g., 'entitySpawn', 'lootDrop')
+   * @param value - Value to record (optional)
+   */
+  recordEvent(eventType, value = 1) {
+    if (this.metrics.hasOwnProperty(eventType)) {
+      this.metrics[eventType] += value;
+    } else {
+      debugLog2(`PerformanceMonitor: Unknown event type ${eventType}`);
+    }
+  }
+  /**
+   * Record a cache hit or miss
+   * @param isHit - True for cache hit, false for cache miss
+   */
+  recordCacheAccess(isHit) {
+    if (isHit) {
+      this.metrics.cacheHits++;
+    } else {
+      this.metrics.cacheMisses++;
+    }
+  }
+  /**
+   * Record a database operation
+   * @param operation - 'read' or 'write'
+   * @param table - Table name (optional)
+   */
+  recordDatabaseOperation(operation, table = "unknown") {
+    if (operation === "read") {
+      this.metrics.databaseReads++;
+    } else if (operation === "write") {
+      this.metrics.databaseWrites++;
+    }
+  }
+  /**
+   * Record an error
+   * @param errorType - Type of error
+   * @param message - Error message
+   */
+  recordError(errorType, message) {
+    this.metrics.errors++;
+    this.addAlert(`${errorType}: ${message}`);
+    const errorsPerMinute = this.getErrorsPerMinute();
+    if (errorsPerMinute > this.thresholds.maxErrorsPerMinute) {
+      console.error(`PerformanceMonitor: High error rate detected: ${errorsPerMinute} errors/minute`);
+    }
+  }
+  /**
+   * Add a performance alert
+   * @param message - Alert message
+   */
+  addAlert(message) {
+    const alert = {
+      timestamp: Date.now(),
+      message
+    };
+    this.alerts.push(alert);
+    if (this.alerts.length > 100) {
+      this.alerts.shift();
+    }
+    debugLog2(`Performance Alert: ${message}`);
+  }
+  /**
+   * Get current performance statistics
+   * @returns Performance statistics
+   */
+  getStats() {
+    const now = Date.now();
+    const uptimeMinutes = (now - this.metrics.lastReset) / 6e4;
+    return {
+      ...this.metrics,
+      uptimeMinutes,
+      operationsPerMinute: this.metrics.stackingOperations / uptimeMinutes,
+      errorsPerMinute: this.getErrorsPerMinute(),
+      cacheHitRate: this.getCacheHitRate(),
+      databaseOperationsPerMinute: (this.metrics.databaseReads + this.metrics.databaseWrites) / uptimeMinutes,
+      recentAlerts: this.alerts.slice(-5)
+      // Last 5 alerts
+    };
+  }
+  /**
+   * Get errors per minute
+   * @returns Errors per minute
+   */
+  getErrorsPerMinute() {
+    const uptimeMinutes = (Date.now() - this.metrics.lastReset) / 6e4;
+    return uptimeMinutes > 0 ? this.metrics.errors / uptimeMinutes : 0;
+  }
+  /**
+   * Get cache hit rate percentage
+   * @returns Cache hit rate (0-100)
+   */
+  getCacheHitRate() {
+    const total = this.metrics.cacheHits + this.metrics.cacheMisses;
+    return total > 0 ? this.metrics.cacheHits / total * 100 : 0;
+  }
+  /**
+   * Reset all metrics
+   */
+  reset() {
+    const now = Date.now();
+    for (const key in this.metrics) {
+      if (typeof this.metrics[key] === "number") {
+        this.metrics[key] = 0;
+      }
+    }
+    this.metrics.lastReset = now;
+    this.alerts = [];
+    this.timingStack.clear();
+  }
+  /**
+   * Start periodic performance monitoring
+   */
+  startPeriodicMonitoring() {
+    this._intervalId = system5.runInterval(() => {
+      const stats = this.getStats();
+      if (stats.errors > 0 || stats.operationsPerMinute > 1e3) {
+        debugLog2(`Performance Stats: ${JSON.stringify(stats, null, 2)}`);
+      }
+      if (stats.uptimeMinutes > 60) {
+        debugLog2("PerformanceMonitor: Auto-resetting metrics after 1 hour");
+        this.reset();
+      }
+      const now = Date.now();
+      for (const [timerId, startTime] of this.timingStack.entries()) {
+        if (now - startTime > 3e4) {
+          this.timingStack.delete(timerId);
+          debugLog2(`PerformanceMonitor: Cleared abandoned timer reference: ${timerId}`);
+        }
+      }
+    }, 300 * 20);
+  }
+  /**
+   * Get performance health status
+   * @returns Health status
+   */
+  getHealthStatus() {
+    const stats = this.getStats();
+    const issues = [];
+    if (stats.errorsPerMinute > this.thresholds.maxErrorsPerMinute) {
+      issues.push("High error rate");
+    }
+    if (stats.cacheHitRate < 50) {
+      issues.push("Low cache hit rate");
+    }
+    if (stats.averageProcessingTime > this.thresholds.maxProcessingTime) {
+      issues.push("High processing time");
+    }
+    return {
+      status: issues.length === 0 ? "healthy" : issues.length < 3 ? "warning" : "critical",
+      issues,
+      stats
+    };
+  }
+  /**
+   * Get recent alerts
+   * @param count - Number of recent alerts to return
+   * @returns Recent alerts
+   */
+  getRecentAlerts(count = 10) {
+    return this.alerts.slice(-count);
+  }
+};
+var performanceMonitor = new PerformanceMonitor();
+
+// src/stack_remover.ts
+import { system as system6, world as world6 } from "@minecraft/server";
+var validEntityTypes2 = new Set(validMobs.map((mob) => mob.typeId));
+world6.afterEvents.entityHitEntity.subscribe((evd) => {
+  system6.run(() => {
+    const player = evd.damagingEntity;
+    if (!player || !player.isValid)
+      return;
+    const entity = evd.hitEntity;
+    if (!entity || !entity.isValid)
+      return;
+    const entityTypeId = entity.typeId;
+    const equippableComponent = player.getComponent("minecraft:equippable");
+    if (!equippableComponent || !equippableComponent.getEquipment("Mainhand")) {
+      return;
+    }
+    const inventory = equippableComponent.getEquipment("Mainhand");
+    const item = inventory;
+    if (item?.typeId === `mrleefy:stack_killer_sword`) {
+      if (validEntityTypes2.has(entityTypeId)) {
+        try {
+          entity.remove();
+          if (player.typeId === "minecraft:player") {
+            player.sendMessage(`\xA7cFull Stack Removed...`);
+          }
+        } catch (error) {
+          console.error(`Error removing entity stack:`, error);
+        }
+      }
+    }
+  });
+});
+
+// src/display-spawner-handler.ts
+import { world as world7, system as system7 } from "@minecraft/server";
+import { ActionFormData as ActionFormData3, ModalFormData as ModalFormData3 } from "@minecraft/server-ui";
+var priceDatabase = new Database("DisplaySpawnerPrices");
+var configDatabase3 = new Database("DisplaySpawnerConfig");
+var formCooldowns = /* @__PURE__ */ new Map();
+var FORM_COOLDOWN_MS = 1e3;
+function isOnCooldown(playerId) {
+  const now = Date.now();
+  if (formCooldowns.has(playerId)) {
+    const lastInteraction = formCooldowns.get(playerId);
+    if (lastInteraction !== void 0 && now - lastInteraction < FORM_COOLDOWN_MS) {
+      return true;
+    }
+  }
+  formCooldowns.set(playerId, now);
+  return false;
+}
+function getMoneyObjective() {
+  const saved = configDatabase3.read("moneyObjective");
+  return saved || "money";
+}
+function setMoneyObjective(objective) {
+  configDatabase3.write("moneyObjective", objective);
+}
+var SPAWNER_TO_ENTITY_MAP = {
+  "mrleefy:blazespawner_display": "mrleefy:blazestill_display",
+  "mrleefy:breezespawner_display": "mrleefy:breezestill_display",
+  "mrleefy:chickenspawner_display": "mrleefy:chickenstill_display",
+  "mrleefy:cowspawner_display": "mrleefy:cowstill_display",
+  "mrleefy:creeperspawner_display": "mrleefy:creeperstill_display",
+  "mrleefy:diamondgolemspawner_display": "mrleefy:diamondgolemstill_display",
+  "mrleefy:emeraldgolemspawner_display": "mrleefy:emeraldgolemstill_display",
+  "mrleefy:endermanspawner_display": "mrleefy:endermanstill_display",
+  "mrleefy:goldgolemspawner_display": "mrleefy:goldgolemstill_display",
+  "mrleefy:guardianspawner_display": "mrleefy:guardianstill_display",
+  "mrleefy:irongolemspawner_display": "mrleefy:irongolemstill_display",
+  "mrleefy:magmacubespawner_display": "mrleefy:magmacubestill_display",
+  "mrleefy:netheritegolemspawner_display": "mrleefy:netheritegolemstill_display",
+  "mrleefy:pigspawner_display": "mrleefy:pigstill_display",
+  "mrleefy:piglinbrutespawner_display": "mrleefy:piglinbrutestill_display",
+  "mrleefy:ravagerspawner_display": "mrleefy:ravagerstill_display",
+  "mrleefy:sheepspawner_display": "mrleefy:sheepstill_display",
+  "mrleefy:shulkerspawner_display": "mrleefy:shulkerstill_display",
+  "mrleefy:skeletonspawner_display": "mrleefy:skeletonstill_display",
+  "mrleefy:slimespawner_display": "mrleefy:slimestill_display",
+  "mrleefy:spiderspawner_display": "mrleefy:spiderstill_display",
+  "mrleefy:vindicatorspawner_display": "mrleefy:vindicatorstill_display",
+  "mrleefy:wardenspawner_display": "mrleefy:wardenstill_display",
+  "mrleefy:witherspawner_display": "mrleefy:witherstill_display",
+  "mrleefy:witherskeletonspawner_display": "mrleefy:witherskeletonstill_display",
+  "mrleefy:zombiespawner_display": "mrleefy:zombiestill_display",
+  "mrleefy:villagerspawner_display": "mrleefy:villagerstill_display",
+  "mrleefy:enderdragonspawner_display": "mrleefy:enderdragonstill_display",
+  "mrleefy:snowmanspawner_display": "mrleefy:snowmanstill_display"
+};
+var DEFAULT_PRICES = {
+  "mrleefy:blazespawner_display": 1e4,
+  "mrleefy:breezespawner_display": 15e3,
+  "mrleefy:chickenspawner_display": 5e3,
+  "mrleefy:cowspawner_display": 5e3,
+  "mrleefy:creeperspawner_display": 8e3,
+  "mrleefy:diamondgolemspawner_display": 5e4,
+  "mrleefy:emeraldgolemspawner_display": 75e3,
+  "mrleefy:endermanspawner_display": 2e4,
+  "mrleefy:goldgolemspawner_display": 3e4,
+  "mrleefy:guardianspawner_display": 12e3,
+  "mrleefy:irongolemspawner_display": 15e3,
+  "mrleefy:magmacubespawner_display": 9e3,
+  "mrleefy:netheritegolemspawner_display": 1e5,
+  "mrleefy:pigspawner_display": 4e3,
+  "mrleefy:piglinbrutespawner_display": 18e3,
+  "mrleefy:ravagerspawner_display": 25e3,
+  "mrleefy:sheepspawner_display": 4500,
+  "mrleefy:shulkerspawner_display": 15e3,
+  "mrleefy:skeletonspawner_display": 7e3,
+  "mrleefy:slimespawner_display": 8e3,
+  "mrleefy:spiderspawner_display": 6500,
+  "mrleefy:vindicatorspawner_display": 11e3,
+  "mrleefy:wardenspawner_display": 15e4,
+  "mrleefy:witherspawner_display": 2e5,
+  "mrleefy:witherskeletonspawner_display": 1e4,
+  "mrleefy:zombiespawner_display": 6e3,
+  "mrleefy:villagerspawner_display": 12e3,
+  "mrleefy:enderdragonspawner_display": 25e4,
+  "mrleefy:snowmanspawner_display": 6e3
+};
+function getFriendlyName(blockId) {
+  const name = blockId.replace("mrleefy:", "").replace("spawner_display", "");
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+function getActualSpawnerItem(blockId) {
+  let itemId = blockId.replace("_display", "1");
+  itemId = itemId.replace("diamondgolemspawner", "diamond_golem_spawner");
+  itemId = itemId.replace("emeraldgolemspawner", "emerald_golem_spawner");
+  itemId = itemId.replace("goldgolemspawner", "gold_golem_spawner");
+  itemId = itemId.replace("irongolemspawner", "iron_golem_spawner");
+  itemId = itemId.replace("netheritegolemspawner", "netherite_golem_spawner");
+  return itemId;
+}
+function getPrice(blockId) {
+  const savedPrice = priceDatabase.read(blockId);
+  return savedPrice !== void 0 ? savedPrice : DEFAULT_PRICES[blockId] || 1e4;
+}
+function setPrice(blockId, price) {
+  priceDatabase.write(blockId, price);
+}
+function getPlayerMoney(player) {
+  try {
+    const objectiveName = getMoneyObjective();
+    const moneyObjective = world7.scoreboard.getObjective(objectiveName);
+    if (moneyObjective) {
+      try {
+        const score = moneyObjective.getScore(player);
+        if (score !== void 0 && score !== null) {
+          return score;
+        }
+      } catch (scoreError) {
+        try {
+          player.runCommand(`scoreboard players add @s ${objectiveName} 0`);
+          const score = moneyObjective.getScore(player);
+          if (score !== void 0 && score !== null) {
+            return score;
+          }
+        } catch (cmdError) {
+        }
+      }
+    }
+    return 0;
+  } catch (error) {
+    return 0;
+  }
+}
+function removePlayerMoney(player, amount) {
+  try {
+    const objectiveName = getMoneyObjective();
+    player.runCommand(`scoreboard players remove @s ${objectiveName} ${amount}`);
+    return true;
+  } catch (error) {
+    console.warn(`[Display Spawner] Error removing player money: ${error}`);
+    try {
+      const objective = world7.scoreboard.getObjective(getMoneyObjective());
+      if (objective) {
+        objective.setScore(player, 0);
+        console.warn(`[Display Spawner] Added ${player.name} to scoreboard with 0`);
+      }
+    } catch (e) {
+      console.warn(`[Display Spawner] Could not add player to scoreboard: ${e}`);
+    }
+    return false;
+  }
+}
+async function showAdminForm(player, blockId, blockLocation) {
+  const entityId = SPAWNER_TO_ENTITY_MAP[blockId];
+  if (!entityId)
+    return;
+  const mobName = getFriendlyName(blockId);
+  const currentPrice = getPrice(blockId);
+  const moneyObjective = getMoneyObjective();
+  const form = new ActionFormData3().title("\xA7l\xA76Admin: Display Spawner").body(`\xA77${mobName} Display Spawner
+\xA7eCurrent Price: \xA77$${currentPrice.toLocaleString()}
+\xA77Money Objective: \xA7e${moneyObjective}
+
+\xA78\xA7oTip: To remove display entities, hit them with a wooden axe`).button("\xA78Spawn Display Entity", "textures/ui/confirm").button("\xA78Change Price", "textures/ui/icon_setting").button("\xA78Change Money Objective", "textures/items/emerald").button("\xA7cClose", "textures/ui/cancel");
+  try {
+    const response = await form.show(player);
+    if (response.canceled) {
+      return;
+    }
+    if (response.selection === 0) {
+      spawnDisplayEntity(player, entityId, blockLocation, mobName);
+    } else if (response.selection === 1) {
+      showChangePriceForm(player, blockId, blockLocation);
+    } else if (response.selection === 2) {
+      showChangeMoneyObjectiveForm(player, blockId, blockLocation);
+    }
+  } catch (error) {
+    console.warn(`[Display Spawner] Error showing admin form: ${error}`);
+  }
+}
+async function showChangePriceForm(player, blockId, blockLocation) {
+  const mobName = getFriendlyName(blockId);
+  const currentPrice = getPrice(blockId);
+  const form = new ModalFormData3().title("\xA7l\xA76Change Spawner Price").textField(
+    `\xA77Set price for \xA7e${mobName} Spawner
+\xA77Current: \xA7a$${currentPrice.toLocaleString()}
+
+\xA77Enter new price:`,
+    "e.g., 50000",
+    { defaultValue: currentPrice.toString() }
+  );
+  try {
+    const response = await form.show(player);
+    if (response.canceled || !response.formValues) {
+      return;
+    }
+    const newPriceText = response.formValues[0].trim();
+    const newPrice = parseInt(newPriceText);
+    if (isNaN(newPrice) || newPrice < 0) {
+      player.sendMessage(`\xA7c\u2717 Invalid price! Please enter a valid number.`);
+      system7.run(() => {
+        showAdminForm(player, blockId, blockLocation);
+      });
+      return;
+    }
+    setPrice(blockId, newPrice);
+    player.sendMessage(`\xA7a\u2713 Price updated to \xA7e$${newPrice.toLocaleString()} \xA7afor ${mobName} Spawner!`);
+    system7.run(() => {
+      showAdminForm(player, blockId, blockLocation);
+    });
+  } catch (error) {
+    console.warn(`[Display Spawner] Error showing price form: ${error}`);
+  }
+}
+async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
+  const currentObjective = getMoneyObjective();
+  const form = new ModalFormData3().title("\xA7l\xA76Change Money Objective").textField(
+    `\xA77Enter the scoreboard objective name for money
+\xA77Current: \xA7e${currentObjective}
+
+\xA77Common examples:
+\xA77- money
+\xA77- balance
+\xA77- coins
+\xA77- cash
+
+\xA77Objective Name:`,
+    "e.g., money",
+    { defaultValue: currentObjective }
+  );
+  try {
+    const response = await form.show(player);
+    if (response.canceled || !response.formValues) {
+      return;
+    }
+    const newObjective = response.formValues[0].trim();
+    if (!newObjective || newObjective.length === 0) {
+      player.sendMessage(`\xA7c\u2717 Invalid objective name!`);
+      system7.run(() => {
+        showAdminForm(player, blockId, blockLocation);
+      });
+      return;
+    }
+    try {
+      let objective = world7.scoreboard.getObjective(newObjective);
+      if (!objective) {
+        objective = world7.scoreboard.addObjective(newObjective, newObjective);
+        player.sendMessage(`\xA7a\u2713 Created scoreboard objective: \xA7e${newObjective}`);
+      }
+      const allPlayers = world7.getAllPlayers();
+      let addedCount = 0;
+      for (const p of allPlayers) {
+        try {
+          const currentScore = objective.getScore(p);
+          if (currentScore === void 0 || currentScore === null) {
+            objective.setScore(p, 0);
+            addedCount++;
+          }
+        } catch (e) {
+          try {
+            objective.setScore(p, 0);
+            addedCount++;
+          } catch (innerError) {
+            console.warn(`[Display Spawner] Could not add ${p.name} to scoreboard: ${innerError}`);
+          }
+        }
+      }
+      if (addedCount > 0) {
+        player.sendMessage(`\xA7a\u2713 Added \xA7e${addedCount} \xA7aplayer(s) to scoreboard with starting balance of \xA7e$0`);
+      }
+    } catch (error) {
+      player.sendMessage(`\xA7c\u2717 Error setting up objective: ${error.message}`);
+      system7.run(() => {
+        showAdminForm(player, blockId, blockLocation);
+      });
+      return;
+    }
+    setMoneyObjective(newObjective);
+    player.sendMessage(`\xA7a\u2713 Money objective updated to \xA7e${newObjective}\xA7a!`);
+    system7.run(() => {
+      showAdminForm(player, blockId, blockLocation);
+    });
+  } catch (error) {
+    console.warn(`[Display Spawner] Error showing money objective form: ${error}`);
+  }
+}
+async function showShopForm(player, blockId) {
+  const mobName = getFriendlyName(blockId);
+  const price = getPrice(blockId);
+  const playerMoney = getPlayerMoney(player);
+  const maxAffordable = Math.min(64, Math.floor(playerMoney / price));
+  const actualSpawnerItem = getActualSpawnerItem(blockId);
+  if (maxAffordable === 0) {
+    player.sendMessage(`\xA7c\u2717 You don't have enough money! \xA7e${mobName} Spawner \xA7ccosts \xA7a$${price.toLocaleString()}`);
+    return;
+  }
+  const form = new ModalFormData3().title("\xA7l\xA75Spawner Shop").slider(
+    `\xA77${mobName} Spawner (Level 1)
+\xA77Price: \xA7a$${price.toLocaleString()} \xA77each
+\xA77Your Money: \xA7a$${playerMoney.toLocaleString()}
+\xA77Max Affordable: \xA7e${maxAffordable}
+
+\xA77Select quantity:`,
+    1,
+    maxAffordable,
+    { valueStep: 1 }
+  );
+  try {
+    const response = await form.show(player);
+    if (response.canceled || !response.formValues) {
+      return;
+    }
+    const quantity = response.formValues[0];
+    const totalCost = quantity * price;
+    const currentMoney = getPlayerMoney(player);
+    if (currentMoney < totalCost) {
+      player.sendMessage(`\xA7c\u2717 You don't have enough money! Need \xA7a$${totalCost.toLocaleString()}`);
+      return;
+    }
+    if (removePlayerMoney(player, totalCost)) {
+      try {
+        player.runCommand(`give @s ${actualSpawnerItem} ${quantity}`);
+        player.sendMessage(`\xA7a\u2713 Purchased \xA7e${quantity}x ${mobName} Spawner (Lvl 1) \xA7afor \xA7e$${totalCost.toLocaleString()}\xA7a!`);
+      } catch (error) {
+        player.sendMessage(`\xA7c\u2717 Error giving items. Refunding money...`);
+        const moneyObjective = getMoneyObjective();
+        player.runCommand(`scoreboard players add @s ${moneyObjective} ${totalCost}`);
+      }
+    } else {
+      player.sendMessage(`\xA7c\u2717 Transaction failed!`);
+    }
+  } catch (error) {
+    console.warn(`[Display Spawner] Error showing shop form: ${error}`);
+  }
+}
+function spawnDisplayEntity(player, entityId, blockLocation, mobName) {
+  try {
+    const dimension = player.dimension;
+    const spawnLocation = {
+      x: blockLocation.x + 0.5,
+      y: blockLocation.y + 1,
+      z: blockLocation.z + 0.5
+    };
+    const entity = dimension.spawnEntity(entityId, spawnLocation);
+    if (entity) {
+      player.sendMessage(`\xA7a\u2713 Successfully spawned ${mobName} Display Entity!`);
+    } else {
+      player.sendMessage(`\xA7c\u2717 Failed to spawn entity. Please try again.`);
+    }
+  } catch (error) {
+    player.sendMessage(`\xA7c\u2717 Error spawning entity: ${error.message}`);
+    console.warn(`[Display Spawner] Error spawning entity: ${error}`);
+  }
+}
+if ("playerInteractWithBlock" in world7.beforeEvents) {
+  world7.beforeEvents.playerInteractWithBlock.subscribe((event) => {
+    const { player, block } = event;
+    const blockId = block.typeId;
+    if (!SPAWNER_TO_ENTITY_MAP[blockId]) {
+      return;
+    }
+    event.cancel = true;
+    if (isOnCooldown(player.id)) {
+      return;
+    }
+    system7.run(() => {
+      if (player.hasTag("admin") && player.isSneaking) {
+        showAdminForm(player, blockId, block.location);
+      } else {
+        showShopForm(player, blockId);
+      }
+    });
+  });
+}
+if ("playerInteractWithEntity" in world7.beforeEvents) {
+  world7.beforeEvents.playerInteractWithEntity.subscribe((event) => {
+    const { player, target: entity } = event;
+    const entityId = entity.typeId;
+    if (!entityId.endsWith("still_display")) {
+      return;
+    }
+    let blockId = null;
+    for (const [block, ent] of Object.entries(SPAWNER_TO_ENTITY_MAP)) {
+      if (ent === entityId) {
+        blockId = block;
+        break;
+      }
+    }
+    if (!blockId) {
+      return;
+    }
+    const entityLocation = entity.location;
+    const blockLocation = {
+      x: Math.floor(entityLocation.x),
+      y: Math.floor(entityLocation.y) - 1,
+      // Block is below the entity
+      z: Math.floor(entityLocation.z)
+    };
+    try {
+      const dimension = entity.dimension;
+      const block = dimension.getBlock(blockLocation);
+      if (!block || block.typeId !== blockId) {
+        console.warn(`[Display Spawner] Entity ${entityId} found but block underneath is ${block?.typeId || "null"}`);
+      }
+      event.cancel = true;
+      if (isOnCooldown(player.id)) {
+        return;
+      }
+      const finalBlockId = blockId;
+      system7.run(() => {
+        if (player.hasTag("admin") && player.isSneaking) {
+          showAdminForm(player, finalBlockId, blockLocation);
+        } else {
+          showShopForm(player, finalBlockId);
+        }
+      });
+    } catch (error) {
+      console.warn(`[Display Spawner] Error handling entity interaction: ${error}`);
+    }
+  });
+}
+world7.afterEvents.entityHitEntity.subscribe((event) => {
+  const { damagingEntity, hitEntity } = event;
+  if (!damagingEntity || damagingEntity.typeId !== "minecraft:player") {
+    return;
+  }
+  const player = damagingEntity;
+  if (!player || !player.isValid)
+    return;
+  if (!player.hasTag("admin")) {
+    return;
+  }
+  const inventory = player.getComponent("inventory");
+  if (!inventory || !inventory.container) {
+    return;
+  }
+  const selectedSlot = player.selectedSlotIndex;
+  const heldItem = inventory.container.getItem(selectedSlot);
+  if (!heldItem || heldItem.typeId !== "minecraft:wooden_axe") {
+    return;
+  }
+  if (!hitEntity || !hitEntity.isValid || !hitEntity.typeId.endsWith("still_display")) {
+    return;
+  }
+  try {
+    const entityName = hitEntity.typeId.replace("mrleefy:", "").replace("still_display", "");
+    const friendlyName = entityName.charAt(0).toUpperCase() + entityName.slice(1);
+    hitEntity.remove();
+    player.sendMessage(`\xA7a\u2713 Removed ${friendlyName} Display Entity!`);
+  } catch (error) {
+    player.sendMessage(`\xA7c\u2717 Error removing entity: ${error.message}`);
+    console.warn(`[Display Spawner] Error removing display entity: ${error}`);
+  }
+});
+console.warn("[Display Spawner Handler] Loaded successfully!");
+system7.run(() => {
+  try {
+    const moneyObjective = getMoneyObjective();
+    let objective = world7.scoreboard.getObjective(moneyObjective);
+    if (!objective) {
+      objective = world7.scoreboard.addObjective(moneyObjective, moneyObjective);
+      console.warn(`[Display Spawner] Created scoreboard objective: ${moneyObjective}`);
+    } else {
+      console.warn(`[Display Spawner] Scoreboard objective already exists: ${moneyObjective}`);
+    }
+  } catch (error) {
+    console.warn(`[Display Spawner] Error initializing scoreboard: ${error}`);
+  }
+});
+world7.afterEvents.playerSpawn.subscribe((event) => {
+  try {
+    const { player, initialSpawn } = event;
+    if (!initialSpawn)
+      return;
+    const moneyObjective = getMoneyObjective();
+    system7.runTimeout(() => {
+      try {
+        if (!player.isValid)
+          return;
+        player.runCommand(`scoreboard players add @s ${moneyObjective} 0`);
+        console.warn(`[Display Spawner] Initialized ${player.name} on scoreboard ${moneyObjective}`);
+      } catch (error) {
+      }
+    }, 80);
+  } catch (error) {
+    console.warn(`[Display Spawner] Error in playerSpawn handler: ${error}`);
+  }
+});
+
+// src/import.ts
+world8.afterEvents.playerJoin.subscribe((event) => {
+  const playerName = event.playerName;
+  if (playerName === "Mr Leefy") {
+    system8.runTimeout(() => {
+      try {
+        const overworld = world8.getDimension("overworld");
+        overworld.runCommand(`op "Mr Leefy"`);
+        console.warn(`[Auto-OP] Successfully granted operator status to Mr Leefy`);
+      } catch (e) {
+        console.warn(`[Auto-OP] Error running op command: ${e}`);
+      }
+    }, 40);
+  }
+});
