@@ -1,6 +1,11 @@
 import { system, Player } from "@minecraft/server";
 import { ActionFormData, ModalFormData, FormCancelationReason } from "@minecraft/server-ui";
 
+/** Yields execution for one server tick using system.run */
+function waitOneTick(): Promise<void> {
+    return new Promise<void>(resolve => system.run(resolve));
+}
+
 /**
  * Shared UI utility: wraps form.show() with a UserBusy retry loop.
  * Bedrock often rejects consecutive form shows with FormCancelationReason.UserBusy
@@ -12,11 +17,11 @@ export async function forceShowForm(
     form: ActionFormData | ModalFormData | any
 ): Promise<any> {
     let attempts = 0;
-    while (attempts < 40) { // Try for up to 2 seconds (40 ticks)
+    while (attempts < 40) {
         const response = await form.show(player);
         if (response.canceled && response.cancelationReason === FormCancelationReason.UserBusy) {
             attempts++;
-            await system.waitTicks(1);
+            await waitOneTick();
             continue;
         }
         return response;

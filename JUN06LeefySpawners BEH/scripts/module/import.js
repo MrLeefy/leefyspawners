@@ -927,13 +927,16 @@ import { ActionFormData as ActionFormData3, ModalFormData as ModalFormData3, Mes
 // src/ui-utils.ts
 import { system as system2 } from "@minecraft/server";
 import { FormCancelationReason } from "@minecraft/server-ui";
+function waitOneTick() {
+  return new Promise((resolve) => system2.run(resolve));
+}
 async function forceShowForm(player, form) {
   let attempts = 0;
   while (attempts < 40) {
     const response = await form.show(player);
     if (response.canceled && response.cancelationReason === FormCancelationReason.UserBusy) {
       attempts++;
-      await system2.waitTicks(1);
+      await waitOneTick();
       continue;
     }
     return response;
