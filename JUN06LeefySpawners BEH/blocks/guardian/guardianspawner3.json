@@ -11,7 +11,7 @@
                     "texture": "guardianspawner"
                 }
             },
-            "minecraft:geometry": "geometry.mrleefy",
+            "minecraft:geometry": "minecraft:geometry.full_block",
             "minecraft:light_dampening": 15,
             "minecraft:light_emission": 10,
             "minecraft:map_color": [
