@@ -200,6 +200,11 @@
             "textures": [
                 "textures/blocks/villagerspawner"
             ]
+        },
+        "snowmanspawner": {
+            "textures": [
+                "textures/blocks/snowgolemspawner"
+            ]
         }
     }
 }

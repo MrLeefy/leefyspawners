@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.64 RES - Jul 04",
-		"description": "LeefySpawners Resource Pack v8.2.64 - Dynamic Form Queue - Jul 2026",
+		"name": "LeefySpawners v8.2.65 RES - Jul 04",
+		"description": "LeefySpawners Resource Pack v8.2.65 - Added Snowman Display Block & Names - Jul 2026",
 		"uuid": "95155b18-8b16-4b7e-a1c0-3a6f57f95ca0",
 		"version": [
 			8,
 			2,
-			64
+			65
 		],
 		"min_engine_version": [
 			1,
@@ -22,7 +22,7 @@
 			"version": [
 				8,
 				2,
-				64
+				65
 			]
 		}
 	],
@@ -32,7 +32,7 @@
 			"version": [
 				8,
 				2,
-				64
+				65
 			]
 		}
 	]
