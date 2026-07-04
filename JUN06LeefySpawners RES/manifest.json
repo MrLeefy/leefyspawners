@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.54 RES - Jul 04",
-		"description": "LeefySpawners Resource Pack v8.2.54 - Fixed ModalFormData API signatures causing settings to not save - Jul 2026",
-		"uuid": "0432170a-1bb2-46df-b418-46b6ec4f00cd",
+		"name": "LeefySpawners v8.2.55 RES - Jul 04",
+		"description": "LeefySpawners Resource Pack v8.2.55 - Fixed ModalFormData API signatures causing settings to not save - Jul 2026",
+		"uuid": "4c4408eb-8bba-4915-a388-c0fe7f228af1",
 		"version": [
 			8,
 			2,
-			54
+			55
 		],
 		"min_engine_version": [
 			1,
@@ -18,21 +18,21 @@
 	"modules": [
 		{
 			"type": "resources",
-			"uuid": "892e3943-e4d1-47e1-86e7-3b684d6f8b61",
+			"uuid": "4a1e559e-d840-4241-b2e7-4c1e0ba31071",
 			"version": [
 				8,
 				2,
-				54
+				55
 			]
 		}
 	],
 	"dependencies": [
 		{
-			"uuid": "fbbf83a4-e09e-4de1-a670-9811099a8394",
+			"uuid": "4113cd5c-9918-4963-b8f3-b7fbe086c33b",
 			"version": [
 				8,
 				2,
-				54
+				55
 			]
 		}
 	]

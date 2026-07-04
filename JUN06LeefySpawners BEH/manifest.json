@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.54 BEH - Jul 04",
-		"description": "LeefySpawners Behavior Pack v8.2.54 - Fixed ModalFormData API signatures (toggle/textField/slider) causing settings to not save - Jul 2026",
-		"uuid": "fbbf83a4-e09e-4de1-a670-9811099a8394",
+		"name": "LeefySpawners v8.2.55 BEH - Jul 04",
+		"description": "LeefySpawners Behavior Pack v8.2.55 - Fixed ModalFormData API signatures (toggle/textField/slider) causing settings to not save - Jul 2026",
+		"uuid": "4113cd5c-9918-4963-b8f3-b7fbe086c33b",
 		"version": [
 			8,
 			2,
-			54
+			55
 		],
 		"min_engine_version": [
 			1,
@@ -18,20 +18,20 @@
 	"modules": [
 		{
 			"type": "data",
-			"uuid": "4a423d41-fb9a-4f40-87a1-41a110d9aacc",
+			"uuid": "f3da3ab2-16b8-4aa7-b3e0-ba68102f860a",
 			"version": [
 				8,
 				2,
-				54
+				55
 			]
 		},
 		{
 			"description": "",
-			"uuid": "03978c4d-a539-417a-a1d2-dbcf8d3c4010",
+			"uuid": "cbcd58a9-ce7d-44d4-890a-fab13a95b81a",
 			"version": [
 				8,
 				2,
-				54
+				55
 			],
 			"type": "script",
 			"language": "javascript",
@@ -48,11 +48,11 @@
 			"version": "1.2.0"
 		},
 		{
-			"uuid": "0432170a-1bb2-46df-b418-46b6ec4f00cd",
+			"uuid": "4c4408eb-8bba-4915-a388-c0fe7f228af1",
 			"version": [
 				8,
 				2,
-				54
+				55
 			]
 		}
 	]
