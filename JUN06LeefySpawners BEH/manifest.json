@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.38 BEH - Jul 03",
-		"description": "LeefySpawners Behavior Pack v8.2.38 - Reverted terrain texture mappings to original flat ore blocks - Jul 2026",
+		"name": "LeefySpawners v8.2.39 BEH - Jul 03",
+		"description": "LeefySpawners Behavior Pack v8.2.39 - Reverted terrain texture mappings to original flat ore blocks - Jul 2026",
 		"uuid": "a69a9e17-259c-4413-84b8-af991e4df096",
 		"version": [
 			8,
 			2,
-			38
+			39
 		],
 		"min_engine_version": [
 			1,
@@ -22,7 +22,7 @@
 			"version": [
 				8,
 				2,
-				38
+				39
 			]
 		},
 		{
@@ -31,7 +31,7 @@
 			"version": [
 				8,
 				2,
-				38
+				39
 			],
 			"type": "script",
 			"language": "javascript",
@@ -52,7 +52,7 @@
 			"version": [
 				8,
 				2,
-				38
+				39
 			]
 		}
 	]
