@@ -6067,13 +6067,13 @@ async function showAdminForm(player, blockId, blockLocation) {
     if (response.selection === 0) {
       spawnDisplayEntity(player, entityId, blockLocation, mobName);
     } else if (response.selection === 1) {
-      system7.run(() => {
+      system7.runTimeout(() => {
         showChangePriceForm(player, blockId, blockLocation);
-      });
+      }, 5);
     } else if (response.selection === 2) {
-      system7.run(() => {
+      system7.runTimeout(() => {
         showChangeMoneyObjectiveForm(player, blockId, blockLocation);
-      });
+      }, 5);
     }
   } catch (error) {
     console.warn(`[Display Spawner] Error showing admin form: ${error}`);
@@ -6099,16 +6099,16 @@ async function showChangePriceForm(player, blockId, blockLocation) {
     const newPrice = parseInt(newPriceText);
     if (isNaN(newPrice) || newPrice < 1) {
       player.sendMessage(`\xA7c\u2717 Invalid price! Please enter a number greater than 0.`);
-      system7.run(() => {
+      system7.runTimeout(() => {
         showAdminForm(player, blockId, blockLocation);
-      });
+      }, 5);
       return;
     }
     setPrice(blockId, newPrice);
     player.sendMessage(`\xA7a\u2713 Price updated to \xA7e$${newPrice.toLocaleString()} \xA7afor ${mobName} Spawner!`);
-    system7.run(() => {
+    system7.runTimeout(() => {
       showAdminForm(player, blockId, blockLocation);
-    });
+    }, 5);
   } catch (error) {
     console.warn(`[Display Spawner] Error showing price form: ${error}`);
   }
@@ -6137,9 +6137,9 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
     const newObjective = response.formValues[0].trim();
     if (!newObjective || newObjective.length === 0) {
       player.sendMessage(`\xA7c\u2717 Invalid objective name!`);
-      system7.run(() => {
+      system7.runTimeout(() => {
         showAdminForm(player, blockId, blockLocation);
-      });
+      }, 5);
       return;
     }
     try {
@@ -6171,16 +6171,16 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
       }
     } catch (error) {
       player.sendMessage(`\xA7c\u2717 Error setting up objective: ${error.message}`);
-      system7.run(() => {
+      system7.runTimeout(() => {
         showAdminForm(player, blockId, blockLocation);
-      });
+      }, 5);
       return;
     }
     setMoneyObjective(newObjective);
     player.sendMessage(`\xA7a\u2713 Money objective updated to \xA7e${newObjective}\xA7a!`);
-    system7.run(() => {
+    system7.runTimeout(() => {
       showAdminForm(player, blockId, blockLocation);
-    });
+    }, 5);
   } catch (error) {
     console.warn(`[Display Spawner] Error showing money objective form: ${error}`);
   }
