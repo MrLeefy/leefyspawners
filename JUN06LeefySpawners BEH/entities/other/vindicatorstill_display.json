@@ -107,7 +107,10 @@
             "minecraft:movement.basic": {
                 "max_turn": 30.0
             },
-            "minecraft:navigation.generic": {}
+            "minecraft:navigation.walk": {
+                "avoid_water": true,
+                "using_door_annotation": true
+            }
         },
         "events": {
             "minecraft:entity_spawned": {
