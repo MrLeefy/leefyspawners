@@ -6116,7 +6116,7 @@ async function showChangePriceForm(player, blockId, blockLocation) {
 
 \xA77Enter new price:`,
     "e.g., 50000",
-    currentPrice.toString()
+    { defaultValue: currentPrice.toString() }
   );
   try {
     const response = await forceShowForm(player, form);
@@ -6150,7 +6150,7 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
 
 \xA77Objective Name:`,
     "e.g., money",
-    currentObjective
+    { defaultValue: currentObjective }
   );
   try {
     const response = await forceShowForm(player, form);
