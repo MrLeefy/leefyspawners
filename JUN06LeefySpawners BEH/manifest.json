@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.74 BEH - Jul 04",
-		"description": "LeefySpawners Behavior Pack v8.2.74 - Added Snowman Display Block & Names - Jul 2026",
-		"uuid": "908e12ff-9261-4f75-a825-051380c46392",
+		"name": "LeefySpawners v8.2.75 BEH - Jul 04",
+		"description": "LeefySpawners Behavior Pack v8.2.75 - Added Snowman Display Block & Names - Jul 2026",
+		"uuid": "f84f6865-8497-46eb-923e-db27803fa33a",
 		"version": [
 			8,
 			2,
-			74
+			75
 		],
 		"min_engine_version": [
 			1,
@@ -18,20 +18,20 @@
 	"modules": [
 		{
 			"type": "data",
-			"uuid": "f120df18-1572-4993-bd4c-17ad289aed57",
+			"uuid": "95e127d3-d93f-4091-b195-f66646dacb75",
 			"version": [
 				8,
 				2,
-				74
+				75
 			]
 		},
 		{
 			"description": "",
-			"uuid": "ba5c2d2c-5029-4329-b64b-bc50f94a8b5f",
+			"uuid": "14d8844e-7ab7-41dc-a3f1-fd659f3d75cc",
 			"version": [
 				8,
 				2,
-				74
+				75
 			],
 			"type": "script",
 			"language": "javascript",
@@ -48,11 +48,11 @@
 			"version": "1.2.0"
 		},
 		{
-			"uuid": "bd90ac48-9c96-41a3-b8c7-658b6b776847",
+			"uuid": "9e0ae4f9-4d60-431d-85d7-e97eab7fecb5",
 			"version": [
 				8,
 				2,
-				74
+				75
 			]
 		}
 	]
