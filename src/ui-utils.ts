@@ -44,3 +44,59 @@ export async function forceShowForm(
         return { canceled: true, cancelationReason: "MaxAttemptsExceeded" };
     }
 }
+
+import { securityService } from "./security-service";
+import { UI, THEME, ERROR_MESSAGES } from "./constants";
+import { configDatabase } from "./mobstacker-core";
+
+/**
+ * Format helper for UI text based on unified colors from THEME constants,
+ * reading from the config database for dynamic customization.
+ */
+export const Format = {
+    getColor: (key: string, defaultColor: string): string => {
+        try {
+            return configDatabase.read(`theme_${key}`) ?? defaultColor;
+        } catch {
+            return defaultColor;
+        }
+    },
+    title: (text: string) => `${Format.getColor('COLOR_TITLE', THEME.COLOR_TITLE)}${text}${Format.getColor('COLOR_RESET', THEME.COLOR_RESET)}`,
+    success: (text: string) => `${Format.getColor('COLOR_SUCCESS', THEME.COLOR_SUCCESS)}${text}${Format.getColor('COLOR_RESET', THEME.COLOR_RESET)}`,
+    error: (text: string) => `${Format.getColor('COLOR_ERROR', THEME.COLOR_ERROR)}${text}${Format.getColor('COLOR_RESET', THEME.COLOR_RESET)}`,
+    warn: (text: string) => `${Format.getColor('COLOR_WARN', THEME.COLOR_WARN)}${text}${Format.getColor('COLOR_RESET', THEME.COLOR_RESET)}`,
+    info: (text: string) => `${Format.getColor('COLOR_INFO', THEME.COLOR_INFO)}${text}${Format.getColor('COLOR_RESET', THEME.COLOR_RESET)}`,
+    text: (text: string) => `${Format.getColor('COLOR_TEXT', THEME.COLOR_TEXT)}${text}${Format.getColor('COLOR_RESET', THEME.COLOR_RESET)}`,
+    highlight: (text: string) => `${Format.getColor('COLOR_HIGHLIGHT', THEME.COLOR_HIGHLIGHT)}${text}${Format.getColor('COLOR_RESET', THEME.COLOR_RESET)}`
+};
+
+/**
+ * Asserts that the player is valid and has administrative permissions.
+ * Sends an error message to the player if they don't.
+ */
+export function assertAdmin(player: Player): boolean {
+    if (!player || !player.isValid) return false;
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+        player.sendMessage(Format.error(ERROR_MESSAGES.NO_PERMISSION));
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Asserts that the player is near the specified block coordinates.
+ * Sends an error message to the player if they are too far.
+ */
+export function assertProximity(player: Player, x: number, y: number, z: number, maxDistance = 10): boolean {
+    if (!player || !player.isValid) return false;
+    const loc = player.location;
+    const dx = loc.x - x;
+    const dy = loc.y - y;
+    const dz = loc.z - z;
+    const distSq = dx * dx + dy * dy + dz * dz;
+    if (distSq > maxDistance * maxDistance) {
+        player.sendMessage(Format.error("You are too far from the spawner."));
+        return false;
+    }
+    return true;
+}

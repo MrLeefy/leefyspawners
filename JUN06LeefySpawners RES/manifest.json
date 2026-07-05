@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.75 RES - Jul 04",
-		"description": "LeefySpawners Resource Pack v8.2.75 - Added Snowman Display Block & Names - Jul 2026",
+		"name": "LeefySpawners v8.2.76 RES - Jul 05",
+		"description": "LeefySpawners Resource Pack v8.2.76 - Reverted terrain texture mappings to original flat ore blocks - Jul 2026",
 		"uuid": "9e0ae4f9-4d60-431d-85d7-e97eab7fecb5",
 		"version": [
 			8,
 			2,
-			75
+			76
 		],
 		"min_engine_version": [
 			1,
@@ -32,7 +32,7 @@
 			"version": [
 				8,
 				2,
-				75
+				76
 			]
 		}
 	]

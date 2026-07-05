@@ -1,4 +1,4 @@
-import { world, ItemStack, EntityDieAfterEvent, Player, Dimension, Vector3 } from '@minecraft/server';
+import { world, system, ItemStack, EntityDieAfterEvent, Player, Dimension, Vector3, EnchantmentTypes } from '@minecraft/server';
 import { Database } from './database';
 import { ENTITIES } from './constants';
 
@@ -578,17 +578,31 @@ class LootManager {
         };
 
         LootManager.instance = this;
-        this.initialize(); // Load data when the instance is created
+        // Defer initialize() to tick 2: the Database constructor defers its own scoreboard.load()
+        // to tick 1 via system.run(). If we call initialize() synchronously here (tick 0),
+        // lootTableDatabase.read() returns undefined for every key and defaults overwrite saved data.
+        system.run(() => system.run(() => this.initialize()));
     }
 
     /**
      * Loads loot tables from the database or uses defaults.
      */
     initialize(): void {
+        // Load default entities first
         for (const entityId in this.defaultEntities) {
-            const savedLootTable = lootTableDatabase.read(entityId);
-            // If there's a table in the database, use it. Otherwise, use the hardcoded default.
-            this.entities[entityId] = savedLootTable || this.defaultEntities[entityId];
+            this.entities[entityId] = this.defaultEntities[entityId];
+        }
+        // Overwrite or append with saved tables from the database (ensuring custom entities like crawlers are loaded)
+        try {
+            const savedKeys = lootTableDatabase.keys();
+            for (const entityId of savedKeys) {
+                const savedLootTable = lootTableDatabase.read(entityId);
+                if (savedLootTable && Object.keys(savedLootTable).length > 0) {
+                    this.entities[entityId] = savedLootTable;
+                }
+            }
+        } catch (e) {
+            console.error(`[LootManager] Failed to load custom tables from database: ${e}`);
         }
     }
 
@@ -796,11 +810,23 @@ class LootManager {
 
         // --- DYNAMIC ENCHANTING ---
         if (config.enchantments) {
-            // Explicit enchantment config (non-villager use)
+            // Explicit enchantment config: roll chance, then pick a random valid enchant from the category pool.
+            // BUG FIX: config.enchantments.category is a category name (e.g. "sword"), NOT an enchantment ID.
+            // Passing it directly to addEnchantment always threw an error and silently dropped the enchant.
             const enchComp: any = itemStack.getComponent('enchantable');
-            if (enchComp) {
+            if (enchComp && Math.random() * 100 < (config.enchantments.chance ?? 100)) {
                 try {
-                    enchComp.addEnchantment({ type: { id: config.enchantments.category }, level: 1 });
+                    const pool = this.enchantmentCategories[config.enchantments.category];
+                    if (pool && pool.length > 0) {
+                        const randomEnchant = pool[Math.floor(Math.random() * pool.length)];
+                        const typeId = randomEnchant.type.includes(':') ? randomEnchant.type : 'minecraft:' + randomEnchant.type;
+                        const enchType = EnchantmentTypes.get(typeId);
+                        if (enchType) {
+                            enchComp.addEnchantment({ type: enchType, level: randomEnchant.minLevel });
+                        } else {
+                            console.warn(`[LootManager] Enchantment type not found: ${typeId}`);
+                        }
+                    }
                 } catch (e) {
                     console.warn(`[LootManager] Failed to apply enchantment to ${itemId}: ${e}`);
                 }
@@ -818,7 +844,13 @@ class LootManager {
                         const bonusTiers = lootLevel > 0 ? Math.floor(Math.random() * lootLevel) : 0;
                         const scaledMax = Math.min(randomEnchant.maxLevel, randomEnchant.minLevel + bonusTiers + Math.floor(Math.random() * (randomEnchant.maxLevel - randomEnchant.minLevel + 1)));
                         const level = Math.max(randomEnchant.minLevel, Math.min(scaledMax, randomEnchant.maxLevel));
-                        enchComp.addEnchantment({ type: { id: randomEnchant.type }, level });
+                        const typeId = randomEnchant.type.includes(':') ? randomEnchant.type : 'minecraft:' + randomEnchant.type;
+                        const enchType = EnchantmentTypes.get(typeId);
+                        if (enchType) {
+                            enchComp.addEnchantment({ type: enchType, level });
+                        } else {
+                            console.warn(`[LootManager] Enchantment type not found: ${typeId}`);
+                        }
                     }
                 } catch (e) {
                     console.warn(`[LootManager] Failed to apply random enchantment to enchanted_book: ${e}`);
@@ -847,7 +879,13 @@ class LootManager {
                                 // Looting biases toward higher levels
                                 const bonusTiers = lootLevel > 0 ? Math.floor(Math.random() * lootLevel) : 0;
                                 const level = Math.max(randomEnchant.minLevel, Math.min(randomEnchant.maxLevel, randomEnchant.minLevel + bonusTiers + Math.floor(Math.random() * (randomEnchant.maxLevel - randomEnchant.minLevel + 1))));
-                                enchComp.addEnchantment({ type: { id: randomEnchant.type }, level });
+                                const typeId = randomEnchant.type.includes(':') ? randomEnchant.type : 'minecraft:' + randomEnchant.type;
+                                const enchType = EnchantmentTypes.get(typeId);
+                                if (enchType) {
+                                    enchComp.addEnchantment({ type: enchType, level });
+                                } else {
+                                    console.warn(`[LootManager] Enchantment type not found: ${typeId}`);
+                                }
                             }
                         } catch (e) {
                             console.warn(`[LootManager] Failed dynamic enchant on ${itemId}: ${e}`);

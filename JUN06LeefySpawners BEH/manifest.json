@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.75 BEH - Jul 04",
-		"description": "LeefySpawners Behavior Pack v8.2.75 - Added Snowman Display Block & Names - Jul 2026",
+		"name": "LeefySpawners v8.2.76 BEH - Jul 05",
+		"description": "LeefySpawners Behavior Pack v8.2.76 - Reverted terrain texture mappings to original flat ore blocks - Jul 2026",
 		"uuid": "f84f6865-8497-46eb-923e-db27803fa33a",
 		"version": [
 			8,
 			2,
-			75
+			76
 		],
 		"min_engine_version": [
 			1,
@@ -22,7 +22,7 @@
 			"version": [
 				8,
 				2,
-				75
+				76
 			]
 		},
 		{
@@ -31,7 +31,7 @@
 			"version": [
 				8,
 				2,
-				75
+				76
 			],
 			"type": "script",
 			"language": "javascript",
@@ -52,7 +52,7 @@
 			"version": [
 				8,
 				2,
-				75
+				76
 			]
 		}
 	]

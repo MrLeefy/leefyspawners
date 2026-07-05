@@ -696,7 +696,7 @@ export const validMobs = [
 
 const mobDisplayNameMap = new Map(validMobs.map(m => [m.typeId, m.displayName]));
 
-function extractStackNumber(nameTag: string | undefined): number {
+export function extractStackNumber(nameTag: string | undefined): number {
     const match = nameTag?.match(/x(\d+)/);
     return match ? parseInt(match[1], 10) : 1;
 }

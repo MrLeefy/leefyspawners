@@ -127,3 +127,15 @@ export const PERFORMANCE = {
     ADAPTIVE_CLEANUP_THRESHOLD: 100,
     FAST_DISTANCE_THRESHOLD: 100
 };
+
+// === THEME CONSTANTS ===
+export const THEME = {
+    COLOR_TITLE: '§e', // Header titles (e.g. Gold/Yellow)
+    COLOR_SUCCESS: '§a', // Success messages (Green)
+    COLOR_ERROR: '§c', // Errors (Red)
+    COLOR_WARN: '§6', // Warnings/Alerts (Gold)
+    COLOR_INFO: '§b', // Info / Numbers (Aqua)
+    COLOR_TEXT: '§7', // Regular description text (Gray)
+    COLOR_HIGHLIGHT: '§d', // Highlighted features/titles (Light Purple)
+    COLOR_RESET: '§r' // Reset color code
+};

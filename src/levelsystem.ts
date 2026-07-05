@@ -19,6 +19,7 @@ import {
 
 import { Database } from "./database";
 import { Vector3 } from "./VectorMath/index";
+import { forceShowForm } from "./ui-utils";
 import { configDatabase, debugLog, clearMaxedSpawnerCache } from "./mobstacker-core";
 import { TIMING, UI, ERROR_MESSAGES, VALIDATION } from "./constants";
 
@@ -193,6 +194,7 @@ world.afterEvents.playerPlaceBlock.subscribe((data: PlayerPlaceBlockAfterEvent) 
         const coordinates = `${block.x},${block.y},${block.z}`;
         const spawnerData = {
             typeId,
+            dimensionId: player.dimension.id,
             placedBy: player.name || player.nameTag || 'Unknown',
             placedAt: Date.now(),
             entitiesKilled: 0,
@@ -411,30 +413,28 @@ function form1(player: Player, level: number, cost: number, block: Block, typeId
 
     const { form, buttonActions } = createSpawnerForm(player, level, upgradee, downgradee, spawnerType, block, typeId, percentrefund, refu, x, y, z, coordinates);
 
-    system.run(() => {
-        form.show(player).then((response: any) => {
-            const isNested = response.selection !== undefined && buttonActions[response.selection] && (buttonActions[response.selection] as any).isNested;
-            if (!isNested) {
-                activeForms.delete(coordinates);
-            } else {
-                activeForms.set(coordinates, { player, timestamp: Date.now() });
-            }
-
-            const dimension = block.dimension;
-            const currentBlock = dimension.getBlock(new Vector3(x, y, z));
-            if (!currentBlock || currentBlock.typeId !== typeId) {
-                player.sendMessage(ERROR_MESSAGES.INVALID_BLOCK);
-                spawnerDatabase.delete(coordinates);
-                activeForms.delete(coordinates);
-                return;
-            }
-
-            if (response.selection !== undefined && buttonActions[response.selection]) {
-                buttonActions[response.selection]();
-            }
-        }).catch(() => {
+    forceShowForm(player, form).then((response: any) => {
+        const isNested = response.selection !== undefined && buttonActions[response.selection] && (buttonActions[response.selection] as any).isNested;
+        if (!isNested) {
             activeForms.delete(coordinates);
-        });
+        } else {
+            activeForms.set(coordinates, { player, timestamp: Date.now() });
+        }
+
+        const dimension = block.dimension;
+        const currentBlock = dimension.getBlock(new Vector3(x, y, z));
+        if (!currentBlock || currentBlock.typeId !== typeId) {
+            player.sendMessage(ERROR_MESSAGES.INVALID_BLOCK);
+            spawnerDatabase.delete(coordinates);
+            activeForms.delete(coordinates);
+            return;
+        }
+
+        if (response.selection !== undefined && buttonActions[response.selection]) {
+            buttonActions[response.selection]();
+        }
+    }).catch(() => {
+        activeForms.delete(coordinates);
     });
 }
 
@@ -594,52 +594,50 @@ function slider(player: Player, spawnerType: string, block: Block, level: number
     slider.title('Select Spawner Level');
     slider.slider('Set Range', 1, 32, 1, 1);
 
-    system.run(() => {
-        slider.show(player).then((response: any) => {
-            activeForms.delete(coordinates); // Release lock
+    forceShowForm(player, slider).then((response: any) => {
+        activeForms.delete(coordinates); // Release lock
 
-            // Re-validate permission and proximity
-            if (!player || !player.isValid) {
-                return;
-            }
-            if (!player.hasTag(`admin`)) {
-                player.sendMessage("§cYou don't have permission to use this feature.");
-                return;
-            }
-            if (!isPlayerNearBlock(player, x, y, z, 10)) {
-                player.sendMessage("§cYou are too far from the spawner.");
-                return;
-            }
-            if (response.formValues && response.formValues.length > 0) {
-                const newLevel = response.formValues[0];
-                if (newLevel) {
-                    player.sendMessage(`§6Level §7set to §2${newLevel}`);
-                    const newBlockType = `mrleefy:${spawnerType}spawner${newLevel}`;
-                    block.setType(newBlockType);
+        // Re-validate permission and proximity
+        if (!player || !player.isValid) {
+            return;
+        }
+        if (!player.hasTag(`admin`)) {
+            player.sendMessage("§cYou don't have permission to use this feature.");
+            return;
+        }
+        if (!isPlayerNearBlock(player, x, y, z, 10)) {
+            player.sendMessage("§cYou are too far from the spawner.");
+            return;
+        }
+        if (response.formValues && response.formValues.length > 0) {
+            const newLevel = response.formValues[0];
+            if (newLevel) {
+                player.sendMessage(`§6Level §7set to §2${newLevel}`);
+                const newBlockType = `mrleefy:${spawnerType}spawner${newLevel}`;
+                block.setType(newBlockType);
 
-                    clearMaxedSpawnerCache(x, y, z);
+                clearMaxedSpawnerCache(x, y, z);
 
-                    const newTypeId = newBlockType;
-                    try {
-                        const dimension = player.dimension;
-                        const entities = dimension.getEntities({
-                            location: { x: x + 0.5, y: y + 0.5, z: z + 0.5 },
-                            maxDistance: 0.8,
-                            type: "mrleefy:spawnrule"
-                        });
-                        for (const ent of entities) {
-                            try { ent.remove(); } catch (e) {}
-                        }
-                        const newEnt = dimension.spawnEntity("mrleefy:spawnrule" as any, { x: x + 0.5, y: y + 0.5, z: z + 0.5 });
-                        newEnt.nameTag = newTypeId;
-                    } catch (error) {
-                        console.error("Error updating spawnrule in slider natively:", error);
+                const newTypeId = newBlockType;
+                try {
+                    const dimension = player.dimension;
+                    const entities = dimension.getEntities({
+                        location: { x: x + 0.5, y: y + 0.5, z: z + 0.5 },
+                        maxDistance: 0.8,
+                        type: "mrleefy:spawnrule"
+                    });
+                    for (const ent of entities) {
+                        try { ent.remove(); } catch (e) {}
                     }
+                    const newEnt = dimension.spawnEntity("mrleefy:spawnrule" as any, { x: x + 0.5, y: y + 0.5, z: z + 0.5 });
+                    newEnt.nameTag = newTypeId;
+                } catch (error) {
+                    console.error("Error updating spawnrule in slider natively:", error);
                 }
             }
-        }).catch(() => {
-            activeForms.delete(coordinates); // Release lock on cancel
-        });
+        }
+    }).catch(() => {
+        activeForms.delete(coordinates); // Release lock on cancel
     });
 }
 
@@ -665,7 +663,7 @@ function showInstructions(player: Player): void {
         '§8Max level is 32. Each level boosts spawn rate and stack size!'
     );
     instructions.button('§l§aGot it!');
-    instructions.show(player).catch((e: any) => console.warn('[LevelSystem] Error showing instructions form:', e));
+    forceShowForm(player, instructions).catch((e: any) => console.warn('[LevelSystem] Error showing instructions form:', e));
 }
 
 // SAFE AND EXPLOIT-FREE MAX UPGRADE ALGORITHM
@@ -1100,6 +1098,7 @@ function updateSpawnerDatabaseOnInteraction(coordinates: string, typeId: string,
         if (!existingData) {
             const spawnerData = {
                 typeId,
+                dimensionId: player.dimension.id,
                 placedBy: player.name || player.nameTag || 'Unknown',
                 placedAt: Date.now(),
                 entitiesKilled: 0,
@@ -1109,6 +1108,7 @@ function updateSpawnerDatabaseOnInteraction(coordinates: string, typeId: string,
             spawnerDatabase.write(coordinates, spawnerData);
         } else {
             existingData.typeId = typeId;
+            existingData.dimensionId = existingData.dimensionId || player.dimension.id; // Self-healing migration for legacy spawners
             existingData.lastAccessed = Date.now();
             existingData.interactedAt = existingData.interactedAt || Date.now();
 

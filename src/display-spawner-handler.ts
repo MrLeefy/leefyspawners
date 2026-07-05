@@ -1,6 +1,6 @@
 // Auto-update pipeline verification comment
 import { world, system, Player, Block, Vector3, Entity, EntityInventoryComponent, EntityHitEntityAfterEvent, PlayerSpawnAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent, ItemStack } from "@minecraft/server";
-import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
+import { ActionFormData, ModalFormData, MessageFormData } from "@minecraft/server-ui";
 import { Database } from "./database";
 import { forceShowForm } from "./ui-utils";
 
@@ -230,8 +230,28 @@ function removePlayerMoney(player: Player, amount: number): boolean {
 }
 
 /**
- * Shows the admin form to the player
+ * Finds a display entity at the spawner block location
  */
+function getDisplayEntity(player: Player, entityId: string, blockLocation: Vector3): Entity | undefined {
+    try {
+        const dimension = player.dimension;
+        const searchLocation = {
+            x: blockLocation.x + 0.5,
+            y: blockLocation.y + 1.2,
+            z: blockLocation.z + 0.5
+        };
+        const entities = dimension.getEntities({
+            location: searchLocation,
+            maxDistance: 1.2,
+            type: entityId
+        });
+        return entities.find(e => e && e.isValid);
+    } catch (error) {
+        console.warn(`[Display Spawner] Error searching for display entity: ${error}`);
+        return undefined;
+    }
+}
+
 async function showAdminForm(player: Player, blockId: string, blockLocation: Vector3): Promise<void> {
     const entityId = SPAWNER_TO_ENTITY_MAP[blockId];
     if (!entityId) return;
@@ -239,10 +259,14 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
     const currentPrice = getPrice(blockId);
     const moneyObjective = getMoneyObjective();
 
+    // Check if display entity already exists
+    const existingEntity = getDisplayEntity(player, entityId, blockLocation);
+    const hasDisplay = !!existingEntity;
+
     const form = new ActionFormData()
         .title("§l§6Admin: Display Spawner")
         .body(`§7${mobName} Display Spawner\n§eCurrent Price: §7$${currentPrice.toLocaleString()}\n§7Money Objective: §e${moneyObjective}\n\n§8§oTip: To remove display entities, hit them with a wooden axe`)
-        .button("§8Spawn Display Entity", "textures/ui/confirm")
+        .button(hasDisplay ? "§cRemove Display Entity" : "§8Spawn Display Entity", hasDisplay ? "textures/ui/cancel" : "textures/ui/confirm")
         .button("§8Change Price", "textures/ui/icon_setting")
         .button("§8Change Money Objective", "textures/items/emerald")
         .button("§cClose", "textures/ui/cancel");
@@ -255,8 +279,28 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
         }
 
         if (response.selection === 0) {
-            // Spawn entity
-            spawnDisplayEntity(player, entityId, blockLocation, mobName);
+            if (hasDisplay) {
+                // Remove existing display entity
+                try {
+                    if (existingEntity && existingEntity.isValid) {
+                        existingEntity.remove();
+                        player.sendMessage(`§a✓ Successfully removed ${mobName} Display Entity!`);
+                    } else {
+                        player.sendMessage(`§c✗ Display Entity not found or already removed.`);
+                    }
+                } catch (e) {
+                    player.sendMessage(`§c✗ Error removing entity: ${e}`);
+                }
+                // Show admin form again
+                await showAdminForm(player, blockId, blockLocation);
+            } else {
+                // Spawn entity
+                spawnDisplayEntity(player, entityId, blockLocation, mobName);
+                // Re-open form on next tick so they see the button update
+                system.run(async () => {
+                    await showAdminForm(player, blockId, blockLocation);
+                });
+            }
         } else if (response.selection === 1) {
             // Change price 
             await showChangePriceForm(player, blockId, blockLocation);
@@ -411,7 +455,8 @@ async function showShopForm(player: Player, blockId: string): Promise<void> {
     const mobName = getFriendlyName(blockId);
     const price = getPrice(blockId);
     const playerMoney = getPlayerMoney(player);
-    const maxAffordable = Math.min(64, Math.floor(playerMoney / price));
+    const totalAffordable = Math.floor(playerMoney / price);
+    const maxAffordable = Math.min(64, totalAffordable);
     const actualSpawnerItem = getActualSpawnerItem(blockId);
 
     if (maxAffordable === 0) {
@@ -419,13 +464,17 @@ async function showShopForm(player: Player, blockId: string): Promise<void> {
         return;
     }
 
+    const maxAffordableText = totalAffordable > 64 
+        ? `§e64 §8(Purchase Protection Cap)` 
+        : `§e${maxAffordable}`;
+
     const form = (new ModalFormData() as any)
         .title("§l§5Spawner Shop")
         .slider(
             `§7${mobName} Spawner (Level 1)\n` +
             `§7Price: §a$${price.toLocaleString()} §7each\n` +
             `§7Your Money: §a$${playerMoney.toLocaleString()}\n` +
-            `§7Max Affordable: §e${maxAffordable}\n\n` +
+            `§7Max Per Transaction: ${maxAffordableText}\n\n` +
             `§7Select quantity:`,
             1,
             maxAffordable,
@@ -446,6 +495,26 @@ async function showShopForm(player: Player, blockId: string): Promise<void> {
         // Verify player still has enough money
         const currentMoney = getPlayerMoney(player);
         if (currentMoney < totalCost) {
+            player.sendMessage(`§c✗ You don't have enough money! Need §a$${totalCost.toLocaleString()}`);
+            return;
+        }
+
+        // Show confirmation popup
+        const confirmForm = new MessageFormData()
+            .title("§l§5Confirm Purchase")
+            .body(`§7Are you sure you want to buy §e${quantity}x ${mobName} Spawner(s)§7 for §a$${totalCost.toLocaleString()}§7?`)
+            .button1("§l§2Yes, Purchase")
+            .button2("§l§cNo, Cancel");
+
+        const confirmRes = await forceShowForm(player, confirmForm);
+        if (confirmRes.canceled || confirmRes.selection !== 0) {
+            player.sendMessage("§c✗ Purchase canceled.");
+            return;
+        }
+
+        // Verify money again in case it changed during the confirmation screen
+        const finalMoney = getPlayerMoney(player);
+        if (finalMoney < totalCost) {
             player.sendMessage(`§c✗ You don't have enough money! Need §a$${totalCost.toLocaleString()}`);
             return;
         }
