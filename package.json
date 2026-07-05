@@ -1,6 +1,6 @@
 {
   "name": "leefyspawners",
-  "version": "8.2.76",
+  "version": "8.2.77",
   "description": "Mob Spawner management and stacking addon for Minecraft Bedrock.",
   "main": "index.js",
   "type": "module",
