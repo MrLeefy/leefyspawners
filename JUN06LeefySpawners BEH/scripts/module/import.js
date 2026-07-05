@@ -1500,9 +1500,9 @@ var _LootManager = class _LootManager {
       return _LootManager.instance;
     }
     this.defaultEntities = {
-      "mrleefy:piglinbrutestill": { "minecraft:golden_axe": { chance: 8.5 }, "minecraft:gold_nugget": { chance: 100 } },
+      "mrleefy:piglinbrutestill": { "minecraft:golden_axe": { chance: 8.5, stackable: false, enchantChance: 15, randomdurability: true }, "minecraft:gold_nugget": { chance: 100 } },
       "mrleefy:breezestill": { "minecraft:wind_charge": { chance: 10 }, "minecraft:breeze_rod": { chance: 80 } },
-      "mrleefy:ravagerstill": { "minecraft:saddle": { chance: 80 }, "minecraft:wolf_armor": { chance: 0.1 }, "minecraft:diamond_horse_armor": { chance: 0.1 }, "minecraft:golden_horse_armor": { chance: 0.2 }, "minecraft:iron_horse_armor": { chance: 1 } },
+      "mrleefy:ravagerstill": { "minecraft:saddle": { chance: 80, stackable: false }, "minecraft:wolf_armor": { chance: 0.1, stackable: false }, "minecraft:diamond_horse_armor": { chance: 0.1, stackable: false }, "minecraft:golden_horse_armor": { chance: 0.2, stackable: false }, "minecraft:iron_horse_armor": { chance: 1, stackable: false } },
       "mrleefy:blazestill": { "minecraft:blaze_rod": { chance: 100, quantity: 1 } },
       "mrleefy:cowstill": { "minecraft:leather": { chance: 100, quantity: 1 }, "minecraft:beef": { chance: 100, quantity: 1, stackable: true } },
       "mrleefy:sheepstill": { "minecraft:wool": { chance: 100, quantity: 1, stackable: true }, "minecraft:mutton": { chance: 100, quantity: 1, stackable: true } },
@@ -1542,7 +1542,7 @@ var _LootManager = class _LootManager {
         "minecraft:salmon": { chance: 25, quantity: 1, stackable: true },
         "minecraft:tropical_fish": { chance: 12, quantity: 1, stackable: true },
         "minecraft:pufferfish": { chance: 8, quantity: 1, stackable: true },
-        "minecraft:fishing_rod": { chance: 6, stackable: false, enchantChance: 25 },
+        "minecraft:fishing_rod": { chance: 6, stackable: false, enchantChance: 25, randomdurability: true },
         "minecraft:campfire": { chance: 5, quantity: 1, stackable: true },
         "minecraft:enchanted_book": { chance: 4, stackable: false },
         // ── LIBRARIAN ──────────────────────────────────────────────
@@ -1575,27 +1575,27 @@ var _LootManager = class _LootManager {
         "minecraft:coal": { chance: 30, quantity: 1, stackable: true },
         "minecraft:iron_ingot": { chance: 22, quantity: 1, stackable: true },
         "minecraft:diamond": { chance: 4, quantity: 1, stackable: true },
-        "minecraft:chainmail_helmet": { chance: 4, stackable: false, enchantChance: 15 },
-        "minecraft:chainmail_chestplate": { chance: 4, stackable: false, enchantChance: 15 },
-        "minecraft:chainmail_leggings": { chance: 4, stackable: false, enchantChance: 15 },
-        "minecraft:chainmail_boots": { chance: 4, stackable: false, enchantChance: 15 },
-        "minecraft:iron_helmet": { chance: 3, stackable: false, enchantChance: 15 },
-        "minecraft:iron_chestplate": { chance: 3, stackable: false, enchantChance: 15 },
-        "minecraft:iron_leggings": { chance: 3, stackable: false, enchantChance: 15 },
-        "minecraft:iron_boots": { chance: 3, stackable: false, enchantChance: 15 },
-        "minecraft:diamond_helmet": { chance: 0.4, stackable: false, enchantChance: 30 },
-        "minecraft:diamond_chestplate": { chance: 0.4, stackable: false, enchantChance: 30 },
-        "minecraft:diamond_leggings": { chance: 0.4, stackable: false, enchantChance: 30 },
-        "minecraft:diamond_boots": { chance: 0.4, stackable: false, enchantChance: 30 },
-        "minecraft:shield": { chance: 5, stackable: false },
+        "minecraft:chainmail_helmet": { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
+        "minecraft:chainmail_chestplate": { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
+        "minecraft:chainmail_leggings": { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
+        "minecraft:chainmail_boots": { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
+        "minecraft:iron_helmet": { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
+        "minecraft:iron_chestplate": { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
+        "minecraft:iron_leggings": { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
+        "minecraft:iron_boots": { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
+        "minecraft:diamond_helmet": { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
+        "minecraft:diamond_chestplate": { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
+        "minecraft:diamond_leggings": { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
+        "minecraft:diamond_boots": { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
+        "minecraft:shield": { chance: 5, stackable: false, randomdurability: true },
         "minecraft:bell": { chance: 1, stackable: false },
         // ── LEATHERWORKER ──────────────────────────────────────────
         "minecraft:leather": { chance: 28, quantity: 1, stackable: true },
         "minecraft:rabbit_hide": { chance: 15, quantity: 1, stackable: true },
-        "minecraft:leather_helmet": { chance: 6, stackable: false, enchantChance: 10 },
-        "minecraft:leather_chestplate": { chance: 6, stackable: false, enchantChance: 10 },
-        "minecraft:leather_leggings": { chance: 6, stackable: false, enchantChance: 10 },
-        "minecraft:leather_boots": { chance: 6, stackable: false, enchantChance: 10 },
+        "minecraft:leather_helmet": { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
+        "minecraft:leather_chestplate": { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
+        "minecraft:leather_leggings": { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
+        "minecraft:leather_boots": { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
         "minecraft:saddle": { chance: 3, stackable: false },
         "minecraft:leather_horse_armor": { chance: 2, stackable: false },
         // ── BUTCHER ────────────────────────────────────────────────
@@ -1618,23 +1618,23 @@ var _LootManager = class _LootManager {
         "minecraft:string": { chance: 20, quantity: 1, stackable: true },
         "minecraft:gravel": { chance: 15, quantity: 1, stackable: true },
         "minecraft:tripwire_hook": { chance: 8, quantity: 1, stackable: true },
-        "minecraft:bow": { chance: 5, stackable: false, enchantChance: 25 },
-        "minecraft:crossbow": { chance: 5, stackable: false, enchantChance: 25 },
+        "minecraft:bow": { chance: 5, stackable: false, enchantChance: 25, randomdurability: true },
+        "minecraft:crossbow": { chance: 5, stackable: false, enchantChance: 25, randomdurability: true },
         "minecraft:tipped_arrow": { chance: 3, quantity: 1, stackable: true },
         // ── TOOLSMITH ──────────────────────────────────────────────
-        "minecraft:iron_shovel": { chance: 4, stackable: false, enchantChance: 20 },
-        "minecraft:iron_pickaxe": { chance: 4, stackable: false, enchantChance: 20 },
-        "minecraft:iron_axe": { chance: 4, stackable: false, enchantChance: 20 },
-        "minecraft:iron_hoe": { chance: 4, stackable: false, enchantChance: 20 },
-        "minecraft:diamond_shovel": { chance: 0.6, stackable: false, enchantChance: 35 },
-        "minecraft:diamond_pickaxe": { chance: 0.6, stackable: false, enchantChance: 35 },
-        "minecraft:diamond_axe": { chance: 0.6, stackable: false, enchantChance: 35 },
-        "minecraft:diamond_hoe": { chance: 0.6, stackable: false, enchantChance: 35 },
+        "minecraft:iron_shovel": { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+        "minecraft:iron_pickaxe": { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+        "minecraft:iron_axe": { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+        "minecraft:iron_hoe": { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+        "minecraft:diamond_shovel": { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
+        "minecraft:diamond_pickaxe": { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
+        "minecraft:diamond_axe": { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
+        "minecraft:diamond_hoe": { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
         // ── WEAPONSMITH ────────────────────────────────────────────
-        "minecraft:iron_sword": { chance: 4, stackable: false, enchantChance: 20 },
-        "minecraft:diamond_sword": { chance: 0.6, stackable: false, enchantChance: 35 },
+        "minecraft:iron_sword": { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+        "minecraft:diamond_sword": { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
         // ── SHEPHERD ───────────────────────────────────────────────
-        "minecraft:shears": { chance: 10, stackable: false, enchantChance: 10 },
+        "minecraft:shears": { chance: 10, stackable: false, enchantChance: 10, randomdurability: true },
         "minecraft:white_wool": { chance: 10, quantity: 1, stackable: true },
         "minecraft:orange_wool": { chance: 7, quantity: 1, stackable: true },
         "minecraft:magenta_wool": { chance: 7, quantity: 1, stackable: true },
@@ -3954,8 +3954,66 @@ function openEditLootItemForm(player, entityId, itemId) {
   const lootManager = lootManagerInstance;
   const config = lootManager.entities[entityId][itemId];
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
-  const catIdx = config.enchantments ? categories.indexOf(config.enchantments.category) : 0;
-  new ModalFormData3().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", `${config.chance}`).toggle("Enchantable?", !!config.enchantments).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", `${config.enchantments?.chance ?? 50}`).toggle("Stackable?", config.stackable !== false).toggle("Random Durability?", config.randomdurability === true).toggle("\xA7cDELETE THIS ITEM?\xA7r", false).show(player).then((r) => {
+  const hasExplicitEnch = !!config.enchantments;
+  const hasDefaultEnch = typeof config.enchantChance === "number";
+  const isEnchantable = hasExplicitEnch || hasDefaultEnch;
+  let resolvedCategory = "None";
+  if (hasExplicitEnch) {
+    resolvedCategory = config.enchantments.category;
+  } else if (hasDefaultEnch) {
+    const ITEM_ENCHANT_CATEGORY2 = {
+      "minecraft:iron_sword": "sword",
+      "minecraft:diamond_sword": "sword",
+      "minecraft:iron_axe": "axe",
+      "minecraft:diamond_axe": "axe",
+      "minecraft:iron_pickaxe": "pickaxe",
+      "minecraft:diamond_pickaxe": "pickaxe",
+      "minecraft:iron_shovel": "shovel",
+      "minecraft:diamond_shovel": "shovel",
+      "minecraft:iron_hoe": "hoe",
+      "minecraft:diamond_hoe": "hoe",
+      "minecraft:bow": "bow",
+      "minecraft:crossbow": "crossbow",
+      "minecraft:fishing_rod": "fishing_rod",
+      "minecraft:shears": "shears",
+      "minecraft:trident": "trident",
+      "minecraft:iron_helmet": "helmet",
+      "minecraft:iron_chestplate": "chestplate",
+      "minecraft:iron_leggings": "leggings",
+      "minecraft:iron_boots": "boots",
+      "minecraft:chainmail_helmet": "helmet",
+      "minecraft:chainmail_chestplate": "chestplate",
+      "minecraft:chainmail_leggings": "leggings",
+      "minecraft:chainmail_boots": "boots",
+      "minecraft:diamond_helmet": "helmet",
+      "minecraft:diamond_chestplate": "chestplate",
+      "minecraft:diamond_leggings": "leggings",
+      "minecraft:diamond_boots": "boots",
+      "minecraft:leather_helmet": "helmet",
+      "minecraft:leather_chestplate": "chestplate",
+      "minecraft:leather_leggings": "leggings",
+      "minecraft:leather_boots": "boots",
+      "minecraft:stone_sword": "sword",
+      "minecraft:stone_axe": "axe",
+      "minecraft:stone_pickaxe": "pickaxe",
+      "minecraft:stone_shovel": "shovel",
+      "minecraft:stone_hoe": "hoe",
+      "minecraft:golden_sword": "sword",
+      "minecraft:golden_axe": "axe",
+      "minecraft:golden_pickaxe": "pickaxe",
+      "minecraft:golden_shovel": "shovel",
+      "minecraft:golden_hoe": "hoe",
+      "minecraft:golden_helmet": "helmet",
+      "minecraft:golden_chestplate": "chestplate",
+      "minecraft:golden_leggings": "leggings",
+      "minecraft:golden_boots": "boots"
+    };
+    resolvedCategory = ITEM_ENCHANT_CATEGORY2[itemId] ?? "None";
+  }
+  const catIdx = categories.indexOf(resolvedCategory);
+  const resolvedEnchChance = hasExplicitEnch ? config.enchantments.chance : hasDefaultEnch ? config.enchantChance : 50;
+  const form = new ModalFormData3().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", `${config.chance}`).toggle("Enchantable?", isEnchantable).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", `${resolvedEnchChance}`).toggle("Stackable?", config.stackable !== false).toggle("Random Durability?", config.randomdurability === true).toggle("\xA7cDELETE THIS ITEM?\xA7r", false);
+  form.show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3973,6 +4031,7 @@ function openEditLootItemForm(player, entityId, itemId) {
       }
       config.chance = pChance;
       config.enchantments = ench && categories[catIdxSelected] !== "None" ? { chance: parseFloat(enchChance), category: categories[catIdxSelected] } : void 0;
+      delete config.enchantChance;
       config.stackable = stack;
       config.randomdurability = dura;
     }
@@ -4566,6 +4625,10 @@ function getSpawnerIconPath(typeId, displayName) {
   let iconName = displayName.toLowerCase().replace(/ /g, "_");
   if (iconName === "wither_skeleton")
     iconName = "witherskeleton";
+  if (iconName === "ender_dragon")
+    iconName = "enderdragon";
+  if (iconName === "snow_golem")
+    iconName = "snowman";
   return `textures/blocks/icons/${iconName}.png`;
 }
 function verifyAndCleanSpawnerDatabase(player) {
@@ -4940,6 +5003,7 @@ Are you absolutely sure you want to proceed?`
       let resetCount = 0;
       if (resetSpawners) {
         spawnerDatabase.clear();
+        spawnerDatabase.Database?._executeSave?.();
         const dims = ["overworld", "nether", "the_end"];
         for (const dim of dims) {
           try {
@@ -4956,14 +5020,18 @@ Are you absolutely sure you want to proceed?`
       }
       if (resetGeneral) {
         configDatabase.clear();
+        configDatabase.Database?._executeSave?.();
         resetCount++;
       }
       if (resetXP) {
         xpDropDatabase.clear();
+        xpDropDatabase.Database?._executeSave?.();
         resetCount++;
       }
       if (resetLoot) {
         lootTableDatabase.clear();
+        lootTableDatabase.Database?._executeSave?.();
+        lootManagerInstance.initialize();
         resetCount++;
       }
       if (resetStats) {

@@ -754,17 +754,51 @@ function openEditLootItemForm(player: Player, entityId: string, itemId: string):
     const lootManager = LootManager;
     const config = lootManager.entities[entityId][itemId];
     const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
-    const catIdx = config.enchantments ? categories.indexOf(config.enchantments.category) : 0;
-    (new ModalFormData() as any)
+
+    // Resolve enchantable state and category dynamically
+    const hasExplicitEnch = !!config.enchantments;
+    const hasDefaultEnch = typeof config.enchantChance === 'number';
+    const isEnchantable = hasExplicitEnch || hasDefaultEnch;
+
+    let resolvedCategory = "None";
+    if (hasExplicitEnch) {
+        resolvedCategory = config.enchantments.category;
+    } else if (hasDefaultEnch) {
+        // Fall back to mapping item ID to its default category
+        const ITEM_ENCHANT_CATEGORY = {
+            'minecraft:iron_sword': 'sword', 'minecraft:diamond_sword': 'sword',
+            'minecraft:iron_axe': 'axe', 'minecraft:diamond_axe': 'axe',
+            'minecraft:iron_pickaxe': 'pickaxe', 'minecraft:diamond_pickaxe': 'pickaxe',
+            'minecraft:iron_shovel': 'shovel', 'minecraft:diamond_shovel': 'shovel',
+            'minecraft:iron_hoe': 'hoe', 'minecraft:diamond_hoe': 'hoe',
+            'minecraft:bow': 'bow', 'minecraft:crossbow': 'crossbow',
+            'minecraft:fishing_rod': 'fishing_rod', 'minecraft:shears': 'shears',
+            'minecraft:trident': 'trident',
+            'minecraft:iron_helmet': 'helmet', 'minecraft:iron_chestplate': 'chestplate', 'minecraft:iron_leggings': 'leggings', 'minecraft:iron_boots': 'boots',
+            'minecraft:chainmail_helmet': 'helmet', 'minecraft:chainmail_chestplate': 'chestplate', 'minecraft:chainmail_leggings': 'leggings', 'minecraft:chainmail_boots': 'boots',
+            'minecraft:diamond_helmet': 'helmet', 'minecraft:diamond_chestplate': 'chestplate', 'minecraft:diamond_leggings': 'leggings', 'minecraft:diamond_boots': 'boots',
+            'minecraft:leather_helmet': 'helmet', 'minecraft:leather_chestplate': 'chestplate', 'minecraft:leather_leggings': 'leggings', 'minecraft:leather_boots': 'boots',
+            'minecraft:stone_sword': 'sword', 'minecraft:stone_axe': 'axe', 'minecraft:stone_pickaxe': 'pickaxe', 'minecraft:stone_shovel': 'shovel', 'minecraft:stone_hoe': 'hoe',
+            'minecraft:golden_sword': 'sword', 'minecraft:golden_axe': 'axe', 'minecraft:golden_pickaxe': 'pickaxe', 'minecraft:golden_shovel': 'shovel', 'minecraft:golden_hoe': 'hoe',
+            'minecraft:golden_helmet': 'helmet', 'minecraft:golden_chestplate': 'chestplate', 'minecraft:golden_leggings': 'leggings', 'minecraft:golden_boots': 'boots'
+        };
+        resolvedCategory = (ITEM_ENCHANT_CATEGORY as any)[itemId] ?? "None";
+    }
+
+    const catIdx = categories.indexOf(resolvedCategory);
+    const resolvedEnchChance = hasExplicitEnch ? config.enchantments.chance : (hasDefaultEnch ? config.enchantChance : 50);
+
+    const form = (new ModalFormData() as any)
         .title(`Editing: ${itemId}`)
         .textField("Chance:", "[0.01-100]", `${config.chance}`)
-        .toggle("Enchantable?", !!config.enchantments)
+        .toggle("Enchantable?", isEnchantable)
         .dropdown("Category:", categories, Math.max(0, catIdx))
-        .textField("Enchant Chance:", "[0-100]", `${config.enchantments?.chance ?? 50}`)
+        .textField("Enchant Chance:", "[0-100]", `${resolvedEnchChance}`)
         .toggle("Stackable?", config.stackable !== false)
         .toggle("Random Durability?", config.randomdurability === true)
-        .toggle("§cDELETE THIS ITEM?§r", false)
-        .show(player).then((r: any) => {
+        .toggle("§cDELETE THIS ITEM?§r", false);
+
+    form.show(player).then((r: any) => {
             if (r.canceled || !r.formValues) return;
             // Re-validate permission inside .then() to prevent session-tag-revocation bypass
             if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -778,6 +812,7 @@ function openEditLootItemForm(player: Player, entityId: string, itemId: string):
                 if (isNaN(pChance)) { player.sendMessage("§cInvalid Chance."); return; }
                 config.chance = pChance;
                 config.enchantments = (ench && categories[catIdxSelected] !== "None") ? { chance: parseFloat(enchChance), category: categories[catIdxSelected] } : undefined;
+                delete (config as any).enchantChance; // Clean up old property to prevent overlaps
                 config.stackable = stack;
                 config.randomdurability = dura;
             }
@@ -1487,6 +1522,8 @@ function getSpawnerIconPath(typeId: string, displayName: string): string {
     // Default icon path
     let iconName = displayName.toLowerCase().replace(/ /g, '_');
     if (iconName === "wither_skeleton") iconName = "witherskeleton";
+    if (iconName === "ender_dragon") iconName = "enderdragon";
+    if (iconName === "snow_golem") iconName = "snowman";
     return `textures/blocks/icons/${iconName}.png`;
 }
 
@@ -2012,6 +2049,7 @@ function openResetDatabaseForm(player: Player): void {
 
             if (resetSpawners) {
                 spawnerDatabase.clear();
+                (spawnerDatabase as any).Database?._executeSave?.();
                 const dims = ["overworld", "nether", "the_end"];
                 for (const dim of dims) {
                     try {
@@ -2028,16 +2066,20 @@ function openResetDatabaseForm(player: Player): void {
 
             if (resetGeneral) {
                 configDatabase.clear();
+                (configDatabase as any).Database?._executeSave?.();
                 resetCount++;
             }
 
             if (resetXP) {
                 xpDropDatabase.clear();
+                (xpDropDatabase as any).Database?._executeSave?.();
                 resetCount++;
             }
 
             if (resetLoot) {
                 lootTableDatabase.clear();
+                (lootTableDatabase as any).Database?._executeSave?.();
+                LootManager.initialize(); // Instantly reload default loot configurations into memory!
                 resetCount++;
             }
 
