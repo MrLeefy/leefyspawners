@@ -4890,7 +4890,7 @@ function openResetDatabaseForm(player) {
     player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
     return;
   }
-  const form = new ModalFormData3().title("Reset Database Settings").toggle("Reset Spawner Upgrades (Levels)", { defaultValue: false }).toggle("Reset General Settings (Speed/Limit)", { defaultValue: false }).toggle("Reset XP Drops Configurations", { defaultValue: false }).toggle("Reset Custom Loot Tables", { defaultValue: false }).toggle("Reset Statistics (Kill counts, uptime)", { defaultValue: false });
+  const form = new ModalFormData3().title("Reset Database Settings").toggle("Reset Spawner Upgrades (Levels)", false).toggle("Reset General Settings (Speed/Limit)", false).toggle("Reset XP Drops Configurations", false).toggle("Reset Custom Loot Tables", false).toggle("Reset Statistics (Kill counts, uptime)", false);
   forceShowForm(player, form).then((r) => {
     if (r.canceled || !r.formValues) {
       openAdminMenu(player);

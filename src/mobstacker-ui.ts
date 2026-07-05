@@ -1950,13 +1950,13 @@ function openResetDatabaseForm(player: Player): void {
         return;
     }
 
-    const form = new ModalFormData()
+    const form = (new ModalFormData() as any)
         .title("Reset Database Settings")
-        .toggle("Reset Spawner Upgrades (Levels)", { defaultValue: false })
-        .toggle("Reset General Settings (Speed/Limit)", { defaultValue: false })
-        .toggle("Reset XP Drops Configurations", { defaultValue: false })
-        .toggle("Reset Custom Loot Tables", { defaultValue: false })
-        .toggle("Reset Statistics (Kill counts, uptime)", { defaultValue: false });
+        .toggle("Reset Spawner Upgrades (Levels)", false)
+        .toggle("Reset General Settings (Speed/Limit)", false)
+        .toggle("Reset XP Drops Configurations", false)
+        .toggle("Reset Custom Loot Tables", false)
+        .toggle("Reset Statistics (Kill counts, uptime)", false);
 
     forceShowForm(player, form).then((r: any) => {
         if (r.canceled || !r.formValues) {
