@@ -2,8 +2,8 @@ import fs from 'fs';
 import { randomUUID } from 'crypto';
 
 // Paths
-const behPath = 'JUN06LeefySpawners BEH/manifest.json';
-const resPath = 'JUN06LeefySpawners RES/manifest.json';
+const behPath = 'LeefySpawners BEH/manifest.json';
+const resPath = 'LeefySpawners RES/manifest.json';
 const pkgPath = 'package.json';
 
 // Helper: Clean JSON text of comments, trailing commas, and empty slots

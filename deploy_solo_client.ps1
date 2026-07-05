@@ -3,8 +3,8 @@ $MinecraftPath = "C:\Users\baseb\AppData\Roaming\Minecraft Bedrock\Users\Shared\
 if (-not (Test-Path $MinecraftPath)) {
     $MinecraftPath = "$env:LOCALAPPDATA\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang"
 }
-$BehaviorDest = Join-Path $MinecraftPath "development_behavior_packs\JUN06LeefySpawners BEH"
-$ResourceDest = Join-Path $MinecraftPath "development_resource_packs\JUN06LeefySpawners RES"
+$BehaviorDest = Join-Path $MinecraftPath "development_behavior_packs\LeefySpawners BEH"
+$ResourceDest = Join-Path $MinecraftPath "development_resource_packs\LeefySpawners RES"
 
 # 1. Run TypeScript build
 Write-Host "Building TypeScript..." -ForegroundColor Cyan
@@ -20,8 +20,8 @@ Remove-Item -Path $BehaviorDest -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $ResourceDest -Recurse -Force -ErrorAction SilentlyContinue
 
 # Copy the fresh built files
-Copy-Item -Path ".\JUN06LeefySpawners BEH" -Destination (Split-Path $BehaviorDest) -Recurse -Force
-Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ResourceDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners BEH" -Destination (Split-Path $BehaviorDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners RES" -Destination (Split-Path $ResourceDest) -Recurse -Force
 
 Write-Host "==================================================" -ForegroundColor Green
 Write-Host "SOLO CLIENT DEPLOYMENT COMPLETE!" -ForegroundColor Green

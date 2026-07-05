@@ -3,12 +3,12 @@ $MinecraftPath = "C:\Users\baseb\AppData\Roaming\Minecraft Bedrock\Users\Shared\
 if (-not (Test-Path $MinecraftPath)) {
     $MinecraftPath = "$env:LOCALAPPDATA\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang"
 }
-$BehaviorDest = Join-Path $MinecraftPath "development_behavior_packs\JUN06LeefySpawners BEH"
-$ResourceDest = Join-Path $MinecraftPath "development_resource_packs\JUN06LeefySpawners RES"
+$BehaviorDest = Join-Path $MinecraftPath "development_behavior_packs\LeefySpawners BEH"
+$ResourceDest = Join-Path $MinecraftPath "development_resource_packs\LeefySpawners RES"
 
 $ServerPath = "C:\Users\baseb\Desktop\Projects\test-dev-server-for-endstone-bedrock"
-$ServerBehaviorDest = Join-Path $ServerPath "bedrock_server\development_behavior_packs\JUN06LeefySpawners BEH"
-$ServerResourceDest = Join-Path $ServerPath "bedrock_server\development_resource_packs\JUN06LeefySpawners RES"
+$ServerBehaviorDest = Join-Path $ServerPath "bedrock_server\development_behavior_packs\LeefySpawners BEH"
+$ServerResourceDest = Join-Path $ServerPath "bedrock_server\development_resource_packs\LeefySpawners RES"
 $WorldPath = Join-Path $ServerPath "bedrock_server\worlds\Bedrock level"
 
 # 1. Run TypeScript build
@@ -20,7 +20,7 @@ node obfuscate.js
 
 
 # Read the version dynamically from the manifest
-$behManifest = Get-Content -Path "JUN06LeefySpawners BEH/manifest.json" -Raw | ConvertFrom-Json
+$behManifest = Get-Content -Path "LeefySpawners BEH/manifest.json" -Raw | ConvertFrom-Json
 $version = $behManifest.header.version -join '.'
 
 # 2. Package into .mcaddon
@@ -31,13 +31,13 @@ Remove-Item -Path ".\LeefySpawnersBEH_*.mcpack" -Force -ErrorAction SilentlyCont
 Remove-Item -Path ".\LeefySpawnersRES_*.mcpack" -Force -ErrorAction SilentlyContinue
 
 # Compress behavior pack contents to LeefySpawnersBEH_$version.mcpack
-Push-Location ".\JUN06LeefySpawners BEH"
+Push-Location ".\LeefySpawners BEH"
 tar -caf "..\LeefySpawnersBEH.zip" --exclude="desktop.ini" --exclude="*.DS_Store" --exclude="Thumbs.db" *
 Pop-Location
 Rename-Item -Path ".\LeefySpawnersBEH.zip" -NewName "LeefySpawnersBEH_$version.mcpack" -Force
 
 # Compress resource pack contents to LeefySpawnersRES_$version.mcpack
-Push-Location ".\JUN06LeefySpawners RES"
+Push-Location ".\LeefySpawners RES"
 tar -caf "..\LeefySpawnersRES.zip" --exclude="desktop.ini" --exclude="*.DS_Store" --exclude="Thumbs.db" *
 Pop-Location
 Rename-Item -Path ".\LeefySpawnersRES.zip" -NewName "LeefySpawnersRES_$version.mcpack" -Force
@@ -66,23 +66,23 @@ New-Item -ItemType Directory -Force -Path (Split-Path $BehaviorDest) | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $ResourceDest) | Out-Null
 Remove-Item -Path $BehaviorDest -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $ResourceDest -Recurse -Force -ErrorAction SilentlyContinue
-Copy-Item -Path ".\JUN06LeefySpawners BEH" -Destination (Split-Path $BehaviorDest) -Recurse -Force
-Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ResourceDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners BEH" -Destination (Split-Path $BehaviorDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners RES" -Destination (Split-Path $ResourceDest) -Recurse -Force
 
 # 4. Deploy to local Endstone server folders
 Write-Host "Deploying addon to local Endstone server folders..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path (Split-Path $ServerBehaviorDest) | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $ServerResourceDest) | Out-Null
-$ServerResourcePacksDest = Join-Path $ServerPath "bedrock_server\resource_packs\JUN06LeefySpawners RES"
+$ServerResourcePacksDest = Join-Path $ServerPath "bedrock_server\resource_packs\LeefySpawners RES"
 New-Item -ItemType Directory -Force -Path (Split-Path $ServerResourcePacksDest) | Out-Null
 
 Remove-Item -Path $ServerBehaviorDest -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $ServerResourceDest -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $ServerResourcePacksDest -Recurse -Force -ErrorAction SilentlyContinue
 
-Copy-Item -Path ".\JUN06LeefySpawners BEH" -Destination (Split-Path $ServerBehaviorDest) -Recurse -Force
-Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ServerResourceDest) -Recurse -Force
-Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ServerResourcePacksDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners BEH" -Destination (Split-Path $ServerBehaviorDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners RES" -Destination (Split-Path $ServerResourceDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners RES" -Destination (Split-Path $ServerResourcePacksDest) -Recurse -Force
 
 # Delete old packs from server dev folders to prevent duplicate package loads
 Remove-Item -Path (Join-Path $ServerPath "bedrock_server\development_behavior_packs\OCT30LeefySpawners BEH") -Recurse -Force -ErrorAction SilentlyContinue
@@ -94,8 +94,8 @@ Write-Host "Ensuring addon packs are registered in server world configuration...
 New-Item -ItemType Directory -Force -Path $WorldPath | Out-Null
 
 # Read the UUID and version array dynamically from manifests to prevent mismatches
-$behManifest = Get-Content -Path "JUN06LeefySpawners BEH/manifest.json" -Raw | ConvertFrom-Json
-$resManifest = Get-Content -Path "JUN06LeefySpawners RES/manifest.json" -Raw | ConvertFrom-Json
+$behManifest = Get-Content -Path "LeefySpawners BEH/manifest.json" -Raw | ConvertFrom-Json
+$resManifest = Get-Content -Path "LeefySpawners RES/manifest.json" -Raw | ConvertFrom-Json
 
 $behUuid = $behManifest.header.uuid
 $behVerArray = $behManifest.header.version

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import JavaScriptObfuscator from 'javascript-obfuscator';
 
-const filePath = 'JUN06LeefySpawners BEH/scripts/module/import.js';
+const filePath = 'LeefySpawners BEH/scripts/module/import.js';
 
 if (fs.existsSync(filePath)) {
     console.log("Obfuscating import.js for PRODUCTION RELEASE...");

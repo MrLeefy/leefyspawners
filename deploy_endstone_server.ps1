@@ -1,7 +1,7 @@
 # Local Endstone Server Deployment and Restart Script
 $ServerPath = "C:\Users\baseb\Desktop\Projects\test-dev-server-for-endstone-bedrock"
-$ServerBehaviorDest = Join-Path $ServerPath "bedrock_server\development_behavior_packs\JUN06LeefySpawners BEH"
-$ServerResourceDest = Join-Path $ServerPath "bedrock_server\development_resource_packs\JUN06LeefySpawners RES"
+$ServerBehaviorDest = Join-Path $ServerPath "bedrock_server\development_behavior_packs\LeefySpawners BEH"
+$ServerResourceDest = Join-Path $ServerPath "bedrock_server\development_resource_packs\LeefySpawners RES"
 $WorldPath = Join-Path $ServerPath "bedrock_server\worlds\Bedrock level"
 
 # 1. Run TypeScript build
@@ -16,16 +16,16 @@ node obfuscate.js
 Write-Host "Deploying addon to local Endstone server folders..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path (Split-Path $ServerBehaviorDest) | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $ServerResourceDest) | Out-Null
-$ServerResourcePacksDest = Join-Path $ServerPath "bedrock_server\resource_packs\JUN06LeefySpawners RES"
+$ServerResourcePacksDest = Join-Path $ServerPath "bedrock_server\resource_packs\LeefySpawners RES"
 New-Item -ItemType Directory -Force -Path (Split-Path $ServerResourcePacksDest) | Out-Null
 
 Remove-Item -Path $ServerBehaviorDest -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $ServerResourceDest -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $ServerResourcePacksDest -Recurse -Force -ErrorAction SilentlyContinue
 
-Copy-Item -Path ".\JUN06LeefySpawners BEH" -Destination (Split-Path $ServerBehaviorDest) -Recurse -Force
-Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ServerResourceDest) -Recurse -Force
-Copy-Item -Path ".\JUN06LeefySpawners RES" -Destination (Split-Path $ServerResourcePacksDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners BEH" -Destination (Split-Path $ServerBehaviorDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners RES" -Destination (Split-Path $ServerResourceDest) -Recurse -Force
+Copy-Item -Path ".\LeefySpawners RES" -Destination (Split-Path $ServerResourcePacksDest) -Recurse -Force
 
 # Delete old packs from server dev folders to prevent duplicate package loads
 Remove-Item -Path (Join-Path $ServerPath "bedrock_server\development_behavior_packs\OCT30LeefySpawners BEH") -Recurse -Force -ErrorAction SilentlyContinue
@@ -35,8 +35,8 @@ Remove-Item -Path (Join-Path $ServerPath "bedrock_server\development_resource_pa
 Write-Host "Ensuring addon packs are registered in server world configuration..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path $WorldPath | Out-Null
 
-$behManifest = Get-Content -Path "JUN06LeefySpawners BEH/manifest.json" -Raw | ConvertFrom-Json
-$resManifest = Get-Content -Path "JUN06LeefySpawners RES/manifest.json" -Raw | ConvertFrom-Json
+$behManifest = Get-Content -Path "LeefySpawners BEH/manifest.json" -Raw | ConvertFrom-Json
+$resManifest = Get-Content -Path "LeefySpawners RES/manifest.json" -Raw | ConvertFrom-Json
 
 $behUuid = $behManifest.header.uuid
 $behVerArray = $behManifest.header.version
