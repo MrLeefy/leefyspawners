@@ -173,7 +173,7 @@ class LootManager {
                 'minecraft:pufferfish':      { chance: 8,  quantity: 1, stackable: true },
                 'minecraft:fishing_rod':     { chance: 6,  stackable: false, enchantChance: 25, randomdurability: true },
                 'minecraft:campfire':        { chance: 5,  quantity: 1, stackable: true },
-                'minecraft:enchanted_book':  { chance: 4,  stackable: false },
+                'minecraft:enchanted_book':  { chance: 40, stackable: false },
 
                 // ── LIBRARIAN ──────────────────────────────────────────────
                 'minecraft:book':            { chance: 38, quantity: 1, stackable: true },
@@ -405,21 +405,7 @@ class LootManager {
                 'minecraft:sweet_berries':   { chance: 10, quantity: 1, stackable: true },
 
                 // ── SHEPHERD (banners — expert tier) ───────────────────────
-                'minecraft:white_banner':    { chance: 3, quantity: 1, stackable: true },
-                'minecraft:orange_banner':   { chance: 3, quantity: 1, stackable: true },
-                'minecraft:magenta_banner':  { chance: 3, quantity: 1, stackable: true },
-                'minecraft:light_blue_banner': { chance: 3, quantity: 1, stackable: true },
-                'minecraft:yellow_banner':   { chance: 3, quantity: 1, stackable: true },
-                'minecraft:lime_banner':     { chance: 3, quantity: 1, stackable: true },
-                'minecraft:pink_banner':     { chance: 3, quantity: 1, stackable: true },
-                'minecraft:gray_banner':     { chance: 3, quantity: 1, stackable: true },
-                'minecraft:cyan_banner':     { chance: 3, quantity: 1, stackable: true },
-                'minecraft:purple_banner':   { chance: 3, quantity: 1, stackable: true },
-                'minecraft:blue_banner':     { chance: 3, quantity: 1, stackable: true },
-                'minecraft:brown_banner':    { chance: 3, quantity: 1, stackable: true },
-                'minecraft:green_banner':    { chance: 3, quantity: 1, stackable: true },
-                'minecraft:red_banner':      { chance: 3, quantity: 1, stackable: true },
-                'minecraft:black_banner':    { chance: 3, quantity: 1, stackable: true },
+                'minecraft:banner':          { chance: 20, quantity: 1, stackable: true },
 
                 // ── SHEPHERD (missing dye colors) ──────────────────────────
                 'minecraft:orange_dye':      { chance: 5, quantity: 1, stackable: true },
