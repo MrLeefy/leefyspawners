@@ -278,15 +278,11 @@ async function showChangePriceForm(player: Player, blockId: string, blockLocatio
     const currentPrice = getPrice(blockId);
     console.warn(`[DS-DEBUG] currentPrice=${currentPrice} (type: ${typeof currentPrice})`);
 
-    let form: ModalFormData;
+    let form: any;
     try {
-        form = new ModalFormData()
+        form = (new ModalFormData() as any)
             .title("§l§6Change Spawner Price")
-            .textField(
-                `§7Set price for §e${mobName} Spawner\n§7Current: §a$${currentPrice.toLocaleString()}\n\n§7Enter new price:`,
-                "e.g., 50000",
-                { defaultValue: currentPrice.toString() }
-            );
+            .textField(`§7Set price for §e${mobName} Spawner\n§7Current: §a$${currentPrice.toLocaleString()}\n\n§7Enter new price:`, "e.g., 50000", currentPrice.toString());
         console.warn(`[DS-DEBUG] Price form built OK`);
     } catch (buildErr) {
         console.warn(`[DS-DEBUG] CRASH building price form: ${buildErr}`);
@@ -330,15 +326,11 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
     const currentObjective = getMoneyObjective();
     console.warn(`[DS-DEBUG] currentObjective=${currentObjective} (type: ${typeof currentObjective})`);
 
-    let form: ModalFormData;
+    let form: any;
     try {
-        form = new ModalFormData()
+        form = (new ModalFormData() as any)
             .title("§l§6Change Money Objective")
-            .textField(
-                `§7Enter the scoreboard objective name for money\n§7Current: §e${currentObjective}\n\n§7Common examples:\n§7- money\n§7- balance\n§7- coins\n§7- cash\n\n§7Objective Name:`,
-                "e.g., money",
-                { defaultValue: currentObjective }
-            );
+            .textField(`§7Enter the scoreboard objective name for money\n§7Current: §e${currentObjective}\n\n§7Common examples:\n§7- money\n§7- balance\n§7- coins\n§7- cash\n\n§7Objective Name:`, "e.g., money", currentObjective);
         console.warn(`[DS-DEBUG] Money objective form built OK`);
     } catch (buildErr) {
         console.warn(`[DS-DEBUG] CRASH building money objective form: ${buildErr}`);

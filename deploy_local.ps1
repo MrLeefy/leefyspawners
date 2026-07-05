@@ -1,5 +1,8 @@
 # Minecraft Local Development and Endstone Server Deployment Script
-$MinecraftPath = "$env:LOCALAPPDATA\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang"
+$MinecraftPath = "C:\Users\baseb\AppData\Roaming\Minecraft Bedrock\Users\Shared\games\com.mojang"
+if (-not (Test-Path $MinecraftPath)) {
+    $MinecraftPath = "$env:LOCALAPPDATA\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang"
+}
 $BehaviorDest = Join-Path $MinecraftPath "development_behavior_packs\JUN06LeefySpawners BEH"
 $ResourceDest = Join-Path $MinecraftPath "development_resource_packs\JUN06LeefySpawners RES"
 

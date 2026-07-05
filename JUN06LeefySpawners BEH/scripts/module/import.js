@@ -3380,7 +3380,7 @@ function openToggleLootDropForm(player) {
   const currentCap = configDatabase2.read("itemSpillCap") || 5;
   const currentXpCap = configDatabase2.read("xpSpillCap") || 3;
   const playerKillOnly = configDatabase2.read("playerKillOnly") ?? false;
-  new ModalFormData3().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", playerKillOnly).textField("Max item drops near stack:", "Enter integer (>=1)", { defaultValue: `${currentCap}` }).textField("Max XP orbs near stack:", "Enter integer (>=1)", { defaultValue: `${currentXpCap}` }).show(player).then((r) => {
+  new ModalFormData3().title("Loot Drop Rules").toggle("Player Kills Only (Lag Protection)", playerKillOnly).textField("Max item drops near stack:", "Enter integer (>=1)", `${currentCap}`).textField("Max XP orbs near stack:", "Enter integer (>=1)", `${currentXpCap}`).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3424,7 +3424,7 @@ function openPerformanceConfigForm(player) {
     currentMaxSpawns
   ).toggle(
     "\xA7bRandom Initial Spawn Delays:\xA7r\n\xA77Randomizes first spawn time (0-100%%% of interval).\n\xA77Prevents all spawners from syncing up.\n\xA7aRecommended: Enabled\xA7r",
-    { defaultValue: currentRandomDelay }
+    currentRandomDelay
   ).slider(
     "\xA7bSpawn Check Interval (ticks):\xA7r\n\xA77How often to check spawners (20 ticks = 1 second).\n\xA77Lower = More responsive, higher CPU usage\n\xA7eDefault: 20 ticks\xA7r",
     10,
@@ -3605,7 +3605,7 @@ function openXPDropManagerForm(player, entityId) {
     return;
   }
   const config = xpDropDatabase.read(entityId) || {};
-  new ModalFormData3().title(`XP Manager: ${entityId}`).textField("XP Amount:", "XP to drop on death", { defaultValue: `${config.amount ?? 1}` }).slider("Drop Chance (%%%)", 1, 100, 1, config.chance ?? 100).show(player).then((r) => {
+  new ModalFormData3().title(`XP Manager: ${entityId}`).textField("XP Amount:", "XP to drop on death", `${config.amount ?? 1}`).slider("Drop Chance (%%%)", 1, 100, 1, config.chance ?? 100).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3633,7 +3633,7 @@ function openAddNewLootItemForm(player, entityId) {
   }
   const lootManager = lootManagerInstance;
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
-  new ModalFormData3().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", { defaultValue: "" }).textField("Chance:", "[0.01-100]", { defaultValue: "100" }).toggle("Enchantable?", false).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", { defaultValue: "50" }).toggle("Stackable?", true).toggle("Random Durability?", false).show(player).then((r) => {
+  new ModalFormData3().title(`Add Loot: ${entityId}`).textField("Item ID:", "e.g., minecraft:diamond", "").textField("Chance:", "[0.01-100]", "100").toggle("Enchantable?", false).dropdown("Enchantment Category:", categories, 0).textField("Enchant Chance:", "[0-100]", "50").toggle("Stackable?", true).toggle("Random Durability?", false).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3672,7 +3672,7 @@ function openEditLootItemForm(player, entityId, itemId) {
   const config = lootManager.entities[entityId][itemId];
   const categories = ["None", ...Object.keys(lootManager.enchantmentCategories)];
   const catIdx = config.enchantments ? categories.indexOf(config.enchantments.category) : 0;
-  new ModalFormData3().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", { defaultValue: `${config.chance}` }).toggle("Enchantable?", !!config.enchantments).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", { defaultValue: `${config.enchantments?.chance ?? 50}` }).toggle("Stackable?", config.stackable !== false).toggle("Random Durability?", config.randomdurability === true).toggle("\xA7cDELETE THIS ITEM?\xA7r", false).show(player).then((r) => {
+  new ModalFormData3().title(`Editing: ${itemId}`).textField("Chance:", "[0.01-100]", `${config.chance}`).toggle("Enchantable?", !!config.enchantments).dropdown("Category:", categories, Math.max(0, catIdx)).textField("Enchant Chance:", "[0-100]", `${config.enchantments?.chance ?? 50}`).toggle("Stackable?", config.stackable !== false).toggle("Random Durability?", config.randomdurability === true).toggle("\xA7cDELETE THIS ITEM?\xA7r", false).show(player).then((r) => {
     if (r.canceled || !r.formValues)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
@@ -3713,14 +3713,14 @@ function openAAConfigForm(player) {
   const form = new ModalFormData3().title("Spawner Settings");
   const entries = [];
   aaDatabase.forEach((val, key) => entries.push([key, val]));
-  form.textField("Add New Range:", "e.g., 1-10 or 33-33", { defaultValue: "" });
-  form.textField("New Range - Quantity:", "e.g., 1", { defaultValue: "" });
-  form.textField("New Range - Speed (sec):", "e.g., 10", { defaultValue: "" });
-  form.textField("New Range - Max Stack:", "e.g., 100", { defaultValue: "" });
+  form.textField("Add New Range:", "e.g., 1-10 or 33-33", "");
+  form.textField("New Range - Quantity:", "e.g., 1", "");
+  form.textField("New Range - Speed (sec):", "e.g., 10", "");
+  form.textField("New Range - Max Stack:", "e.g., 100", "");
   entries.forEach(([range, { qty, speed, maxStack }]) => {
-    form.textField(`Qty for ${range}:`, `Update`, { defaultValue: `${qty}` });
-    form.textField(`Speed for ${range}:`, `Update`, { defaultValue: `${speed}` });
-    form.textField(`Max Stack for ${range}:`, `Update`, { defaultValue: `${maxStack}` });
+    form.textField(`Qty for ${range}:`, `Update`, `${qty}`);
+    form.textField(`Speed for ${range}:`, `Update`, `${speed}`);
+    form.textField(`Max Stack for ${range}:`, `Update`, `${maxStack}`);
     form.toggle(`\xA7cRemove Range ${range}?\xA7r`, false);
   });
   form.show(player).then((r) => {
@@ -3916,7 +3916,7 @@ function openSpawnerStatisticsForm(player) {
         return;
       }
       if (response.selection === 2) {
-        const confirmForm = new ModalFormData3().title("Confirm Reset").textField("Confirm", "Type 'RESET' to confirm", { defaultValue: "" }).submitButton("CONFIRM");
+        const confirmForm = new ModalFormData3().title("Confirm Reset").textField("Confirm", "Type 'RESET' to confirm", "").submitButton("CONFIRM");
         confirmForm.show(player).then((confirmResponse) => {
           if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -4141,7 +4141,7 @@ function openLocationSearchForm(player, allSpawners) {
     const playerLocation = player.location;
     const playerX = Math.round(playerLocation.x);
     const playerZ = Math.round(playerLocation.z);
-    const form = new ModalFormData3().title("Search Spawners by Location").toggle("Use current location", true).textField("X Coordinate", "Enter X coordinate", { defaultValue: playerX.toString() }).textField("Z Coordinate", "Enter Z coordinate", { defaultValue: playerZ.toString() }).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", true);
+    const form = new ModalFormData3().title("Search Spawners by Location").toggle("Use current location", true).textField("X Coordinate", "Enter X coordinate", playerX.toString()).textField("Z Coordinate", "Enter Z coordinate", playerZ.toString()).slider("Search Radius", 10, 500, 10, 50).toggle("Include inactive spawners", true);
     form.show(player).then((r) => {
       if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
         player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
@@ -6114,14 +6114,10 @@ async function showChangePriceForm(player, blockId, blockLocation) {
   console.warn(`[DS-DEBUG] currentPrice=${currentPrice} (type: ${typeof currentPrice})`);
   let form;
   try {
-    form = new ModalFormData4().title("\xA7l\xA76Change Spawner Price").textField(
-      `\xA77Set price for \xA7e${mobName} Spawner
+    form = new ModalFormData4().title("\xA7l\xA76Change Spawner Price").textField(`\xA77Set price for \xA7e${mobName} Spawner
 \xA77Current: \xA7a$${currentPrice.toLocaleString()}
 
-\xA77Enter new price:`,
-      "e.g., 50000",
-      { defaultValue: currentPrice.toString() }
-    );
+\xA77Enter new price:`, "e.g., 50000", currentPrice.toString());
     console.warn(`[DS-DEBUG] Price form built OK`);
   } catch (buildErr) {
     console.warn(`[DS-DEBUG] CRASH building price form: ${buildErr}`);
@@ -6154,8 +6150,7 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
   console.warn(`[DS-DEBUG] currentObjective=${currentObjective} (type: ${typeof currentObjective})`);
   let form;
   try {
-    form = new ModalFormData4().title("\xA7l\xA76Change Money Objective").textField(
-      `\xA77Enter the scoreboard objective name for money
+    form = new ModalFormData4().title("\xA7l\xA76Change Money Objective").textField(`\xA77Enter the scoreboard objective name for money
 \xA77Current: \xA7e${currentObjective}
 
 \xA77Common examples:
@@ -6164,10 +6159,7 @@ async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
 \xA77- coins
 \xA77- cash
 
-\xA77Objective Name:`,
-      "e.g., money",
-      { defaultValue: currentObjective }
-    );
+\xA77Objective Name:`, "e.g., money", currentObjective);
     console.warn(`[DS-DEBUG] Money objective form built OK`);
   } catch (buildErr) {
     console.warn(`[DS-DEBUG] CRASH building money objective form: ${buildErr}`);
