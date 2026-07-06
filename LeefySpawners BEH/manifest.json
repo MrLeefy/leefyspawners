@@ -2,7 +2,7 @@
 	"format_version": 2,
 	"header": {
 		"name": "LeefySpawners v8.2.85 BEH - Jul 06",
-		"description": "LeefySpawners Behavior Pack v8.2.85 - Spawner-to-Chest Storage Linking & Automation - Jul 2026",
+		"description": "LeefySpawners Behavior Pack v8.2.85 - Reverted terrain texture mappings to original flat ore blocks - Jul 2026",
 		"uuid": "2a0efba2-9569-4815-a821-19bd70a78b5a",
 		"version": [
 			8,
@@ -52,7 +52,7 @@
 			"version": [
 				8,
 				2,
-				84
+				85
 			]
 		}
 	]
