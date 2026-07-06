@@ -14,9 +14,9 @@ $WorldPath = Join-Path $ServerPath "bedrock_server\worlds\Bedrock level"
 # 1. Run TypeScript build
 npm run build
 
-# 1b. Run Obfuscation
-Write-Host "Obfuscating bundled code..." -ForegroundColor Cyan
-node obfuscate.js
+# 1b. Run Obfuscation (Skipped for local development to keep code readable/debuggable)
+# Write-Host "Obfuscating bundled code..." -ForegroundColor Cyan
+# node obfuscate.js
 
 
 # Read the version dynamically from the manifest
@@ -69,6 +69,10 @@ Remove-Item -Path $ResourceDest -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item -Path ".\LeefySpawners BEH" -Destination (Split-Path $BehaviorDest) -Recurse -Force
 Copy-Item -Path ".\LeefySpawners RES" -Destination (Split-Path $ResourceDest) -Recurse -Force
 
+# Copy source files to the local client behavior pack folder so they can see and edit the TS code there
+Copy-Item -Path ".\src" -Destination $BehaviorDest -Recurse -Force
+Copy-Item -Path ".\package.json", ".\tsconfig.json", ".\deploy_local.ps1", ".\obfuscate.js" -Destination $BehaviorDest -Force
+
 # 4. Deploy to local Endstone server folders
 Write-Host "Deploying addon to local Endstone server folders..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path (Split-Path $ServerBehaviorDest) | Out-Null
@@ -87,6 +91,10 @@ Copy-Item -Path ".\LeefySpawners RES" -Destination (Split-Path $ServerResourcePa
 # Delete old packs from server dev folders to prevent duplicate package loads
 Remove-Item -Path (Join-Path $ServerPath "bedrock_server\development_behavior_packs\OCT30LeefySpawners BEH") -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path (Join-Path $ServerPath "bedrock_server\development_resource_packs\OCT30LeefySpawners RES") -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path (Join-Path $ServerPath "bedrock_server\behavior_packs\JUN06LeefySpawners BEH") -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path (Join-Path $ServerPath "bedrock_server\development_behavior_packs\JUN06LeefySpawners BEH") -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path (Join-Path $ServerPath "bedrock_server\development_resource_packs\JUN06LeefySpawners RES") -Recurse -Force -ErrorAction SilentlyContinue
+
 
 
 # 5. Register packs in the active server world configuration

@@ -1,6 +1,4 @@
-import { system, world, PlayerPlaceBlockAfterEvent } from "@minecraft/server";
-import { Vector3 } from "./VectorMath/index.js";
-
+export {};
 /*
 const overworld = world.getDimension('overworld');
 
@@ -50,4 +48,4 @@ world.afterEvents.playerPlaceBlock.subscribe((event: PlayerPlaceBlockAfterEvent)
         }
     }, 1); // Delay to ensure the entity associated with the block has time to spawn
 });
-*/
+*/ 

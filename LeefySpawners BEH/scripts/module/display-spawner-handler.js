@@ -1,13 +1,12 @@
 // Auto-update pipeline verification comment
-import { world, system, Player, Block, Vector3, Entity, EntityInventoryComponent, EntityHitEntityAfterEvent, PlayerSpawnAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent, ItemStack } from "@minecraft/server";
+import { world, system, ItemStack } from "@minecraft/server";
 import { ActionFormData, ModalFormData, MessageFormData } from "@minecraft/server-ui";
 import { Database } from "./database.js";
 import { forceShowForm } from "./ui-utils.js";
-
 // Helper to give items to player natively without commands, spawning on ground if inventory is full
-function giveItemNatively(player: Player, itemTypeId: string, amount: number): void {
+function giveItemNatively(player, itemTypeId, amount) {
     try {
-        const inventory = (player as any).getComponent('inventory');
+        const inventory = player.getComponent('inventory');
         const container = inventory?.container;
         if (container) {
             const itemStack = new ItemStack(itemTypeId, amount);
@@ -15,31 +14,29 @@ function giveItemNatively(player: Player, itemTypeId: string, amount: number): v
             if (remaining && remaining.amount > 0) {
                 player.dimension.spawnItem(remaining, player.location);
             }
-        } else {
+        }
+        else {
             player.dimension.spawnItem(new ItemStack(itemTypeId, amount), player.location);
         }
-    } catch (e) {
+    }
+    catch (e) {
         console.error(`[Display Spawner] Error giving item natively: ${e}`);
     }
 }
-
 /**
  * Display Spawner Handler
  * Handles admin interactions with display spawner blocks
  * Spawns display entities on top of the blocks when requested
  * Manages shop system for non-admin players
  */
-
 // Initialize databases
 const priceDatabase = new Database("DisplaySpawnerPrices");
 const configDatabase = new Database("DisplaySpawnerConfig");
-
 // Cooldown system to prevent multiple form opens
-const formCooldowns = new Map<string, number>();
+const formCooldowns = new Map();
 const FORM_COOLDOWN_MS = 1000; // 1 second cooldown
-
 // Check if player is on cooldown
-function isOnCooldown(playerId: string): boolean {
+function isOnCooldown(playerId) {
     const now = Date.now();
     if (formCooldowns.has(playerId)) {
         const lastInteraction = formCooldowns.get(playerId);
@@ -50,20 +47,17 @@ function isOnCooldown(playerId: string): boolean {
     formCooldowns.set(playerId, now);
     return false;
 }
-
 // Get the configured money scoreboard objective (default: "money")
-function getMoneyObjective(): string {
+function getMoneyObjective() {
     const saved = configDatabase.read("moneyObjective");
-    return (saved as string) || "money";
+    return saved || "money";
 }
-
 // Set the money scoreboard objective
-function setMoneyObjective(objective: string): void {
+function setMoneyObjective(objective) {
     configDatabase.write("moneyObjective", objective);
 }
-
 // Map display spawner blocks to their corresponding display entities
-const SPAWNER_TO_ENTITY_MAP: Record<string, string> = {
+const SPAWNER_TO_ENTITY_MAP = {
     "mrleefy:blazespawner_display": "mrleefy:blazestill_display",
     "mrleefy:breezespawner_display": "mrleefy:breezestill_display",
     "mrleefy:chickenspawner_display": "mrleefy:chickenstill_display",
@@ -104,9 +98,8 @@ const SPAWNER_TO_ENTITY_MAP: Record<string, string> = {
     "mrleefy:redstonecrawlerspawner_display": "mrleefy:redstonecrawlerstill_display",
     "mrleefy:spongecrawlerspawner_display": "mrleefy:spongecrawlerstill_display"
 };
-
 // Default prices for each spawner type
-const DEFAULT_PRICES: Record<string, number> = {
+const DEFAULT_PRICES = {
     "mrleefy:blazespawner_display": 10000,
     "mrleefy:breezespawner_display": 15000,
     "mrleefy:chickenspawner_display": 5000,
@@ -147,45 +140,37 @@ const DEFAULT_PRICES: Record<string, number> = {
     "mrleefy:redstonecrawlerspawner_display": 12000,
     "mrleefy:spongecrawlerspawner_display": 15000
 };
-
 // Get friendly name from block ID
-function getFriendlyName(blockId: string): string {
+function getFriendlyName(blockId) {
     const name = blockId.replace("mrleefy:", "").replace("spawner_display", "");
     return name.charAt(0).toUpperCase() + name.slice(1);
 }
-
 // Get the actual spawner item ID (level 1) from display block
-function getActualSpawnerItem(blockId: string): string {
+function getActualSpawnerItem(blockId) {
     // Convert display block ID to actual spawner item ID
     // Example: mrleefy:blazespawner_display -> mrleefy:blazespawner1
     // Special case for golems: mrleefy:diamondgolemspawner_display -> mrleefy:diamond_golem_spawner1
-
     // Fix golem naming (add underscore back)
     let itemId = blockId.replace("_display", "1");
-
     // Handle golem spawners - they need underscores in the actual item name
     itemId = itemId.replace("diamondgolemspawner", "diamond_golem_spawner");
     itemId = itemId.replace("emeraldgolemspawner", "emerald_golem_spawner");
     itemId = itemId.replace("goldgolemspawner", "gold_golem_spawner");
     itemId = itemId.replace("irongolemspawner", "iron_golem_spawner");
     itemId = itemId.replace("netheritegolemspawner", "netherite_golem_spawner");
-
     return itemId;
 }
-
 // Get price for a spawner type
-function getPrice(blockId: string): number {
+function getPrice(blockId) {
     const savedPrice = priceDatabase.read(blockId);
-    return savedPrice !== undefined ? (savedPrice as number) : DEFAULT_PRICES[blockId] || 10000;
+    return savedPrice !== undefined ? savedPrice : DEFAULT_PRICES[blockId] || 10000;
 }
-
 // Set price for a spawner type
-function setPrice(blockId: string, price: number): void {
+function setPrice(blockId, price) {
     priceDatabase.write(blockId, price);
 }
-
 // Get player's money from configured scoreboard objective
-function getPlayerMoney(player: Player): number {
+function getPlayerMoney(player) {
     try {
         const objectiveName = getMoneyObjective();
         const moneyObjective = world.scoreboard.getObjective(objectiveName);
@@ -195,23 +180,25 @@ function getPlayerMoney(player: Player): number {
                 if (score !== undefined && score !== null) {
                     return score;
                 }
-            } catch (scoreError) {
+            }
+            catch (scoreError) {
                 // If getScore fails, the player's identity is not yet resolved or has no score set.
                 // Fallback to running a command to initialize them to 0 safely.
                 try {
                     moneyObjective.setScore(player, 0);
                     return 0;
-                } catch (cmdError) { /* ignore */ }
+                }
+                catch (cmdError) { /* ignore */ }
             }
         }
         return 0;
-    } catch (error) {
+    }
+    catch (error) {
         return 0;
     }
 }
-
 // Remove money from player using configured scoreboard objective
-function removePlayerMoney(player: Player, amount: number): boolean {
+function removePlayerMoney(player, amount) {
     try {
         const objectiveName = getMoneyObjective();
         const moneyObjective = world.scoreboard.getObjective(objectiveName);
@@ -223,16 +210,16 @@ function removePlayerMoney(player: Player, amount: number): boolean {
             }
         }
         return false;
-    } catch (error) {
+    }
+    catch (error) {
         console.warn(`[Display Spawner] Error removing player money: ${error}`);
         return false;
     }
 }
-
 /**
  * Finds a display entity at the spawner block location
  */
-function getDisplayEntity(player: Player, entityId: string, blockLocation: Vector3): Entity | undefined {
+function getDisplayEntity(player, entityId, blockLocation) {
     try {
         const dimension = player.dimension;
         const searchLocation = {
@@ -246,23 +233,22 @@ function getDisplayEntity(player: Player, entityId: string, blockLocation: Vecto
             type: entityId
         });
         return entities.find(e => e && e.isValid);
-    } catch (error) {
+    }
+    catch (error) {
         console.warn(`[Display Spawner] Error searching for display entity: ${error}`);
         return undefined;
     }
 }
-
-async function showAdminForm(player: Player, blockId: string, blockLocation: Vector3): Promise<void> {
+async function showAdminForm(player, blockId, blockLocation) {
     const entityId = SPAWNER_TO_ENTITY_MAP[blockId];
-    if (!entityId) return;
+    if (!entityId)
+        return;
     const mobName = getFriendlyName(blockId);
     const currentPrice = getPrice(blockId);
     const moneyObjective = getMoneyObjective();
-
     // Check if display entity already exists
     const existingEntity = getDisplayEntity(player, entityId, blockLocation);
     const hasDisplay = !!existingEntity;
-
     const form = new ActionFormData()
         .title("§l§6Admin: Display Spawner")
         .body(`§7${mobName} Display Spawner\n§eCurrent Price: §7$${currentPrice.toLocaleString()}\n§7Money Objective: §e${moneyObjective}\n\n§8§oTip: To remove display entities, hit them with a wooden axe`)
@@ -270,14 +256,11 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
         .button("§8Change Price", "textures/ui/icon_setting")
         .button("§8Change Money Objective", "textures/items/emerald")
         .button("§cClose", "textures/ui/cancel");
-
     try {
         const response = await forceShowForm(player, form);
-
         if (response.canceled) {
             return;
         }
-
         if (response.selection === 0) {
             if (hasDisplay) {
                 // Remove existing display entity
@@ -285,15 +268,18 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
                     if (existingEntity && existingEntity.isValid) {
                         existingEntity.remove();
                         player.sendMessage(`§a✓ Successfully removed ${mobName} Display Entity!`);
-                    } else {
+                    }
+                    else {
                         player.sendMessage(`§c✗ Display Entity not found or already removed.`);
                     }
-                } catch (e) {
+                }
+                catch (e) {
                     player.sendMessage(`§c✗ Error removing entity: ${e}`);
                 }
                 // Show admin form again
                 await showAdminForm(player, blockId, blockLocation);
-            } else {
+            }
+            else {
                 // Spawn entity
                 spawnDisplayEntity(player, entityId, blockLocation, mobName);
                 // Re-open form on next tick so they see the button update
@@ -301,104 +287,95 @@ async function showAdminForm(player: Player, blockId: string, blockLocation: Vec
                     await showAdminForm(player, blockId, blockLocation);
                 });
             }
-        } else if (response.selection === 1) {
+        }
+        else if (response.selection === 1) {
             // Change price 
             await showChangePriceForm(player, blockId, blockLocation);
-        } else if (response.selection === 2) {
+        }
+        else if (response.selection === 2) {
             // Change money objective 
             await showChangeMoneyObjectiveForm(player, blockId, blockLocation);
         }
-    } catch (error) {
+    }
+    catch (error) {
         console.warn(`[Display Spawner] Error showing admin form: ${error}`);
     }
 }
-
 /**
  * Shows the price change form to admins
  */
-async function showChangePriceForm(player: Player, blockId: string, blockLocation: Vector3): Promise<void> {
+async function showChangePriceForm(player, blockId, blockLocation) {
     console.warn(`[DS-DEBUG] showChangePriceForm called for blockId=${blockId}`);
     const mobName = getFriendlyName(blockId);
     const currentPrice = getPrice(blockId);
     console.warn(`[DS-DEBUG] currentPrice=${currentPrice} (type: ${typeof currentPrice})`);
-
-    let form: any;
+    let form;
     try {
-        form = (new ModalFormData() as any)
+        form = new ModalFormData()
             .title("§l§6Change Spawner Price")
             .textField(`§7Set price for §e${mobName} Spawner\n§7Current: §a$${currentPrice.toLocaleString()}\n\n§7Enter new price:`, "e.g., 50000", currentPrice.toString());
         console.warn(`[DS-DEBUG] Price form built OK`);
-    } catch (buildErr) {
+    }
+    catch (buildErr) {
         console.warn(`[DS-DEBUG] CRASH building price form: ${buildErr}`);
         return;
     }
-
     try {
         console.warn(`[DS-DEBUG] Calling forceShowForm for price...`);
         const response = await forceShowForm(player, form);
         console.warn(`[DS-DEBUG] Price form response: canceled=${response.canceled}, reason=${response.cancelationReason}, values=${JSON.stringify(response.formValues)}`);
-
         if (response.canceled || !response.formValues) {
             console.warn(`[DS-DEBUG] Price form was canceled or had no values - returning`);
             return;
         }
-
         const newPrice = Number(response.formValues[0]);
-
         // Validate the input
         if (isNaN(newPrice) || newPrice < 1) {
             player.sendMessage(`§c✗ Invalid price! Please enter a number greater than 0.`);
             await showAdminForm(player, blockId, blockLocation);
             return;
         }
-
         setPrice(blockId, newPrice);
         player.sendMessage(`§a✓ Price updated to §e$${newPrice.toLocaleString()} §afor ${mobName} Spawner!`);
-
         // Show admin form again
         await showAdminForm(player, blockId, blockLocation);
-    } catch (error) {
+    }
+    catch (error) {
         console.warn(`[DS-DEBUG] EXCEPTION in price form show: ${error}`);
     }
 }
-
 /**
  * Shows the money objective change form to admins
  */
-async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blockLocation: Vector3): Promise<void> {
+async function showChangeMoneyObjectiveForm(player, blockId, blockLocation) {
     console.warn(`[DS-DEBUG] showChangeMoneyObjectiveForm called`);
     const currentObjective = getMoneyObjective();
     console.warn(`[DS-DEBUG] currentObjective=${currentObjective} (type: ${typeof currentObjective})`);
-
-    let form: any;
+    let form;
     try {
-        form = (new ModalFormData() as any)
+        form = new ModalFormData()
             .title("§l§6Change Money Objective")
             .textField(`§7Enter the scoreboard objective name for money\n§7Current: §e${currentObjective}\n\n§7Common examples:\n§7- money\n§7- balance\n§7- coins\n§7- cash\n\n§7Objective Name:`, "e.g., money", currentObjective);
         console.warn(`[DS-DEBUG] Money objective form built OK`);
-    } catch (buildErr) {
+    }
+    catch (buildErr) {
         console.warn(`[DS-DEBUG] CRASH building money objective form: ${buildErr}`);
         return;
     }
-
     try {
         console.warn(`[DS-DEBUG] Calling forceShowForm for money objective...`);
         const response = await forceShowForm(player, form);
         console.warn(`[DS-DEBUG] Money obj form response: canceled=${response.canceled}, reason=${response.cancelationReason}, values=${JSON.stringify(response.formValues)}`);
-
         if (response.canceled || !response.formValues) {
             console.warn(`[DS-DEBUG] Money obj form was canceled or had no values - returning`);
             return;
         }
-
-        const newObjective = (response.formValues[0] as string).trim();
-
+        const newObjective = response.formValues[0].trim();
         if (!newObjective || newObjective.length === 0) {
             player.sendMessage(`§c✗ Invalid objective name!`);
             await showAdminForm(player, blockId, blockLocation);
             return;
         }
-
         // Create the objective if it doesn't exist, then add all players
         try {
             let objective = world.scoreboard.getObjective(newObjective);
@@ -407,7 +384,6 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
                 objective = world.scoreboard.addObjective(newObjective, newObjective);
                 player.sendMessage(`§a✓ Created scoreboard objective: §e${newObjective}`);
             }
-
             // Add all current players to the objective with score 0 if they don't have a score
             const allPlayers = world.getAllPlayers();
             let addedCount = 0;
@@ -418,208 +394,182 @@ async function showChangeMoneyObjectiveForm(player: Player, blockId: string, blo
                         objective.setScore(p, 0);
                         addedCount++;
                     }
-                } catch (e) {
+                }
+                catch (e) {
                     // Player not on scoreboard, add them
                     try {
                         objective.setScore(p, 0);
                         addedCount++;
-                    } catch (innerError) {
+                    }
+                    catch (innerError) {
                         console.warn(`[Display Spawner] Could not add ${p.name} to scoreboard: ${innerError}`);
                     }
                 }
             }
-
             if (addedCount > 0) {
                 player.sendMessage(`§a✓ Added §e${addedCount} §aplayer(s) to scoreboard with starting balance of §e$0`);
             }
-        } catch (error: any) {
+        }
+        catch (error) {
             player.sendMessage(`§c✗ Error setting up objective: ${error.message}`);
             await showAdminForm(player, blockId, blockLocation);
             return;
         }
-
         setMoneyObjective(newObjective);
         player.sendMessage(`§a✓ Money objective updated to §e${newObjective}§a!`);
-
         // Show admin form again
         await showAdminForm(player, blockId, blockLocation);
-    } catch (error) {
+    }
+    catch (error) {
         console.warn(`[Display Spawner] Error showing money objective form: ${error}`);
     }
 }
-
 /**
  * Shows the shop form to non-admin players
  */
-async function showShopForm(player: Player, blockId: string): Promise<void> {
+async function showShopForm(player, blockId) {
     const mobName = getFriendlyName(blockId);
     const price = getPrice(blockId);
     const playerMoney = getPlayerMoney(player);
     const totalAffordable = Math.floor(playerMoney / price);
     const maxAffordable = Math.min(64, totalAffordable);
     const actualSpawnerItem = getActualSpawnerItem(blockId);
-
     if (maxAffordable === 0) {
         player.sendMessage(`§c✗ You don't have enough money! §e${mobName} Spawner §ccosts §a$${price.toLocaleString()}`);
         return;
     }
-
-    const maxAffordableText = totalAffordable > 64 
-        ? `§e64 §8(Purchase Protection Cap)` 
+    const maxAffordableText = totalAffordable > 64
+        ? `§e64 §8(Purchase Protection Cap)`
         : `§e${maxAffordable}`;
-
-    const form = (new ModalFormData() as any)
+    const form = new ModalFormData()
         .title("§l§5Spawner Shop")
-        .slider(
-            `§7${mobName} Spawner (Level 1)\n` +
-            `§7Price: §a$${price.toLocaleString()} §7each\n` +
-            `§7Your Money: §a$${playerMoney.toLocaleString()}\n` +
-            `§7Max Per Transaction: ${maxAffordableText}\n\n` +
-            `§7Select quantity:`,
-            1,
-            maxAffordable,
-            1,
-            1
-        );
-
+        .slider(`§7${mobName} Spawner (Level 1)\n` +
+        `§7Price: §a$${price.toLocaleString()} §7each\n` +
+        `§7Your Money: §a$${playerMoney.toLocaleString()}\n` +
+        `§7Max Per Transaction: ${maxAffordableText}\n\n` +
+        `§7Select quantity:`, 1, maxAffordable, 1, 1);
     try {
         const response = await forceShowForm(player, form);
-
         if (response.canceled || !response.formValues) {
             return;
         }
-
-        const quantity = response.formValues[0] as number;
+        const quantity = response.formValues[0];
         const totalCost = quantity * price;
-
         // Verify player still has enough money
         const currentMoney = getPlayerMoney(player);
         if (currentMoney < totalCost) {
             player.sendMessage(`§c✗ You don't have enough money! Need §a$${totalCost.toLocaleString()}`);
             return;
         }
-
         // Show confirmation popup
         const confirmForm = new MessageFormData()
             .title("§l§5Confirm Purchase")
             .body(`§7Are you sure you want to buy §e${quantity}x ${mobName} Spawner(s)§7 for §a$${totalCost.toLocaleString()}§7?`)
             .button1("§l§2Yes, Purchase")
             .button2("§l§cNo, Cancel");
-
         const confirmRes = await forceShowForm(player, confirmForm);
         if (confirmRes.canceled || confirmRes.selection !== 0) {
             player.sendMessage("§c✗ Purchase canceled.");
             return;
         }
-
         // Verify money again in case it changed during the confirmation screen
         const finalMoney = getPlayerMoney(player);
         if (finalMoney < totalCost) {
             player.sendMessage(`§c✗ You don't have enough money! Need §a$${totalCost.toLocaleString()}`);
             return;
         }
-
         // Process purchase - give actual functional spawners (level 1)
         if (removePlayerMoney(player, totalCost)) {
             giveItemNatively(player, actualSpawnerItem, quantity);
             player.sendMessage(`§a✓ Purchased §e${quantity}x ${mobName} Spawner (Lvl 1) §afor §e$${totalCost.toLocaleString()}§a!`);
-        } else {
+        }
+        else {
             player.sendMessage(`§c✗ Transaction failed!`);
         }
-    } catch (error) {
+    }
+    catch (error) {
         console.warn(`[Display Spawner] Error showing shop form: ${error}`);
     }
 }
-
 /**
  * Spawns the display entity on top of the spawner block
  */
-function spawnDisplayEntity(player: Player, entityId: string, blockLocation: Vector3, mobName: string): void {
+function spawnDisplayEntity(player, entityId, blockLocation, mobName) {
     try {
         const dimension = player.dimension;
-
         // Calculate spawn position (center of block, on top)
         const spawnLocation = {
             x: blockLocation.x + 0.5,
             y: blockLocation.y + 1,
             z: blockLocation.z + 0.5
         };
-
         // Spawn the entity
-        const entity = dimension.spawnEntity(entityId as any, spawnLocation);
-
+        const entity = dimension.spawnEntity(entityId, spawnLocation);
         if (entity) {
             player.sendMessage(`§a✓ Successfully spawned ${mobName} Display Entity!`);
-        } else {
+        }
+        else {
             player.sendMessage(`§c✗ Failed to spawn entity. Please try again.`);
         }
-    } catch (error: any) {
+    }
+    catch (error) {
         player.sendMessage(`§c✗ Error spawning entity: ${error.message}`);
         console.warn(`[Display Spawner] Error spawning entity: ${error}`);
     }
 }
-
 /**
  * Handles player interaction with display spawner blocks
  */
 if ('playerInteractWithBlock' in world.beforeEvents) {
-    (world.beforeEvents as any).playerInteractWithBlock.subscribe((event: PlayerInteractWithBlockBeforeEvent) => {
+    world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
         const { player, block } = event;
-
         // Check if the block is a display spawner
         const blockId = block.typeId;
         if (!SPAWNER_TO_ENTITY_MAP[blockId]) {
             return; // Not a display spawner block
         }
-
         // Cancel the default interaction
         event.cancel = true;
-
         // Check cooldown to prevent multiple form opens
         if (isOnCooldown(player.id)) {
             return; // Player is on cooldown
         }
-
         // Show the appropriate form on the next tick (required for forms in beforeEvents)
         system.run(async () => {
             // Admin must be sneaking to access admin panel, otherwise they see the shop (for testing)
             if (player.hasTag("admin") && player.isSneaking) {
                 // Show admin form with spawn entity + change price options
                 await showAdminForm(player, blockId, block.location);
-            } else {
+            }
+            else {
                 // Show shop form for non-admin players (and admins who aren't sneaking)
                 await showShopForm(player, blockId);
             }
         });
     });
 }
-
 /**
  * Handles player interaction with display entities (on top of spawner blocks)
  */
 if ('playerInteractWithEntity' in world.beforeEvents) {
-    (world.beforeEvents as any).playerInteractWithEntity.subscribe((event: PlayerInteractWithEntityBeforeEvent) => {
+    world.beforeEvents.playerInteractWithEntity.subscribe((event) => {
         const { player, target: entity } = event;
-
         // Check if the entity is a display entity
         const entityId = entity.typeId;
         if (!entityId.endsWith("still_display")) {
             return; // Not a display entity
         }
-
         // Find the corresponding block type
-        let blockId: string | null = null;
+        let blockId = null;
         for (const [block, ent] of Object.entries(SPAWNER_TO_ENTITY_MAP)) {
             if (ent === entityId) {
                 blockId = block;
                 break;
             }
         }
-
         if (!blockId) {
             return; // No matching block found
         }
-
         // Get the block underneath the entity (should be the display spawner)
         const entityLocation = entity.location;
         const blockLocation = {
@@ -627,25 +577,20 @@ if ('playerInteractWithEntity' in world.beforeEvents) {
             y: Math.floor(entityLocation.y) - 1, // Block is below the entity
             z: Math.floor(entityLocation.z)
         };
-
         try {
             const dimension = entity.dimension;
             const block = dimension.getBlock(blockLocation);
-
             // Verify it's the correct display spawner block
             if (!block || block.typeId !== blockId) {
                 // Block underneath doesn't match, still show the form but without block location
                 console.warn(`[Display Spawner] Entity ${entityId} found but block underneath is ${block?.typeId || 'null'}`);
             }
-
             // Cancel the default interaction
             event.cancel = true;
-
             // Check cooldown to prevent multiple form opens
             if (isOnCooldown(player.id)) {
                 return; // Player is on cooldown
             }
-
             const finalBlockId = blockId;
             // Show the appropriate form on the next tick
             system.run(async () => {
@@ -653,113 +598,104 @@ if ('playerInteractWithEntity' in world.beforeEvents) {
                 if (player.hasTag("admin") && player.isSneaking) {
                     // Show admin form with spawn entity + change price options
                     await showAdminForm(player, finalBlockId, blockLocation);
-                } else {
+                }
+                else {
                     // Show shop form for non-admin players (and admins who aren't sneaking)
                     await showShopForm(player, finalBlockId);
                 }
             });
-        } catch (error) {
+        }
+        catch (error) {
             console.warn(`[Display Spawner] Error handling entity interaction: ${error}`);
         }
     });
 }
-
 /**
  * Admin feature: Remove display entities by hitting them with a wooden axe
  */
-world.afterEvents.entityHitEntity.subscribe((event: EntityHitEntityAfterEvent) => {
+world.afterEvents.entityHitEntity.subscribe((event) => {
     const { damagingEntity, hitEntity } = event;
-
     // Check if the damaging entity is a player
     if (!damagingEntity || damagingEntity.typeId !== "minecraft:player") {
         return;
     }
-
-    const player = damagingEntity as Player;
-
-    if (!player || !player.isValid) return;
-
+    const player = damagingEntity;
+    if (!player || !player.isValid)
+        return;
     // Check if player has admin tag
     if (!player.hasTag("admin")) {
         return;
     }
-
     // Check if player is holding a wooden axe
-    const inventory = player.getComponent("inventory") as EntityInventoryComponent | undefined;
+    const inventory = player.getComponent("inventory");
     if (!inventory || !inventory.container) {
         return;
     }
-
     const selectedSlot = player.selectedSlotIndex;
     const heldItem = inventory.container.getItem(selectedSlot);
-
     if (!heldItem || heldItem.typeId !== "minecraft:wooden_axe") {
         return;
     }
-
     // Check if the hit entity is a display entity
     if (!hitEntity || !hitEntity.isValid || !hitEntity.typeId.endsWith("still_display")) {
         return;
     }
-
     // Remove the entity
     try {
         const entityName = hitEntity.typeId.replace("mrleefy:", "").replace("still_display", "");
         const friendlyName = entityName.charAt(0).toUpperCase() + entityName.slice(1);
-
         hitEntity.remove();
         player.sendMessage(`§a✓ Removed ${friendlyName} Display Entity!`);
-    } catch (error: any) {
+    }
+    catch (error) {
         player.sendMessage(`§c✗ Error removing entity: ${error.message}`);
         console.warn(`[Display Spawner] Error removing display entity: ${error}`);
     }
 });
-
 console.warn("[Display Spawner Handler] Loaded successfully!");
-
 // Initialize scoreboard objectives on world load
 system.run(() => {
     try {
         const moneyObjective = getMoneyObjective();
-
         // Try to get existing objective, or create if doesn't exist
         let objective = world.scoreboard.getObjective(moneyObjective);
         if (!objective) {
             objective = world.scoreboard.addObjective(moneyObjective, moneyObjective);
             console.warn(`[Display Spawner] Created scoreboard objective: ${moneyObjective}`);
-        } else {
+        }
+        else {
             console.warn(`[Display Spawner] Scoreboard objective already exists: ${moneyObjective}`);
         }
-    } catch (error) {
+    }
+    catch (error) {
         console.warn(`[Display Spawner] Error initializing scoreboard: ${error}`);
     }
 });
-
 // Add players to scoreboard when they first spawn
-world.afterEvents.playerSpawn.subscribe((event: PlayerSpawnAfterEvent) => {
+world.afterEvents.playerSpawn.subscribe((event) => {
     try {
         const { player, initialSpawn } = event;
-
         // Only handle initial spawn (when player joins for the first time)
-        if (!initialSpawn) return;
-
+        if (!initialSpawn)
+            return;
         const moneyObjective = getMoneyObjective();
-
         // Delay execution by 80 ticks (4 seconds) to ensure native profile/identity loads
         system.runTimeout(() => {
             try {
-                if (!player.isValid) return;
+                if (!player.isValid)
+                    return;
                 const objective = world.scoreboard.getObjective(moneyObjective);
                 if (objective) {
                     objective.setScore(player, objective.getScore(player) ?? 0);
                     console.warn(`[Display Spawner] Initialized ${player.name} on scoreboard ${moneyObjective}`);
                 }
-            } catch (error) {
+            }
+            catch (error) {
                 // If fails (already exists or still unresolved), ignore
             }
         }, 80);
-    } catch (error) {
+    }
+    catch (error) {
         console.warn(`[Display Spawner] Error in playerSpawn handler: ${error}`);
     }
 });
-

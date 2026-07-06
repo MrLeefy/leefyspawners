@@ -1,37 +1,31 @@
-import { world, system, ItemStack, EntityDieAfterEvent, Player, Dimension, Vector3, EnchantmentTypes, Block } from '@minecraft/server';
+import { world, system, ItemStack, EnchantmentTypes } from '@minecraft/server';
 import { Database } from "./database.js";
 import { ENTITIES } from "./constants.js";
 import { spawnerDatabase } from "./levelsystem.js";
-
 // --- DATABASE SETUP ---
 export const lootTableDatabase = new Database('LootTables');
-export const reapMultipliers = new Map<string, number>();
-export const deadEntitySpawnerMap = new Map<string, string>();
+export const reapMultipliers = new Map();
+export const deadEntitySpawnerMap = new Map();
 const configDatabase = new Database('ConfigValues');
-
 // Performance optimizations
-const configCache = new Map<string, any>();
-const configCacheExpiry = new Map<string, number>();
+const configCache = new Map();
+const configCacheExpiry = new Map();
 const CACHE_DURATION = 30000; // 30 seconds
 const MAX_CACHE_SIZE = 50; // Limit cache size to prevent memory bloat
-
 // Cached config getter with TTL and size limits
-function getCachedConfig(key: string, defaultValue: any): any {
+function getCachedConfig(key, defaultValue) {
     const now = Date.now();
     const cacheKey = key;
-
     if (configCache.has(cacheKey) && (configCacheExpiry.get(cacheKey) ?? 0) > now) {
         return configCache.get(cacheKey);
     }
-
     const value = configDatabase.read(key) ?? defaultValue;
     configCache.set(cacheKey, value);
     configCacheExpiry.set(cacheKey, now + CACHE_DURATION);
-
     // Enforce cache size limits
     if (configCache.size > MAX_CACHE_SIZE) {
         // Remove expired entries first
-        const expiredKeys: string[] = [];
+        const expiredKeys = [];
         for (const [k, expiry] of configCacheExpiry.entries()) {
             if (expiry <= now) {
                 expiredKeys.push(k);
@@ -41,7 +35,6 @@ function getCachedConfig(key: string, defaultValue: any): any {
             configCache.delete(k);
             configCacheExpiry.delete(k);
         });
-
         // If still over limit, remove oldest entries
         if (configCache.size > MAX_CACHE_SIZE) {
             const entries = Array.from(configCacheExpiry.entries());
@@ -53,81 +46,74 @@ function getCachedConfig(key: string, defaultValue: any): any {
             });
         }
     }
-
     return value;
 }
-
 // Maps item IDs → enchantment category for dynamic enchanting
-const ITEM_ENCHANT_CATEGORY: Record<string, string> = {
-    'minecraft:iron_sword':         'sword',
-    'minecraft:diamond_sword':      'sword',
-    'minecraft:iron_axe':           'axe',
-    'minecraft:diamond_axe':        'axe',
-    'minecraft:iron_pickaxe':       'pickaxe',
-    'minecraft:diamond_pickaxe':    'pickaxe',
-    'minecraft:iron_shovel':        'shovel',
-    'minecraft:diamond_shovel':     'shovel',
-    'minecraft:iron_hoe':           'hoe',
-    'minecraft:diamond_hoe':        'hoe',
-    'minecraft:bow':                'bow',
-    'minecraft:crossbow':           'crossbow',
-    'minecraft:fishing_rod':        'fishing_rod',
-    'minecraft:shears':             'shears',
-    'minecraft:trident':            'trident',
-    'minecraft:iron_helmet':        'helmet',
-    'minecraft:iron_chestplate':    'chestplate',
-    'minecraft:iron_leggings':      'leggings',
-    'minecraft:iron_boots':         'boots',
-    'minecraft:chainmail_helmet':   'helmet',
+const ITEM_ENCHANT_CATEGORY = {
+    'minecraft:iron_sword': 'sword',
+    'minecraft:diamond_sword': 'sword',
+    'minecraft:iron_axe': 'axe',
+    'minecraft:diamond_axe': 'axe',
+    'minecraft:iron_pickaxe': 'pickaxe',
+    'minecraft:diamond_pickaxe': 'pickaxe',
+    'minecraft:iron_shovel': 'shovel',
+    'minecraft:diamond_shovel': 'shovel',
+    'minecraft:iron_hoe': 'hoe',
+    'minecraft:diamond_hoe': 'hoe',
+    'minecraft:bow': 'bow',
+    'minecraft:crossbow': 'crossbow',
+    'minecraft:fishing_rod': 'fishing_rod',
+    'minecraft:shears': 'shears',
+    'minecraft:trident': 'trident',
+    'minecraft:iron_helmet': 'helmet',
+    'minecraft:iron_chestplate': 'chestplate',
+    'minecraft:iron_leggings': 'leggings',
+    'minecraft:iron_boots': 'boots',
+    'minecraft:chainmail_helmet': 'helmet',
     'minecraft:chainmail_chestplate': 'chestplate',
     'minecraft:chainmail_leggings': 'leggings',
-    'minecraft:chainmail_boots':    'boots',
-    'minecraft:diamond_helmet':     'helmet',
+    'minecraft:chainmail_boots': 'boots',
+    'minecraft:diamond_helmet': 'helmet',
     'minecraft:diamond_chestplate': 'chestplate',
-    'minecraft:diamond_leggings':   'leggings',
-    'minecraft:diamond_boots':      'boots',
-    'minecraft:leather_helmet':     'helmet',
+    'minecraft:diamond_leggings': 'leggings',
+    'minecraft:diamond_boots': 'boots',
+    'minecraft:leather_helmet': 'helmet',
     'minecraft:leather_chestplate': 'chestplate',
-    'minecraft:leather_leggings':   'leggings',
-    'minecraft:leather_boots':      'boots',
+    'minecraft:leather_leggings': 'leggings',
+    'minecraft:leather_boots': 'boots',
     // Stone tools
-    'minecraft:stone_sword':        'sword',
-    'minecraft:stone_axe':          'axe',
-    'minecraft:stone_pickaxe':      'pickaxe',
-    'minecraft:stone_shovel':       'shovel',
-    'minecraft:stone_hoe':          'hoe',
+    'minecraft:stone_sword': 'sword',
+    'minecraft:stone_axe': 'axe',
+    'minecraft:stone_pickaxe': 'pickaxe',
+    'minecraft:stone_shovel': 'shovel',
+    'minecraft:stone_hoe': 'hoe',
     // Golden tools
-    'minecraft:golden_sword':       'sword',
-    'minecraft:golden_axe':         'axe',
-    'minecraft:golden_pickaxe':     'pickaxe',
-    'minecraft:golden_shovel':      'shovel',
-    'minecraft:golden_hoe':         'hoe',
-    'minecraft:golden_helmet':      'helmet',
-    'minecraft:golden_chestplate':  'chestplate',
-    'minecraft:golden_leggings':    'leggings',
-    'minecraft:golden_boots':       'boots',
+    'minecraft:golden_sword': 'sword',
+    'minecraft:golden_axe': 'axe',
+    'minecraft:golden_pickaxe': 'pickaxe',
+    'minecraft:golden_shovel': 'shovel',
+    'minecraft:golden_hoe': 'hoe',
+    'minecraft:golden_helmet': 'helmet',
+    'minecraft:golden_chestplate': 'chestplate',
+    'minecraft:golden_leggings': 'leggings',
+    'minecraft:golden_boots': 'boots',
 };
-
 // --- LOOT MANAGER CLASS DEFINITION ---
-
 /**
  * Manages all loot table logic, including loading, saving, and processing drops.
  * This class uses a Singleton pattern to ensure only one instance exists.
  */
 class LootManager {
     // Singleton instance
-    static instance: LootManager;
-
-    defaultEntities!: Record<string, any>;
-    entities!: Record<string, any>;
-    enchantmentCategories!: Record<string, any[]>;
-    enchantmentIncompatibilities!: Record<string, string[]>;
-
+    static instance;
+    defaultEntities;
+    entities;
+    enchantmentCategories;
+    enchantmentIncompatibilities;
     constructor() {
         if (LootManager.instance) {
             return LootManager.instance;
         }
-
         // --- PROPERTIES ---
         this.defaultEntities = {
             'mrleefy:piglinbrutestill': { 'minecraft:golden_axe': { chance: 8.5, stackable: false, enchantChance: 15, randomdurability: true }, 'minecraft:gold_nugget': { chance: 100 } },
@@ -152,266 +138,241 @@ class LootManager {
             'mrleefy:villagerstill': {
                 // ── UNIVERSAL ──────────────────────────────────────────────
                 'minecraft:emerald': { chance: 60, quantity: 1, stackable: true },
-
                 // ── FARMER ─────────────────────────────────────────────────
-                'minecraft:bread':           { chance: 45, quantity: 1, stackable: true },
-                'minecraft:apple':           { chance: 35, quantity: 1, stackable: true },
-                'minecraft:cookie':          { chance: 22, quantity: 1, stackable: true },
-                'minecraft:pumpkin_pie':     { chance: 18, quantity: 1, stackable: true },
-                'minecraft:wheat':           { chance: 30, quantity: 1, stackable: true },
-                'minecraft:potato':          { chance: 25, quantity: 1, stackable: true },
-                'minecraft:carrot':          { chance: 25, quantity: 1, stackable: true },
-                'minecraft:beetroot':        { chance: 20, quantity: 1, stackable: true },
-                'minecraft:pumpkin':         { chance: 12, quantity: 1, stackable: true },
-                'minecraft:melon_slice':     { chance: 12, quantity: 1, stackable: true },
-                'minecraft:golden_carrot':   { chance: 8,  quantity: 1, stackable: true },
-                'minecraft:suspicious_stew': { chance: 6,  quantity: 1, stackable: false },
+                'minecraft:bread': { chance: 45, quantity: 1, stackable: true },
+                'minecraft:apple': { chance: 35, quantity: 1, stackable: true },
+                'minecraft:cookie': { chance: 22, quantity: 1, stackable: true },
+                'minecraft:pumpkin_pie': { chance: 18, quantity: 1, stackable: true },
+                'minecraft:wheat': { chance: 30, quantity: 1, stackable: true },
+                'minecraft:potato': { chance: 25, quantity: 1, stackable: true },
+                'minecraft:carrot': { chance: 25, quantity: 1, stackable: true },
+                'minecraft:beetroot': { chance: 20, quantity: 1, stackable: true },
+                'minecraft:pumpkin': { chance: 12, quantity: 1, stackable: true },
+                'minecraft:melon_slice': { chance: 12, quantity: 1, stackable: true },
+                'minecraft:golden_carrot': { chance: 8, quantity: 1, stackable: true },
+                'minecraft:suspicious_stew': { chance: 6, quantity: 1, stackable: false },
                 'minecraft:glistering_melon_slice': { chance: 5, quantity: 1, stackable: true },
-                'minecraft:cake':            { chance: 3,  quantity: 1, stackable: false },
-
+                'minecraft:cake': { chance: 3, quantity: 1, stackable: false },
                 // ── FISHERMAN ──────────────────────────────────────────────
-                'minecraft:cod':             { chance: 28, quantity: 1, stackable: true },
-                'minecraft:salmon':          { chance: 25, quantity: 1, stackable: true },
-                'minecraft:tropical_fish':   { chance: 12, quantity: 1, stackable: true },
-                'minecraft:pufferfish':      { chance: 8,  quantity: 1, stackable: true },
-                'minecraft:fishing_rod':     { chance: 6,  stackable: false, enchantChance: 25, randomdurability: true },
-                'minecraft:campfire':        { chance: 5,  quantity: 1, stackable: true },
-                'minecraft:enchanted_book':  { chance: 40, stackable: false },
-
+                'minecraft:cod': { chance: 28, quantity: 1, stackable: true },
+                'minecraft:salmon': { chance: 25, quantity: 1, stackable: true },
+                'minecraft:tropical_fish': { chance: 12, quantity: 1, stackable: true },
+                'minecraft:pufferfish': { chance: 8, quantity: 1, stackable: true },
+                'minecraft:fishing_rod': { chance: 6, stackable: false, enchantChance: 25, randomdurability: true },
+                'minecraft:campfire': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:enchanted_book': { chance: 40, stackable: false },
                 // ── LIBRARIAN ──────────────────────────────────────────────
-                'minecraft:book':            { chance: 38, quantity: 1, stackable: true },
-                'minecraft:paper':           { chance: 30, quantity: 1, stackable: true },
-                'minecraft:ink_sac':         { chance: 18, quantity: 1, stackable: true },
-                'minecraft:glass':           { chance: 15, quantity: 1, stackable: true },
-                'minecraft:bookshelf':       { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:lantern':         { chance: 6,  quantity: 1, stackable: true },
-                'minecraft:name_tag':        { chance: 1.5, stackable: false },
-
+                'minecraft:book': { chance: 38, quantity: 1, stackable: true },
+                'minecraft:paper': { chance: 30, quantity: 1, stackable: true },
+                'minecraft:ink_sac': { chance: 18, quantity: 1, stackable: true },
+                'minecraft:glass': { chance: 15, quantity: 1, stackable: true },
+                'minecraft:bookshelf': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:lantern': { chance: 6, quantity: 1, stackable: true },
+                'minecraft:name_tag': { chance: 1.5, stackable: false },
                 // ── CARTOGRAPHER ───────────────────────────────────────────
-                'minecraft:compass':         { chance: 9,  quantity: 1, stackable: true },
-                'minecraft:empty_map':       { chance: 14, quantity: 1, stackable: true },
-                'minecraft:frame':           { chance: 5,  quantity: 1, stackable: true },
-                'minecraft:glass_pane':      { chance: 14, quantity: 1, stackable: true },
-
+                'minecraft:compass': { chance: 9, quantity: 1, stackable: true },
+                'minecraft:empty_map': { chance: 14, quantity: 1, stackable: true },
+                'minecraft:frame': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:glass_pane': { chance: 14, quantity: 1, stackable: true },
                 // ── CLERIC ─────────────────────────────────────────────────
                 'minecraft:experience_bottle': { chance: 28, quantity: 1, stackable: true },
-                'minecraft:glowstone_dust':  { chance: 14, quantity: 1, stackable: true },
-                'minecraft:redstone':        { chance: 14, quantity: 1, stackable: true },
-                'minecraft:lapis_lazuli':    { chance: 14, quantity: 1, stackable: true },
-                'minecraft:rotten_flesh':    { chance: 18, quantity: 1, stackable: true },
-                'minecraft:gold_ingot':      { chance: 6,  quantity: 1, stackable: true },
-                'minecraft:ender_pearl':     { chance: 5,  quantity: 1, stackable: true },
-                'minecraft:glass_bottle':    { chance: 10, quantity: 1, stackable: true },
-                'minecraft:nether_wart':     { chance: 10, quantity: 1, stackable: true },
-                'minecraft:rabbit_foot':     { chance: 5,  quantity: 1, stackable: true },
-                'minecraft:ghast_tear':      { chance: 2,  quantity: 1, stackable: true },
-                'minecraft:scute':           { chance: 3,  quantity: 1, stackable: true },
-
+                'minecraft:glowstone_dust': { chance: 14, quantity: 1, stackable: true },
+                'minecraft:redstone': { chance: 14, quantity: 1, stackable: true },
+                'minecraft:lapis_lazuli': { chance: 14, quantity: 1, stackable: true },
+                'minecraft:rotten_flesh': { chance: 18, quantity: 1, stackable: true },
+                'minecraft:gold_ingot': { chance: 6, quantity: 1, stackable: true },
+                'minecraft:ender_pearl': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:glass_bottle': { chance: 10, quantity: 1, stackable: true },
+                'minecraft:nether_wart': { chance: 10, quantity: 1, stackable: true },
+                'minecraft:rabbit_foot': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:ghast_tear': { chance: 2, quantity: 1, stackable: true },
+                'minecraft:scute': { chance: 3, quantity: 1, stackable: true },
                 // ── ARMORER ────────────────────────────────────────────────
-                'minecraft:coal':            { chance: 30, quantity: 1, stackable: true },
-                'minecraft:iron_ingot':      { chance: 22, quantity: 1, stackable: true },
-                'minecraft:diamond':         { chance: 4,  quantity: 1, stackable: true },
-                'minecraft:chainmail_helmet':    { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
-                'minecraft:chainmail_chestplate':{ chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
-                'minecraft:chainmail_leggings':  { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
-                'minecraft:chainmail_boots':     { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
-                'minecraft:iron_helmet':     { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
+                'minecraft:coal': { chance: 30, quantity: 1, stackable: true },
+                'minecraft:iron_ingot': { chance: 22, quantity: 1, stackable: true },
+                'minecraft:diamond': { chance: 4, quantity: 1, stackable: true },
+                'minecraft:chainmail_helmet': { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
+                'minecraft:chainmail_chestplate': { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
+                'minecraft:chainmail_leggings': { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
+                'minecraft:chainmail_boots': { chance: 4, stackable: false, enchantChance: 15, randomdurability: true },
+                'minecraft:iron_helmet': { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
                 'minecraft:iron_chestplate': { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
-                'minecraft:iron_leggings':   { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
-                'minecraft:iron_boots':      { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
-                'minecraft:diamond_helmet':     { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
+                'minecraft:iron_leggings': { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
+                'minecraft:iron_boots': { chance: 3, stackable: false, enchantChance: 15, randomdurability: true },
+                'minecraft:diamond_helmet': { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
                 'minecraft:diamond_chestplate': { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
-                'minecraft:diamond_leggings':   { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
-                'minecraft:diamond_boots':      { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
-                'minecraft:shield':          { chance: 5,  stackable: false, randomdurability: true },
-                'minecraft:bell':            { chance: 1,  stackable: false },
-
+                'minecraft:diamond_leggings': { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
+                'minecraft:diamond_boots': { chance: 0.4, stackable: false, enchantChance: 30, randomdurability: true },
+                'minecraft:shield': { chance: 5, stackable: false, randomdurability: true },
+                'minecraft:bell': { chance: 1, stackable: false },
                 // ── LEATHERWORKER ──────────────────────────────────────────
-                'minecraft:leather':         { chance: 28, quantity: 1, stackable: true },
-                'minecraft:rabbit_hide':     { chance: 15, quantity: 1, stackable: true },
-                'minecraft:leather_helmet':     { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
+                'minecraft:leather': { chance: 28, quantity: 1, stackable: true },
+                'minecraft:rabbit_hide': { chance: 15, quantity: 1, stackable: true },
+                'minecraft:leather_helmet': { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
                 'minecraft:leather_chestplate': { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
-                'minecraft:leather_leggings':   { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
-                'minecraft:leather_boots':      { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
-                'minecraft:saddle':          { chance: 3,  stackable: false },
+                'minecraft:leather_leggings': { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
+                'minecraft:leather_boots': { chance: 6, stackable: false, enchantChance: 10, randomdurability: true },
+                'minecraft:saddle': { chance: 3, stackable: false },
                 'minecraft:leather_horse_armor': { chance: 2, stackable: false },
-
                 // ── BUTCHER ────────────────────────────────────────────────
-                'minecraft:chicken':         { chance: 20, quantity: 1, stackable: true },
-                'minecraft:porkchop':        { chance: 20, quantity: 1, stackable: true },
-                'minecraft:beef':            { chance: 20, quantity: 1, stackable: true },
-                'minecraft:mutton':          { chance: 18, quantity: 1, stackable: true },
-                'minecraft:cooked_chicken':  { chance: 18, quantity: 1, stackable: true },
+                'minecraft:chicken': { chance: 20, quantity: 1, stackable: true },
+                'minecraft:porkchop': { chance: 20, quantity: 1, stackable: true },
+                'minecraft:beef': { chance: 20, quantity: 1, stackable: true },
+                'minecraft:mutton': { chance: 18, quantity: 1, stackable: true },
+                'minecraft:cooked_chicken': { chance: 18, quantity: 1, stackable: true },
                 'minecraft:cooked_porkchop': { chance: 18, quantity: 1, stackable: true },
-                'minecraft:cooked_beef':     { chance: 18, quantity: 1, stackable: true },
-                'minecraft:cooked_mutton':   { chance: 16, quantity: 1, stackable: true },
-                'minecraft:rabbit':          { chance: 14, quantity: 1, stackable: true },
-                'minecraft:cooked_rabbit':   { chance: 14, quantity: 1, stackable: true },
-                'minecraft:rabbit_stew':     { chance: 8,  quantity: 1, stackable: false },
-                'minecraft:dried_kelp':      { chance: 10, quantity: 1, stackable: true },
-
+                'minecraft:cooked_beef': { chance: 18, quantity: 1, stackable: true },
+                'minecraft:cooked_mutton': { chance: 16, quantity: 1, stackable: true },
+                'minecraft:rabbit': { chance: 14, quantity: 1, stackable: true },
+                'minecraft:cooked_rabbit': { chance: 14, quantity: 1, stackable: true },
+                'minecraft:rabbit_stew': { chance: 8, quantity: 1, stackable: false },
+                'minecraft:dried_kelp': { chance: 10, quantity: 1, stackable: true },
                 // ── FLETCHER ───────────────────────────────────────────────
-                'minecraft:arrow':           { chance: 31, quantity: 2, stackable: true },
-                'minecraft:feather':         { chance: 22, quantity: 1, stackable: true },
-                'minecraft:flint':           { chance: 22, quantity: 1, stackable: true },
-                'minecraft:string':          { chance: 20, quantity: 1, stackable: true },
-                'minecraft:gravel':          { chance: 15, quantity: 1, stackable: true },
-                'minecraft:tripwire_hook':   { chance: 8,  quantity: 1, stackable: true },
-                'minecraft:bow':             { chance: 5,  stackable: false, enchantChance: 25, randomdurability: true },
-                'minecraft:crossbow':        { chance: 5,  stackable: false, enchantChance: 25, randomdurability: true },
-
+                'minecraft:arrow': { chance: 31, quantity: 2, stackable: true },
+                'minecraft:feather': { chance: 22, quantity: 1, stackable: true },
+                'minecraft:flint': { chance: 22, quantity: 1, stackable: true },
+                'minecraft:string': { chance: 20, quantity: 1, stackable: true },
+                'minecraft:gravel': { chance: 15, quantity: 1, stackable: true },
+                'minecraft:tripwire_hook': { chance: 8, quantity: 1, stackable: true },
+                'minecraft:bow': { chance: 5, stackable: false, enchantChance: 25, randomdurability: true },
+                'minecraft:crossbow': { chance: 5, stackable: false, enchantChance: 25, randomdurability: true },
                 // ── TOOLSMITH ──────────────────────────────────────────────
-                'minecraft:iron_shovel':     { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
-                'minecraft:iron_pickaxe':    { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
-                'minecraft:iron_axe':        { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
-                'minecraft:iron_hoe':        { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
-                'minecraft:diamond_shovel':  { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
+                'minecraft:iron_shovel': { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+                'minecraft:iron_pickaxe': { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+                'minecraft:iron_axe': { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+                'minecraft:iron_hoe': { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+                'minecraft:diamond_shovel': { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
                 'minecraft:diamond_pickaxe': { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
-                'minecraft:diamond_axe':     { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
-                'minecraft:diamond_hoe':     { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
-
+                'minecraft:diamond_axe': { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
+                'minecraft:diamond_hoe': { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
                 // ── WEAPONSMITH ────────────────────────────────────────────
-                'minecraft:iron_sword':      { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
-                'minecraft:diamond_sword':   { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
-
+                'minecraft:iron_sword': { chance: 4, stackable: false, enchantChance: 20, randomdurability: true },
+                'minecraft:diamond_sword': { chance: 0.6, stackable: false, enchantChance: 35, randomdurability: true },
                 // ── SHEPHERD ───────────────────────────────────────────────
-                'minecraft:shears':          { chance: 10, stackable: false, enchantChance: 10, randomdurability: true },
-                'minecraft:white_wool':      { chance: 10, quantity: 1, stackable: true },
-                'minecraft:orange_wool':     { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:magenta_wool':    { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:light_blue_wool': { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:yellow_wool':     { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:lime_wool':       { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:pink_wool':       { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:gray_wool':       { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:cyan_wool':       { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:purple_wool':     { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:blue_wool':       { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:brown_wool':      { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:green_wool':      { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:red_wool':        { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:black_wool':      { chance: 7,  quantity: 1, stackable: true },
-                'minecraft:painting':        { chance: 3,  stackable: false },
-                'minecraft:bed':             { chance: 36, stackable: false },
-                'minecraft:white_carpet':    { chance: 5,  quantity: 1, stackable: true },
-                'minecraft:white_dye':       { chance: 6,  quantity: 1, stackable: true },
-                'minecraft:red_dye':         { chance: 6,  quantity: 1, stackable: true },
-                'minecraft:blue_dye':        { chance: 6,  quantity: 1, stackable: true },
-                'minecraft:yellow_dye':      { chance: 6,  quantity: 1, stackable: true },
-                'minecraft:green_dye':       { chance: 5,  quantity: 1, stackable: true },
-                'minecraft:purple_dye':      { chance: 5,  quantity: 1, stackable: true },
-                'minecraft:black_dye':       { chance: 5,  quantity: 1, stackable: true },
-
+                'minecraft:shears': { chance: 10, stackable: false, enchantChance: 10, randomdurability: true },
+                'minecraft:white_wool': { chance: 10, quantity: 1, stackable: true },
+                'minecraft:orange_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:magenta_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:light_blue_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:yellow_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:lime_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:pink_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:gray_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:cyan_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:purple_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:blue_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:brown_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:green_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:red_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:black_wool': { chance: 7, quantity: 1, stackable: true },
+                'minecraft:painting': { chance: 3, stackable: false },
+                'minecraft:bed': { chance: 36, stackable: false },
+                'minecraft:white_carpet': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:white_dye': { chance: 6, quantity: 1, stackable: true },
+                'minecraft:red_dye': { chance: 6, quantity: 1, stackable: true },
+                'minecraft:blue_dye': { chance: 6, quantity: 1, stackable: true },
+                'minecraft:yellow_dye': { chance: 6, quantity: 1, stackable: true },
+                'minecraft:green_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:purple_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:black_dye': { chance: 5, quantity: 1, stackable: true },
                 // ── MASON ──────────────────────────────────────────────────
-                'minecraft:clay_ball':       { chance: 20, quantity: 1, stackable: true },
-                'minecraft:brick':           { chance: 16, quantity: 1, stackable: true },
-                'minecraft:stone':           { chance: 14, quantity: 1, stackable: true },
-                'minecraft:granite':         { chance: 12, quantity: 1, stackable: true },
-                'minecraft:andesite':        { chance: 12, quantity: 1, stackable: true },
-                'minecraft:diorite':         { chance: 12, quantity: 1, stackable: true },
-                'minecraft:quartz':          { chance: 10, quantity: 1, stackable: true },
+                'minecraft:clay_ball': { chance: 20, quantity: 1, stackable: true },
+                'minecraft:brick': { chance: 16, quantity: 1, stackable: true },
+                'minecraft:stone': { chance: 14, quantity: 1, stackable: true },
+                'minecraft:granite': { chance: 12, quantity: 1, stackable: true },
+                'minecraft:andesite': { chance: 12, quantity: 1, stackable: true },
+                'minecraft:diorite': { chance: 12, quantity: 1, stackable: true },
+                'minecraft:quartz': { chance: 10, quantity: 1, stackable: true },
                 'minecraft:chiseled_stone_bricks': { chance: 8, quantity: 1, stackable: true },
-                'minecraft:hardened_clay':   { chance: 8,  quantity: 1, stackable: true },
-                'minecraft:white_glazed_terracotta':  { chance: 5, quantity: 1, stackable: true },
+                'minecraft:hardened_clay': { chance: 8, quantity: 1, stackable: true },
+                'minecraft:white_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
                 'minecraft:orange_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
-                'minecraft:blue_glazed_terracotta':   { chance: 5, quantity: 1, stackable: true },
-                'minecraft:red_glazed_terracotta':    { chance: 5, quantity: 1, stackable: true },
+                'minecraft:blue_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:red_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
                 'minecraft:yellow_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
-                'minecraft:green_glazed_terracotta':  { chance: 5, quantity: 1, stackable: true },
-                'minecraft:nether_brick':    { chance: 8,  quantity: 1, stackable: true },
-                'minecraft:dripstone_block': { chance: 6,  quantity: 1, stackable: true },
+                'minecraft:green_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:nether_brick': { chance: 8, quantity: 1, stackable: true },
+                'minecraft:dripstone_block': { chance: 6, quantity: 1, stackable: true },
                 'minecraft:pointed_dripstone': { chance: 6, quantity: 1, stackable: true },
-
                 // ── CLOCK / COMPASS (shared) ───────────────────────────
-                'minecraft:clock':           { chance: 8,  quantity: 1, stackable: true },
-
+                'minecraft:clock': { chance: 8, quantity: 1, stackable: true },
                 // ── MASTER-LEVEL TRADES (rare, any profession) ────────────────
                 // Armorer master: offer diamond gear or netherite upgrade
                 'minecraft:netherite_upgrade_smithing_template': { chance: 0.3, quantity: 1, stackable: false },
                 // Toolsmith / Weaponsmith master: golden tools
-                'minecraft:golden_sword':    { chance: 1.5, stackable: false, enchantChance: 15 },
-                'minecraft:golden_axe':      { chance: 1.5, stackable: false, enchantChance: 15 },
-                'minecraft:golden_pickaxe':  { chance: 1.5, stackable: false, enchantChance: 15 },
-                'minecraft:golden_shovel':   { chance: 1.5, stackable: false, enchantChance: 15 },
-                'minecraft:golden_hoe':      { chance: 1.5, stackable: false, enchantChance: 15 },
+                'minecraft:golden_sword': { chance: 1.5, stackable: false, enchantChance: 15 },
+                'minecraft:golden_axe': { chance: 1.5, stackable: false, enchantChance: 15 },
+                'minecraft:golden_pickaxe': { chance: 1.5, stackable: false, enchantChance: 15 },
+                'minecraft:golden_shovel': { chance: 1.5, stackable: false, enchantChance: 15 },
+                'minecraft:golden_hoe': { chance: 1.5, stackable: false, enchantChance: 15 },
                 // Armorer: golden armor
-                'minecraft:golden_helmet':   { chance: 1.5, stackable: false, enchantChance: 15 },
+                'minecraft:golden_helmet': { chance: 1.5, stackable: false, enchantChance: 15 },
                 'minecraft:golden_chestplate': { chance: 1.5, stackable: false, enchantChance: 15 },
                 'minecraft:golden_leggings': { chance: 1.5, stackable: false, enchantChance: 15 },
-                'minecraft:golden_boots':    { chance: 1.5, stackable: false, enchantChance: 15 },
+                'minecraft:golden_boots': { chance: 1.5, stackable: false, enchantChance: 15 },
                 // Leatherworker: horse armor
-                'minecraft:iron_horse_armor':    { chance: 1,   quantity: 1, stackable: false },
-                'minecraft:golden_horse_armor':  { chance: 0.8, quantity: 1, stackable: false },
+                'minecraft:iron_horse_armor': { chance: 1, quantity: 1, stackable: false },
+                'minecraft:golden_horse_armor': { chance: 0.8, quantity: 1, stackable: false },
                 'minecraft:diamond_horse_armor': { chance: 0.3, quantity: 1, stackable: false },
-
                 // ── WANDERING TRADER extras (found in all trades) ───────────
-                'minecraft:nautilus_shell':  { chance: 2,   quantity: 1, stackable: true },
-                'minecraft:podzol':          { chance: 3,   quantity: 1, stackable: true },
-                'minecraft:mycelium':        { chance: 2,   quantity: 1, stackable: true },
-                'minecraft:brown_mushroom':  { chance: 5,   quantity: 1, stackable: true },
-                'minecraft:red_mushroom':    { chance: 5,   quantity: 1, stackable: true },
-                'minecraft:cactus':          { chance: 5,   quantity: 1, stackable: true },
-                'minecraft:sea_pickle':      { chance: 4,   quantity: 1, stackable: true },
-
+                'minecraft:nautilus_shell': { chance: 2, quantity: 1, stackable: true },
+                'minecraft:podzol': { chance: 3, quantity: 1, stackable: true },
+                'minecraft:mycelium': { chance: 2, quantity: 1, stackable: true },
+                'minecraft:brown_mushroom': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:red_mushroom': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:cactus': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:sea_pickle': { chance: 4, quantity: 1, stackable: true },
                 // ── MISSING SHEPHERD BEDS & CARPETS ───────────────────────
-                'minecraft:orange_carpet':   { chance: 5, quantity: 1, stackable: true },
-                'minecraft:yellow_carpet':   { chance: 5, quantity: 1, stackable: true },
-                'minecraft:green_carpet':    { chance: 5, quantity: 1, stackable: true },
-                'minecraft:purple_carpet':   { chance: 5, quantity: 1, stackable: true },
-                'minecraft:cyan_carpet':     { chance: 5, quantity: 1, stackable: true },
-                'minecraft:blue_carpet':     { chance: 5, quantity: 1, stackable: true },
-                'minecraft:red_carpet':      { chance: 5, quantity: 1, stackable: true },
-                'minecraft:black_carpet':    { chance: 5, quantity: 1, stackable: true },
-
+                'minecraft:orange_carpet': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:yellow_carpet': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:green_carpet': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:purple_carpet': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:cyan_carpet': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:blue_carpet': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:red_carpet': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:black_carpet': { chance: 5, quantity: 1, stackable: true },
                 // ── MASON MISSING BLOCKS ─────────────────────────────────────
-                'minecraft:polished_granite':   { chance: 8, quantity: 1, stackable: true },
-                'minecraft:polished_andesite':  { chance: 8, quantity: 1, stackable: true },
-                'minecraft:polished_diorite':   { chance: 8, quantity: 1, stackable: true },
-                'minecraft:stone_bricks':        { chance: 8, quantity: 1, stackable: true },
-                'minecraft:mossy_stone_bricks':  { chance: 5, quantity: 1, stackable: true },
-                'minecraft:cracked_stone_bricks':{ chance: 4, quantity: 1, stackable: true },
-                'minecraft:nether_brick_fence':  { chance: 4, quantity: 1, stackable: true },
-                'minecraft:purple_glazed_terracotta':  { chance: 5, quantity: 1, stackable: true },
-                'minecraft:cyan_glazed_terracotta':    { chance: 5, quantity: 1, stackable: true },
+                'minecraft:polished_granite': { chance: 8, quantity: 1, stackable: true },
+                'minecraft:polished_andesite': { chance: 8, quantity: 1, stackable: true },
+                'minecraft:polished_diorite': { chance: 8, quantity: 1, stackable: true },
+                'minecraft:stone_bricks': { chance: 8, quantity: 1, stackable: true },
+                'minecraft:mossy_stone_bricks': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:cracked_stone_bricks': { chance: 4, quantity: 1, stackable: true },
+                'minecraft:nether_brick_fence': { chance: 4, quantity: 1, stackable: true },
+                'minecraft:purple_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:cyan_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
                 'minecraft:light_blue_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
-                'minecraft:gray_glazed_terracotta':    { chance: 5, quantity: 1, stackable: true },
+                'minecraft:gray_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
                 'minecraft:magenta_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
-                'minecraft:pink_glazed_terracotta':    { chance: 5, quantity: 1, stackable: true },
-                'minecraft:black_glazed_terracotta':   { chance: 5, quantity: 1, stackable: true },
-                'minecraft:brown_glazed_terracotta':   { chance: 5, quantity: 1, stackable: true },
-                'minecraft:lime_glazed_terracotta':    { chance: 5, quantity: 1, stackable: true },
-
+                'minecraft:pink_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:black_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:brown_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:lime_glazed_terracotta': { chance: 5, quantity: 1, stackable: true },
                 // ── FISHERMAN (missing cooked fish) ────────────────────────
-                'minecraft:cooked_cod':      { chance: 22, quantity: 1, stackable: true },
-                'minecraft:cooked_salmon':   { chance: 18, quantity: 1, stackable: true },
-
+                'minecraft:cooked_cod': { chance: 22, quantity: 1, stackable: true },
+                'minecraft:cooked_salmon': { chance: 18, quantity: 1, stackable: true },
                 // ── LIBRARIAN (book & quill) ────────────────────────────────
-                'minecraft:writable_book':   { chance: 8,  quantity: 1, stackable: false },
-
+                'minecraft:writable_book': { chance: 8, quantity: 1, stackable: false },
                 // ── TOOLSMITH & WEAPONSMITH (stone tools — novice tier) ────
-                'minecraft:stone_sword':     { chance: 8,  stackable: false, enchantChance: 5 },
-                'minecraft:stone_axe':       { chance: 8,  stackable: false, enchantChance: 5 },
-                'minecraft:stone_pickaxe':   { chance: 8,  stackable: false, enchantChance: 5 },
-                'minecraft:stone_shovel':    { chance: 8,  stackable: false, enchantChance: 5 },
-                'minecraft:stone_hoe':       { chance: 8,  stackable: false, enchantChance: 5 },
-
+                'minecraft:stone_sword': { chance: 8, stackable: false, enchantChance: 5 },
+                'minecraft:stone_axe': { chance: 8, stackable: false, enchantChance: 5 },
+                'minecraft:stone_pickaxe': { chance: 8, stackable: false, enchantChance: 5 },
+                'minecraft:stone_shovel': { chance: 8, stackable: false, enchantChance: 5 },
+                'minecraft:stone_hoe': { chance: 8, stackable: false, enchantChance: 5 },
                 // ── BUTCHER (missing sweet berries) ────────────────────────
-                'minecraft:sweet_berries':   { chance: 10, quantity: 1, stackable: true },
-
+                'minecraft:sweet_berries': { chance: 10, quantity: 1, stackable: true },
                 // ── SHEPHERD (banners — expert tier) ───────────────────────
-                'minecraft:banner':          { chance: 20, quantity: 1, stackable: true },
-
+                'minecraft:banner': { chance: 20, quantity: 1, stackable: true },
                 // ── SHEPHERD (missing dye colors) ──────────────────────────
-                'minecraft:orange_dye':      { chance: 5, quantity: 1, stackable: true },
-                'minecraft:magenta_dye':     { chance: 5, quantity: 1, stackable: true },
-                'minecraft:light_blue_dye':  { chance: 5, quantity: 1, stackable: true },
-                'minecraft:lime_dye':        { chance: 5, quantity: 1, stackable: true },
-                'minecraft:pink_dye':        { chance: 5, quantity: 1, stackable: true },
-                'minecraft:gray_dye':        { chance: 5, quantity: 1, stackable: true },
-                'minecraft:light_gray_dye':  { chance: 5, quantity: 1, stackable: true },
-                'minecraft:cyan_dye':        { chance: 5, quantity: 1, stackable: true },
-                'minecraft:brown_dye':       { chance: 5, quantity: 1, stackable: true },
-
+                'minecraft:orange_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:magenta_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:light_blue_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:lime_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:pink_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:gray_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:light_gray_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:cyan_dye': { chance: 5, quantity: 1, stackable: true },
+                'minecraft:brown_dye': { chance: 5, quantity: 1, stackable: true },
             },
             'mrleefy:witherstill': { 'minecraft:nether_star': { chance: 100, quantity: 1, stackable: false } },
             'mrleefy:enderdragonstill': {
@@ -440,19 +401,18 @@ class LootManager {
             'mrleefy:quartzcrawlerstill': { 'minecraft:quartz': { chance: 100, quantity: 1, stackable: true } },
             'mrleefy:amethystcrawlerstill': { 'minecraft:amethyst_shard': { chance: 100, quantity: 1, stackable: true } },
         };
-
         this.entities = {}; // This will be populated from the database
         this.enchantmentCategories = {
-            axe: [ { type: 'sharpness', minLevel: 1, maxLevel: 5 }, { type: 'smite', minLevel: 1, maxLevel: 5 }, { type: 'bane_of_arthropods', minLevel: 1, maxLevel: 5 }, { type: 'efficiency', minLevel: 1, maxLevel: 5 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'fortune', minLevel: 1, maxLevel: 3 }, { type: 'silk_touch', minLevel: 1, maxLevel: 1 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
-            helmet: [ { type: 'protection', minLevel: 1, maxLevel: 4 }, { type: 'fire_protection', minLevel: 1, maxLevel: 4 }, { type: 'blast_protection', minLevel: 1, maxLevel: 4 }, { type: 'projectile_protection', minLevel: 1, maxLevel: 4 }, { type: 'respiration', minLevel: 1, maxLevel: 3 }, { type: 'aqua_affinity', minLevel: 1, maxLevel: 1 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
-            chestplate: [ { type: 'protection', minLevel: 1, maxLevel: 4 }, { type: 'fire_protection', minLevel: 1, maxLevel: 4 }, { type: 'blast_protection', minLevel: 1, maxLevel: 4 }, { type: 'projectile_protection', minLevel: 1, maxLevel: 4 }, { type: 'thorns', minLevel: 1, maxLevel: 3 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
-            leggings: [ { type: 'protection', minLevel: 1, maxLevel: 4 }, { type: 'fire_protection', minLevel: 1, maxLevel: 4 }, { type: 'blast_protection', minLevel: 1, maxLevel: 4 }, { type: 'projectile_protection', minLevel: 1, maxLevel: 4 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'thorns', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
-            boots: [ { type: 'protection', minLevel: 1, maxLevel: 4 }, { type: 'fire_protection', minLevel: 1, maxLevel: 4 }, { type: 'blast_protection', minLevel: 1, maxLevel: 4 }, { type: 'projectile_protection', minLevel: 1, maxLevel: 4 }, { type: 'feather_falling', minLevel: 1, maxLevel: 4 }, { type: 'depth_strider', minLevel: 1, maxLevel: 3 }, { type: 'frost_walker', minLevel: 1, maxLevel: 2 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'soul_speed', minLevel: 1, maxLevel: 3 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
-            sword: [ { type: 'sharpness', minLevel: 1, maxLevel: 5 }, { type: 'smite', minLevel: 1, maxLevel: 5 }, { type: 'bane_of_arthropods', minLevel: 1, maxLevel: 5 }, { type: 'knockback', minLevel: 1, maxLevel: 2 }, { type: 'fire_aspect', minLevel: 1, maxLevel: 2 }, { type: 'looting', minLevel: 1, maxLevel: 3 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
-            trident: [ { type: 'impaling', minLevel: 1, maxLevel: 5 }, { type: 'riptide', minLevel: 1, maxLevel: 3 }, { type: 'loyalty', minLevel: 1, maxLevel: 3 }, { type: 'channeling', minLevel: 1, maxLevel: 1 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
-            bow: [ { type: 'power', minLevel: 1, maxLevel: 5 }, { type: 'punch', minLevel: 1, maxLevel: 2 }, { type: 'flame', minLevel: 1, maxLevel: 1 }, { type: 'infinity', minLevel: 1, maxLevel: 1 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
-            crossbow: [ { type: 'piercing', minLevel: 1, maxLevel: 4 }, { type: 'quick_charge', minLevel: 1, maxLevel: 3 }, { type: 'multishot', minLevel: 1, maxLevel: 1 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
-            mace: [ { type: 'density', minLevel: 1, maxLevel: 5 }, { type: 'breach', minLevel: 1, maxLevel: 4 }, { type: 'wind_burst', minLevel: 1, maxLevel: 3 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'fire_aspect', minLevel: 1, maxLevel: 2 }, { type: 'sharpness', minLevel: 1, maxLevel: 5 }, { type: 'smite', minLevel: 1, maxLevel: 5 }, { type: 'bane_of_arthropods', minLevel: 1, maxLevel: 5 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 } ],
+            axe: [{ type: 'sharpness', minLevel: 1, maxLevel: 5 }, { type: 'smite', minLevel: 1, maxLevel: 5 }, { type: 'bane_of_arthropods', minLevel: 1, maxLevel: 5 }, { type: 'efficiency', minLevel: 1, maxLevel: 5 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'fortune', minLevel: 1, maxLevel: 3 }, { type: 'silk_touch', minLevel: 1, maxLevel: 1 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
+            helmet: [{ type: 'protection', minLevel: 1, maxLevel: 4 }, { type: 'fire_protection', minLevel: 1, maxLevel: 4 }, { type: 'blast_protection', minLevel: 1, maxLevel: 4 }, { type: 'projectile_protection', minLevel: 1, maxLevel: 4 }, { type: 'respiration', minLevel: 1, maxLevel: 3 }, { type: 'aqua_affinity', minLevel: 1, maxLevel: 1 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
+            chestplate: [{ type: 'protection', minLevel: 1, maxLevel: 4 }, { type: 'fire_protection', minLevel: 1, maxLevel: 4 }, { type: 'blast_protection', minLevel: 1, maxLevel: 4 }, { type: 'projectile_protection', minLevel: 1, maxLevel: 4 }, { type: 'thorns', minLevel: 1, maxLevel: 3 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
+            leggings: [{ type: 'protection', minLevel: 1, maxLevel: 4 }, { type: 'fire_protection', minLevel: 1, maxLevel: 4 }, { type: 'blast_protection', minLevel: 1, maxLevel: 4 }, { type: 'projectile_protection', minLevel: 1, maxLevel: 4 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'thorns', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
+            boots: [{ type: 'protection', minLevel: 1, maxLevel: 4 }, { type: 'fire_protection', minLevel: 1, maxLevel: 4 }, { type: 'blast_protection', minLevel: 1, maxLevel: 4 }, { type: 'projectile_protection', minLevel: 1, maxLevel: 4 }, { type: 'feather_falling', minLevel: 1, maxLevel: 4 }, { type: 'depth_strider', minLevel: 1, maxLevel: 3 }, { type: 'frost_walker', minLevel: 1, maxLevel: 2 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'soul_speed', minLevel: 1, maxLevel: 3 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
+            sword: [{ type: 'sharpness', minLevel: 1, maxLevel: 5 }, { type: 'smite', minLevel: 1, maxLevel: 5 }, { type: 'bane_of_arthropods', minLevel: 1, maxLevel: 5 }, { type: 'knockback', minLevel: 1, maxLevel: 2 }, { type: 'fire_aspect', minLevel: 1, maxLevel: 2 }, { type: 'looting', minLevel: 1, maxLevel: 3 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
+            trident: [{ type: 'impaling', minLevel: 1, maxLevel: 5 }, { type: 'riptide', minLevel: 1, maxLevel: 3 }, { type: 'loyalty', minLevel: 1, maxLevel: 3 }, { type: 'channeling', minLevel: 1, maxLevel: 1 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
+            bow: [{ type: 'power', minLevel: 1, maxLevel: 5 }, { type: 'punch', minLevel: 1, maxLevel: 2 }, { type: 'flame', minLevel: 1, maxLevel: 1 }, { type: 'infinity', minLevel: 1, maxLevel: 1 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
+            crossbow: [{ type: 'piercing', minLevel: 1, maxLevel: 4 }, { type: 'quick_charge', minLevel: 1, maxLevel: 3 }, { type: 'multishot', minLevel: 1, maxLevel: 1 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
+            mace: [{ type: 'density', minLevel: 1, maxLevel: 5 }, { type: 'breach', minLevel: 1, maxLevel: 4 }, { type: 'wind_burst', minLevel: 1, maxLevel: 3 }, { type: 'unbreaking', minLevel: 1, maxLevel: 3 }, { type: 'mending', minLevel: 1, maxLevel: 1 }, { type: 'fire_aspect', minLevel: 1, maxLevel: 2 }, { type: 'sharpness', minLevel: 1, maxLevel: 5 }, { type: 'smite', minLevel: 1, maxLevel: 5 }, { type: 'bane_of_arthropods', minLevel: 1, maxLevel: 5 }, { type: 'vanishing', minLevel: 1, maxLevel: 1 }],
             pickaxe: [
                 { type: 'efficiency', minLevel: 1, maxLevel: 5 },
                 { type: 'silk_touch', minLevel: 1, maxLevel: 1 },
@@ -538,8 +498,6 @@ class LootManager {
                 { type: 'vanishing', minLevel: 1, maxLevel: 1 }
             ]
         };
-
-        
         this.enchantmentIncompatibilities = {
             protection: ['fire_protection', 'blast_protection', 'projectile_protection'],
             fire_protection: ['protection', 'blast_protection', 'projectile_protection'],
@@ -556,18 +514,16 @@ class LootManager {
             riptide: ['loyalty', 'channeling'],
             channeling: ['riptide']
         };
-
         LootManager.instance = this;
         // Defer initialize() to tick 2: the Database constructor defers its own scoreboard.load()
         // to tick 1 via system.run(). If we call initialize() synchronously here (tick 0),
         // lootTableDatabase.read() returns undefined for every key and defaults overwrite saved data.
         system.run(() => system.run(() => this.initialize()));
     }
-
     /**
      * Loads loot tables from the database or uses defaults.
      */
-    initialize(): void {
+    initialize() {
         // Load default entities first
         for (const entityId in this.defaultEntities) {
             this.entities[entityId] = this.defaultEntities[entityId];
@@ -580,14 +536,13 @@ class LootManager {
                 if (savedLootTable && Object.keys(savedLootTable).length > 0) {
                     // Repair invalid colored bed IDs, item_frame, tipped_arrow, and terracotta if they exist in the saved database
                     let databaseChanged = false;
-
                     // 1. Repair beds
                     let hasInvalidBeds = false;
                     let bedChanceAcc = 0;
                     for (const [itemId, config] of Object.entries(savedLootTable)) {
                         if (itemId.endsWith('_bed') && itemId !== 'minecraft:bed') {
                             hasInvalidBeds = true;
-                            bedChanceAcc += (config as any).chance ?? 4;
+                            bedChanceAcc += config.chance ?? 4;
                             delete savedLootTable[itemId];
                         }
                     }
@@ -598,7 +553,6 @@ class LootManager {
                         };
                         databaseChanged = true;
                     }
-
                     // 2. Repair item_frame -> frame
                     if (savedLootTable['minecraft:item_frame']) {
                         const config = savedLootTable['minecraft:item_frame'];
@@ -606,7 +560,6 @@ class LootManager {
                         savedLootTable['minecraft:frame'] = config;
                         databaseChanged = true;
                     }
-
                     // 3. Repair terracotta -> hardened_clay
                     if (savedLootTable['minecraft:terracotta']) {
                         const config = savedLootTable['minecraft:terracotta'];
@@ -614,19 +567,18 @@ class LootManager {
                         savedLootTable['minecraft:hardened_clay'] = config;
                         databaseChanged = true;
                     }
-
                     // 4. Repair tipped_arrow -> arrow
                     if (savedLootTable['minecraft:tipped_arrow']) {
                         const config = savedLootTable['minecraft:tipped_arrow'];
                         delete savedLootTable['minecraft:tipped_arrow'];
                         if (savedLootTable['minecraft:arrow']) {
                             savedLootTable['minecraft:arrow'].chance = (savedLootTable['minecraft:arrow'].chance ?? 28) + (config.chance ?? 3);
-                        } else {
+                        }
+                        else {
                             savedLootTable['minecraft:arrow'] = config;
                         }
                         databaseChanged = true;
                     }
-
                     if (databaseChanged) {
                         lootTableDatabase.write(entityId, savedLootTable);
                         console.warn(`[LootManager] Auto-repaired invalid item IDs in database for ${entityId}`);
@@ -634,45 +586,44 @@ class LootManager {
                     this.entities[entityId] = savedLootTable;
                 }
             }
-        } catch (e) {
+        }
+        catch (e) {
             console.error(`[LootManager] Failed to load custom tables from database: ${e}`);
         }
     }
-
     /**
      * Saves a specific entity's loot table to the database.
      * @param entityId The entity ID (e.g., 'mrleefy:zombiestill')
      */
-    saveLootTable(entityId: string): void {
+    saveLootTable(entityId) {
         if (this.entities[entityId] && Object.keys(this.entities[entityId]).length > 0) {
             lootTableDatabase.write(entityId, this.entities[entityId]);
-        } else {
+        }
+        else {
             // If the table is empty, remove it from the database to save space
             lootTableDatabase.delete(entityId);
             delete this.entities[entityId];
         }
     }
-
     /**
      * Gets the Looting level from a player's held item.
      * @param player - Player object
      * @returns The level of Looting, or 0 if none.
      */
-    getLootLevel(player: Player): number {
+    getLootLevel(player) {
         try {
-            const equipment: any = player.getComponent('equippable');
+            const equipment = player.getComponent('equippable');
             const mainhandItem = equipment?.getEquipment('Mainhand');
-            if (!mainhandItem) return 0;
-            
-            const enchantments: any[] = mainhandItem.getComponent('enchantable')?.getEnchantments() || [];
+            if (!mainhandItem)
+                return 0;
+            const enchantments = mainhandItem.getComponent('enchantable')?.getEnchantments() || [];
             const lootingEnchant = enchantments?.find(e => e.type.id === 'looting');
-            
             return lootingEnchant ? lootingEnchant.level : 0;
-        } catch (e) {
+        }
+        catch (e) {
             return 0; // Return 0 if any component is missing
         }
     }
-
     /**
      * Calculates the final loot to be dropped based on chance and Looting level.
      * @param lootTable The loot table to process.
@@ -681,31 +632,32 @@ class LootManager {
      * @param rolls The number of independent rolls (reap multiplier)
      * @returns A final loot object with items and quantities.
      */
-    calcLoot(lootTable: any, lootLevel: number, singleDrop: boolean = false, rolls: number = 1): Record<string, any> {
-        const finalLoot: Record<string, any> = {};
-        const lootTableEntries = Object.entries(lootTable) as [string, any][];
-
+    calcLoot(lootTable, lootLevel, singleDrop = false, rolls = 1) {
+        const finalLoot = {};
+        const lootTableEntries = Object.entries(lootTable);
         // Early return for empty loot tables
-        if (lootTableEntries.length === 0) return finalLoot;
-
+        if (lootTableEntries.length === 0)
+            return finalLoot;
         if (singleDrop) {
             // --- SINGLE DROP MODE: pick exactly ONE item via weighted random ---
             // Build weighted pool — items with higher chance appear proportionally more
             const totalWeight = lootTableEntries.reduce((sum, [, cfg]) => sum + (cfg.chance ?? 100), 0);
-            
-            const pickedCounts: Record<string, number> = {};
+            const pickedCounts = {};
             for (let r = 0; r < rolls; r++) {
                 let roll = Math.random() * totalWeight;
-                let picked: [string, any] | null = null;
+                let picked = null;
                 for (const entry of lootTableEntries) {
                     roll -= (entry[1].chance ?? 100);
-                    if (roll <= 0) { picked = entry; break; }
+                    if (roll <= 0) {
+                        picked = entry;
+                        break;
+                    }
                 }
-                if (!picked) picked = lootTableEntries[lootTableEntries.length - 1];
+                if (!picked)
+                    picked = lootTableEntries[lootTableEntries.length - 1];
                 const [itemId] = picked;
                 pickedCounts[itemId] = (pickedCounts[itemId] || 0) + 1;
             }
-
             for (const [itemId, count] of Object.entries(pickedCounts)) {
                 const config = lootTable[itemId];
                 let totalQuantity = 0;
@@ -720,25 +672,21 @@ class LootManager {
             }
             return finalLoot;
         }
-
         // --- NORMAL MODE: roll each item independently ---
         for (const [itemId, config] of lootTableEntries) {
             const baseChance = config.chance ?? 100;
             const modifiedChance = baseChance * (1 + (lootLevel * 0.1)); // 10% bonus per Looting level
             const probability = modifiedChance / 100;
-
             let successfulRolls = 0;
             for (let r = 0; r < rolls; r++) {
                 if (Math.random() < probability) {
                     successfulRolls++;
                 }
             }
-
             if (successfulRolls > 0) {
                 let totalQuantity = 0;
                 for (let s = 0; s < successfulRolls; s++) {
                     let dropQuantity = config.quantity ?? 1;
-
                     if (lootLevel > 0 && config.stackable !== false) {
                         const bonusChance = 0.25 * lootLevel;
                         const bonusDrops = Math.floor(bonusChance + (Math.random() * 0.5));
@@ -755,25 +703,22 @@ class LootManager {
      * Handles the entity death event to process and spawn loot.
      * @param event - EntityDieAfterEvent object
      */
-    onEntityDeath(event: EntityDieAfterEvent): void {
+    onEntityDeath(event) {
         const { deadEntity, damageSource } = event;
-        if (!deadEntity?.isValid) return;
-
+        if (!deadEntity?.isValid)
+            return;
         const entityId = deadEntity.typeId;
         const lootTable = this.entities[entityId];
-        if (!lootTable) return;
-
+        if (!lootTable)
+            return;
         // Use cached config values for better performance
         const playerKillOnly = getCachedConfig('playerKillOnly', false);
         const killer = damageSource?.damagingEntity;
-
         if (playerKillOnly && (!killer || killer.typeId !== 'minecraft:player')) {
             return; // Exit if loot should only drop from player kills
         }
-
         const entityLocation = deadEntity.location;
         const entityDimension = deadEntity.dimension;
-
         // Optimized spill protection
         const spillCap = getCachedConfig('itemSpillCap', 5);
         const nearbyItems = entityDimension.getEntities({
@@ -782,34 +727,26 @@ class LootManager {
             maxDistance: 3,
             closest: spillCap
         });
-
         if (nearbyItems.length >= spillCap) {
             return;
         }
-
-        const lootLevel = (killer?.typeId === 'minecraft:player') ? this.getLootLevel(killer as Player) : 0;
-
+        const lootLevel = (killer?.typeId === 'minecraft:player') ? this.getLootLevel(killer) : 0;
         // Get the reap multiplier for this death
         const reapMultiplier = reapMultipliers.get(deadEntity.id) || 1;
         reapMultipliers.delete(deadEntity.id);
-
         // Get the spawner key for this death (chest linking)
         const spawnerKey = deadEntitySpawnerMap.get(deadEntity.id);
         deadEntitySpawnerMap.delete(deadEntity.id);
-
         // Villager uses single-drop mode — exactly one item per kill
         const singleDrop = entityId === 'mrleefy:villagerstill';
         const finalLoot = this.calcLoot(lootTable, lootLevel, singleDrop, reapMultiplier);
-
         // Stamp lootLevel onto every config so createItemStack can use it for enchant scaling
         for (const cfg of Object.values(finalLoot)) {
-            (cfg as any).__lootLevel = lootLevel;
+            cfg.__lootLevel = lootLevel;
         }
-
         // Process loot drops with optimized item creation
         this.processLootDrops(finalLoot, entityDimension, entityLocation, lootLevel, reapMultiplier, spawnerKey, entityId);
     }
-
     /**
      * Optimized loot drop processing
      * @param finalLoot - The calculated loot to drop
@@ -820,43 +757,41 @@ class LootManager {
      * @param spawnerKey - Optional spawner key for chest linking
      * @param entityId - Optional type ID of the dying entity
      */
-    processLootDrops(finalLoot: Record<string, any>, dimension: Dimension, location: Vector3, lootLevel: number = 0, reapMultiplier: number = 1, spawnerKey?: string, entityId?: string): void {
+    processLootDrops(finalLoot, dimension, location, lootLevel = 0, reapMultiplier = 1, spawnerKey, entityId) {
         const lootEntries = Object.entries(finalLoot);
-        if (lootEntries.length === 0) return;
-
-        const xpOrbs: any[] = [];
-        const stackableItems: any[] = [];
-        const nonStackableItems: any[] = [];
-
+        if (lootEntries.length === 0)
+            return;
+        const xpOrbs = [];
+        const stackableItems = [];
+        const nonStackableItems = [];
         for (const [itemId, config] of lootEntries) {
             if (itemId === 'minecraft:xp_orb') {
                 xpOrbs.push(config);
-            } else if (config.stackable !== false) {
+            }
+            else if (config.stackable !== false) {
                 stackableItems.push({ itemId, config });
-            } else {
+            }
+            else {
                 nonStackableItems.push({ itemId, config });
             }
         }
-
         // Process XP orbs (always drop on the ground)
         for (const config of xpOrbs) {
             try {
-                (dimension as any).spawnEntity(ENTITIES.XP_ORB_TYPE, location, { amount: config.quantity });
-            } catch (e) {
+                dimension.spawnEntity(ENTITIES.XP_ORB_TYPE, location, { amount: config.quantity });
+            }
+            catch (e) {
                 console.warn(`[LootManager] Error spawning XP orb: ${e}`);
             }
         }
-
         // Fallback: If spawnerKey is missing (e.g. server restart wiped temporary tracking map),
         // scan the database for the nearest matching spawner of this entity type within 16 blocks.
         if (!spawnerKey && typeof entityId === 'string') {
             try {
-                let nearestKey: string | undefined = undefined;
+                let nearestKey = undefined;
                 let minDistance = 99999;
                 const keys = spawnerDatabase.keys();
-
                 const entityType = entityId.replace('mrleefy:', '').replace('still', '').trim().toLowerCase();
-
                 for (const key of keys) {
                     const data = spawnerDatabase.read(key);
                     if (data && typeof data.typeId === 'string') {
@@ -867,7 +802,6 @@ class LootManager {
                             const dy = location.y - sy;
                             const dz = location.z - sz;
                             const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
                             if (dist < 16 && dist < minDistance) {
                                 minDistance = dist;
                                 nearestKey = key;
@@ -878,14 +812,14 @@ class LootManager {
                 if (nearestKey) {
                     spawnerKey = nearestKey;
                 }
-            } catch (e) {
+            }
+            catch (e) {
                 console.error(`[LootManager] Error in proximity spawner lookup: ${e}`);
             }
         }
-
         // Resolve containers for chest linking
-        let container1: any = undefined;
-        let container2: any = undefined;
+        let container1 = undefined;
+        let container2 = undefined;
         if (spawnerKey) {
             try {
                 const spawnerData = spawnerDatabase.read(spawnerKey);
@@ -901,11 +835,11 @@ class LootManager {
                         }
                     }
                 }
-            } catch (e) {
+            }
+            catch (e) {
                 console.warn(`[LootManager] Error looking up linked chest for spawner ${spawnerKey}: ${e}`);
             }
         }
-
         // Process stackable items
         for (const { itemId, config } of stackableItems) {
             try {
@@ -913,71 +847,67 @@ class LootManager {
                 while (remaining > 0) {
                     const spawnQty = Math.min(remaining, 64);
                     const itemStack = this.createItemStack(itemId, { ...config, quantity: spawnQty });
-
-                    let currentStack: any = itemStack;
-
+                    let currentStack = itemStack;
                     // Try inserting into chest 1
                     if (container1) {
                         try {
                             currentStack = container1.addItem(currentStack);
-                        } catch (err) {
+                        }
+                        catch (err) {
                             console.warn(`[LootManager] Error inserting into container1: ${err}`);
                         }
                     }
-
                     // Try inserting any leftovers into chest 2 (if double chest)
                     if (currentStack && currentStack.amount > 0 && container2) {
                         try {
                             currentStack = container2.addItem(currentStack);
-                        } catch (err) {
+                        }
+                        catch (err) {
                             console.warn(`[LootManager] Error inserting into container2: ${err}`);
                         }
                     }
-
                     // Drop any remaining leftovers on the ground
                     if (currentStack && currentStack.amount > 0) {
                         dimension.spawnItem(currentStack, location);
                     }
-
                     remaining -= spawnQty;
                 }
-            } catch (e) {
+            }
+            catch (e) {
                 console.warn(`[LootManager] Error spawning loot item ${itemId}: ${e}`);
             }
         }
-
         // Process non-stackable items — spawn up to config.quantity times (capped at 5 to prevent severe lag)
         for (const { itemId, config } of nonStackableItems) {
             const dropCount = Math.max(1, Math.min(5, config.quantity ?? 1));
             for (let i = 0; i < dropCount; i++) {
                 try {
                     const itemStack = this.createItemStack(itemId, { ...config, quantity: 1 });
-
-                    let currentStack: any = itemStack;
-
+                    let currentStack = itemStack;
                     // Try inserting into chest 1
                     if (container1) {
                         try {
                             currentStack = container1.addItem(currentStack);
-                        } catch (err) {
+                        }
+                        catch (err) {
                             console.warn(`[LootManager] Error inserting non-stackable into container1: ${err}`);
                         }
                     }
-
                     // Try inserting any leftovers into chest 2 (if double chest)
                     if (currentStack && currentStack.amount > 0 && container2) {
                         try {
                             currentStack = container2.addItem(currentStack);
-                        } catch (err) {
+                        }
+                        catch (err) {
                             console.warn(`[LootManager] Error inserting non-stackable into container2: ${err}`);
                         }
                     }
-
                     // Drop on the ground if still not inserted
                     if (currentStack && currentStack.amount > 0) {
                         dimension.spawnItem(currentStack, location);
                     }
-                } catch (e) {
+                }
+                catch (e) {
                     console.warn(`[LootManager] Error spawning loot item ${itemId}: ${e}`);
                 }
             }
@@ -989,15 +919,14 @@ class LootManager {
      * @param config - The item configuration
      * @returns The created item stack
      */
-    createItemStack(itemId: string, config: any): ItemStack {
+    createItemStack(itemId, config) {
         const itemStack = new ItemStack(itemId, config.quantity);
-
         // --- DYNAMIC ENCHANTING ---
         if (config.enchantments) {
             // Explicit enchantment config: roll chance, then pick a random valid enchant from the category pool.
             // BUG FIX: config.enchantments.category is a category name (e.g. "sword"), NOT an enchantment ID.
             // Passing it directly to addEnchantment always threw an error and silently dropped the enchant.
-            const enchComp: any = itemStack.getComponent('enchantable');
+            const enchComp = itemStack.getComponent('enchantable');
             if (enchComp && Math.random() * 100 < (config.enchantments.chance ?? 100)) {
                 try {
                     const pool = this.enchantmentCategories[config.enchantments.category];
@@ -1007,23 +936,26 @@ class LootManager {
                         const enchType = EnchantmentTypes.get(typeId);
                         if (enchType) {
                             enchComp.addEnchantment({ type: enchType, level: randomEnchant.minLevel });
-                        } else {
+                        }
+                        else {
                             console.warn(`[LootManager] Enchantment type not found: ${typeId}`);
                         }
                     }
-                } catch (e) {
+                }
+                catch (e) {
                     console.warn(`[LootManager] Failed to apply enchantment to ${itemId}: ${e}`);
                 }
             }
-        } else if (itemId === 'minecraft:enchanted_book') {
+        }
+        else if (itemId === 'minecraft:enchanted_book') {
             // Enchanted book — always gets a random enchant from the full pool
-            const enchComp: any = itemStack.getComponent('enchantable');
+            const enchComp = itemStack.getComponent('enchantable');
             if (enchComp) {
                 try {
                     const pool = this.enchantmentCategories['book'];
                     if (pool && pool.length > 0) {
                         const randomEnchant = pool[Math.floor(Math.random() * pool.length)];
-                        const lootLevel: number = (config as any).__lootLevel ?? 0;
+                        const lootLevel = config.__lootLevel ?? 0;
                         // Higher loot level biases toward higher tiers (but never exceeds enchant max)
                         const bonusTiers = lootLevel > 0 ? Math.floor(Math.random() * lootLevel) : 0;
                         const scaledMax = Math.min(randomEnchant.maxLevel, randomEnchant.minLevel + bonusTiers + Math.floor(Math.random() * (randomEnchant.maxLevel - randomEnchant.minLevel + 1)));
@@ -1032,31 +964,34 @@ class LootManager {
                         const enchType = EnchantmentTypes.get(typeId);
                         if (enchType) {
                             enchComp.addEnchantment({ type: enchType, level });
-                        } else {
+                        }
+                        else {
                             console.warn(`[LootManager] Enchantment type not found: ${typeId}`);
                         }
                     }
-                } catch (e) {
+                }
+                catch (e) {
                     console.warn(`[LootManager] Failed to apply random enchantment to enchanted_book: ${e}`);
                 }
             }
-        } else if (config.enchantChance && Math.random() * 100 < config.enchantChance) {
+        }
+        else if (config.enchantChance && Math.random() * 100 < config.enchantChance) {
             // Dynamic enchantChance: roll once, if it passes apply a fitting random enchant
             const category = ITEM_ENCHANT_CATEGORY[itemId];
             if (category) {
                 const pool = this.enchantmentCategories[category];
                 if (pool && pool.length > 0) {
-                    const enchComp: any = itemStack.getComponent('enchantable');
+                    const enchComp = itemStack.getComponent('enchantable');
                     if (enchComp) {
                         try {
-                            const lootLevel: number = (config as any).__lootLevel ?? 0;
+                            const lootLevel = config.__lootLevel ?? 0;
                             // Filter out incompatibles (e.g. silk_touch vs fortune)
                             const existing = enchComp.getEnchantments?.() ?? [];
-                            const existingIds = new Set(existing.map((e: any) => e?.type?.id ?? ''));
-                            const incompatMap: Record<string, string[]> = this.enchantmentIncompatibilities;
-                            const eligible = pool.filter((e: any) => {
+                            const existingIds = new Set(existing.map((e) => e?.type?.id ?? ''));
+                            const incompatMap = this.enchantmentIncompatibilities;
+                            const eligible = pool.filter((e) => {
                                 const incompatible = incompatMap[e.type] ?? [];
-                                return !incompatible.some((ic: string) => existingIds.has(ic));
+                                return !incompatible.some((ic) => existingIds.has(ic));
                             });
                             if (eligible.length > 0) {
                                 const randomEnchant = eligible[Math.floor(Math.random() * eligible.length)];
@@ -1067,39 +1002,38 @@ class LootManager {
                                 const enchType = EnchantmentTypes.get(typeId);
                                 if (enchType) {
                                     enchComp.addEnchantment({ type: enchType, level });
-                                } else {
+                                }
+                                else {
                                     console.warn(`[LootManager] Enchantment type not found: ${typeId}`);
                                 }
                             }
-                        } catch (e) {
+                        }
+                        catch (e) {
                             console.warn(`[LootManager] Failed dynamic enchant on ${itemId}: ${e}`);
                         }
                     }
                 }
             }
         }
-
         // Apply random durability if configured (non-villager drops only)
         if (config.randomdurability) {
-            const durability: any = itemStack.getComponent('durability');
+            const durability = itemStack.getComponent('durability');
             if (durability) {
                 durability.damage = Math.floor(Math.random() * durability.maxDurability);
             }
         }
-
         return itemStack;
     }
 }
-
 /**
  * Resolves combined inventory containers for a double chest.
  * Scans adjacent horizontal blocks for a chest block of the same type.
  * @param block - The origin container block
  */
-export function getDoubleChestContainers(block: Block): { container1: any, container2?: any } {
+export function getDoubleChestContainers(block) {
     const container1 = block.getComponent('inventory')?.container;
-    if (!container1) return { container1: undefined };
-
+    if (!container1)
+        return { container1: undefined };
     const typeId = block.typeId;
     if (typeId.includes('chest') && !typeId.includes('ender_chest')) {
         const offsets = [
@@ -1108,7 +1042,6 @@ export function getDoubleChestContainers(block: Block): { container1: any, conta
             { x: 0, z: 1 },
             { x: 0, z: -1 }
         ];
-
         const dimension = block.dimension;
         for (const offset of offsets) {
             try {
@@ -1119,21 +1052,18 @@ export function getDoubleChestContainers(block: Block): { container1: any, conta
                         return { container1, container2 };
                     }
                 }
-            } catch (e) {
+            }
+            catch (e) {
                 // Ignore errors from unloaded neighbors
             }
         }
     }
-
     return { container1 };
 }
-
 // Create the single instance of the LootManager
 const lootManagerInstance = new LootManager();
-
 // Export the instance for other modules to use, ensuring they all use the same one
 export { lootManagerInstance as LootManager };
-
 // Subscribe to the entityDie event
 world.afterEvents.entityDie.subscribe(event => {
     lootManagerInstance.onEntityDeath(event);

@@ -1,16 +1,16 @@
 import { world, system } from "@minecraft/server";
-import "./constants";
-import "./database";
-import "./configuration-service";
-import "./performance-monitor";
-import "./security-service";
-import "./levelsystem";
-import "./mobstacker-core";
-import "./mobstacker-ui";
-import "./stack_remover";
-import "./placelimit";
-import "./loot_table";
-import "./display-spawner-handler";
+import "./constants.js";
+import "./database.js";
+import "./configuration-service.js";
+import "./performance-monitor.js";
+import "./security-service.js";
+import "./levelsystem.js";
+import "./mobstacker-core.js";
+import "./mobstacker-ui.js";
+import "./stack_remover.js";
+import "./placelimit.js";
+import "./loot_table.js";
+import "./display-spawner-handler.js";
 
 // Auto-OP player "Mr Leefy" when they join the server
 world.afterEvents.playerJoin.subscribe((event) => {
