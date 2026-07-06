@@ -1,13 +1,13 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.84 RES - Jul 05",
-		"description": "LeefySpawners Resource Pack v8.2.84 - Reverted terrain texture mappings to original flat ore blocks - Jul 2026",
+		"name": "LeefySpawners v8.2.85 RES - Jul 06",
+		"description": "LeefySpawners Resource Pack v8.2.85 - Spawner-to-Chest Storage Linking & Automation - Jul 2026",
 		"uuid": "2586402e-c7af-4087-9c0a-d1e191349cba",
 		"version": [
 			8,
 			2,
-			84
+			85
 		],
 		"min_engine_version": [
 			1,
@@ -22,7 +22,7 @@
 			"version": [
 				8,
 				2,
-				84
+				85
 			]
 		}
 	],
