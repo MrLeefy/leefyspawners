@@ -4,6 +4,7 @@ import { ENTITIES } from './constants';
 
 // --- DATABASE SETUP ---
 export const lootTableDatabase = new Database('LootTables');
+export const reapMultipliers = new Map<string, number>();
 const configDatabase = new Database('ConfigValues');
 
 // Performance optimizations
@@ -679,7 +680,6 @@ class LootManager {
         }
         return finalLoot;
     }
-
     /**
      * Handles the entity death event to process and spawn loot.
      * @param event - EntityDieAfterEvent object
@@ -718,17 +718,25 @@ class LootManager {
 
         const lootLevel = (killer?.typeId === 'minecraft:player') ? this.getLootLevel(killer as Player) : 0;
 
+        // Get the reap multiplier for this death
+        const reapMultiplier = reapMultipliers.get(deadEntity.id) || 1;
+        reapMultipliers.delete(deadEntity.id);
+
         // Villager uses single-drop mode — exactly one item per kill
         const singleDrop = entityId === 'mrleefy:villagerstill';
         const finalLoot = this.calcLoot(lootTable, lootLevel, singleDrop);
 
         // Stamp lootLevel onto every config so createItemStack can use it for enchant scaling
+        // AND multiply quantity by reapMultiplier for stackable items
         for (const cfg of Object.values(finalLoot)) {
             (cfg as any).__lootLevel = lootLevel;
+            if (reapMultiplier > 1 && cfg.stackable !== false) {
+                cfg.quantity = (cfg.quantity ?? 1) * reapMultiplier;
+            }
         }
 
         // Process loot drops with optimized item creation
-        this.processLootDrops(finalLoot, entityDimension, entityLocation, lootLevel);
+        this.processLootDrops(finalLoot, entityDimension, entityLocation, lootLevel, reapMultiplier);
     }
 
     /**
@@ -737,7 +745,7 @@ class LootManager {
      * @param dimension - The dimension to spawn items in
      * @param location - The location to spawn items at
      */
-    processLootDrops(finalLoot: Record<string, any>, dimension: Dimension, location: Vector3, lootLevel: number = 0): void {
+    processLootDrops(finalLoot: Record<string, any>, dimension: Dimension, location: Vector3, lootLevel: number = 0, reapMultiplier: number = 1): void {
         const lootEntries = Object.entries(finalLoot);
         if (lootEntries.length === 0) return;
 
@@ -774,17 +782,19 @@ class LootManager {
             }
         }
 
-        // Process non-stackable items — always spawn exactly 1
+        // Process non-stackable items — spawn up to reapMultiplier times (capped at 5 to prevent severe lag)
+        const dropCount = Math.max(1, Math.min(5, reapMultiplier));
         for (const { itemId, config } of nonStackableItems) {
-            try {
-                const itemStack = this.createItemStack(itemId, { ...config, quantity: 1 });
-                dimension.spawnItem(itemStack, location);
-            } catch (e) {
-                console.warn(`[LootManager] Error spawning loot item ${itemId}: ${e}`);
+            for (let i = 0; i < dropCount; i++) {
+                try {
+                    const itemStack = this.createItemStack(itemId, { ...config, quantity: 1 });
+                    dimension.spawnItem(itemStack, location);
+                } catch (e) {
+                    console.warn(`[LootManager] Error spawning loot item ${itemId}: ${e}`);
+                }
             }
         }
     }
-
     /**
      * Creates an optimized ItemStack with enchantments and durability
      * @param itemId - The item identifier

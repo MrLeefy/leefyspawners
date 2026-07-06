@@ -1404,6 +1404,7 @@ var Format = {
 // src/loot_table.ts
 import { world as world2, system as system3, ItemStack, EnchantmentTypes } from "@minecraft/server";
 var lootTableDatabase = new Database("LootTables");
+var reapMultipliers = /* @__PURE__ */ new Map();
 var configDatabase2 = new Database("ConfigValues");
 var configCache = /* @__PURE__ */ new Map();
 var configCacheExpiry = /* @__PURE__ */ new Map();
@@ -2036,12 +2037,17 @@ var _LootManager = class _LootManager {
       return;
     }
     const lootLevel = killer?.typeId === "minecraft:player" ? this.getLootLevel(killer) : 0;
+    const reapMultiplier = reapMultipliers.get(deadEntity.id) || 1;
+    reapMultipliers.delete(deadEntity.id);
     const singleDrop = entityId === "mrleefy:villagerstill";
     const finalLoot = this.calcLoot(lootTable, lootLevel, singleDrop);
     for (const cfg of Object.values(finalLoot)) {
       cfg.__lootLevel = lootLevel;
+      if (reapMultiplier > 1 && cfg.stackable !== false) {
+        cfg.quantity = (cfg.quantity ?? 1) * reapMultiplier;
+      }
     }
-    this.processLootDrops(finalLoot, entityDimension, entityLocation, lootLevel);
+    this.processLootDrops(finalLoot, entityDimension, entityLocation, lootLevel, reapMultiplier);
   }
   /**
    * Optimized loot drop processing
@@ -2049,7 +2055,7 @@ var _LootManager = class _LootManager {
    * @param dimension - The dimension to spawn items in
    * @param location - The location to spawn items at
    */
-  processLootDrops(finalLoot, dimension, location, lootLevel = 0) {
+  processLootDrops(finalLoot, dimension, location, lootLevel = 0, reapMultiplier = 1) {
     const lootEntries = Object.entries(finalLoot);
     if (lootEntries.length === 0)
       return;
@@ -2080,12 +2086,15 @@ var _LootManager = class _LootManager {
         console.warn(`[LootManager] Error spawning loot item ${itemId}: ${e}`);
       }
     }
+    const dropCount = Math.max(1, Math.min(5, reapMultiplier));
     for (const { itemId, config } of nonStackableItems) {
-      try {
-        const itemStack = this.createItemStack(itemId, { ...config, quantity: 1 });
-        dimension.spawnItem(itemStack, location);
-      } catch (e) {
-        console.warn(`[LootManager] Error spawning loot item ${itemId}: ${e}`);
+      for (let i = 0; i < dropCount; i++) {
+        try {
+          const itemStack = this.createItemStack(itemId, { ...config, quantity: 1 });
+          dimension.spawnItem(itemStack, location);
+        } catch (e) {
+          console.warn(`[LootManager] Error spawning loot item ${itemId}: ${e}`);
+        }
       }
     }
   }
@@ -4038,70 +4047,210 @@ function openAAConfigForm(player) {
     securityService.logSecurityEvent("unauthorized_aa_config", player);
     return;
   }
-  const form = new ModalFormData3().title("Spawner Settings");
   const entries = [];
   aaDatabase.forEach((val, key) => entries.push([key, val]));
-  form.textField("Add New Range:", "e.g., 1-10 or 33-33", "");
-  form.textField("New Range - Quantity:", "e.g., 1", "");
-  form.textField("New Range - Speed (sec):", "e.g., 10", "");
-  form.textField("New Range - Max Stack:", "e.g., 100", "");
-  entries.forEach(([range, { qty, speed, maxStack }]) => {
-    form.textField(`Qty for ${range}:`, `Update`, `${qty}`);
-    form.textField(`Speed for ${range}:`, `Update`, `${speed}`);
-    form.textField(`Max Stack for ${range}:`, `Update`, `${maxStack}`);
-    form.toggle(`\xA7cRemove Range ${range}?\xA7r`, false);
+  entries.sort((a, b) => {
+    const aMin = parseInt(a[0].split("-")[0], 10) || 0;
+    const bMin = parseInt(b[0].split("-")[0], 10) || 0;
+    return aMin - bMin;
   });
-  form.show(player).then((r) => {
-    if (r.canceled || !r.formValues)
+  const form = new ActionFormData3().title("Spawner Settings").body(`${entries.length} level range(s) configured.
+Tap a range to edit, or add a new one.`);
+  form.button("+ Add New Range", "textures/ui/color_plus");
+  form.button("Load 32-Level Preset", "textures/items/nether_star");
+  for (const [range, { qty, speed, maxStack }] of entries) {
+    form.button(
+      `Level ${range}
+Qty: ${qty}  Speed: ${speed}s  Max: ${maxStack}`,
+      "textures/items/diamond"
+    );
+  }
+  form.button("Back", "textures/ui/cancel");
+  forceShowForm(player, form).then((r) => {
+    if (r.canceled || r.selection === void 0)
       return;
     if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
       player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
       return;
     }
+    system5.run(() => {
+      if (r.selection === 0) {
+        openAAAddForm(player);
+      } else if (r.selection === 1) {
+        loadAAPreset32Levels(player);
+      } else if (r.selection === entries.length + 2) {
+        openAdminMenu(player);
+      } else {
+        const idx = r.selection - 2;
+        if (idx >= 0 && idx < entries.length) {
+          const [range, values] = entries[idx];
+          openAAEditForm(player, range, values);
+        }
+      }
+    });
+  }).catch((error) => {
+    console.error(`Error in openAAConfigForm: ${error}`);
+    player.sendMessage("\xA7cAn error occurred while opening spawner settings.");
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openAAEditForm(player, range, currentVal) {
+  if (!player || !player.isValid)
+    return;
+  const savedQty = currentVal?.qty ?? 1;
+  const savedSpeed = currentVal?.speed ?? 10;
+  const savedMaxStack = currentVal?.maxStack ?? 100;
+  const form = new ModalFormData3().title(`Edit Level ${range}`).textField("Quantity:", "e.g., 2", `${savedQty}`).textField("Speed (sec):", "e.g., 6", `${savedSpeed}`).textField("Max Stack:", "e.g., 50", `${savedMaxStack}`).toggle("\xA7cRemove this range?\xA7r", false);
+  form.show(player).then((r) => {
+    if (r.canceled || !r.formValues) {
+      system5.run(() => openAAConfigForm(player));
+      return;
+    }
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
     const vals = r.formValues;
-    if (typeof vals[0] === "string" && vals[0].trim()) {
-      let range = vals[0].trim();
-      if (!range.includes("-"))
-        range = `${range}-${range}`;
-      const parseOrDefault = (raw, fallback) => {
+    const shouldRemove = vals[3];
+    if (shouldRemove) {
+      aaDatabase.delete(range);
+      player.sendMessage(`\xA7eRemoved level range \xA7f${range}\xA7e.`);
+    } else {
+      const parseOrPreserve = (raw, saved) => {
         const s = String(raw).trim();
         if (s === "")
-          return fallback;
+          return saved;
         const n = parseInt(s);
-        return isNaN(n) ? fallback : n;
+        return isNaN(n) ? saved : n;
       };
       aaDatabase.write(range, {
-        qty: Math.max(1, parseOrDefault(vals[1], 1)),
-        speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrDefault(vals[2], 10))),
-        maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrDefault(vals[3], 100)))
+        qty: Math.max(1, parseOrPreserve(vals[0], savedQty)),
+        speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrPreserve(vals[1], savedSpeed))),
+        maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrPreserve(vals[2], savedMaxStack)))
       });
+      player.sendMessage(`\xA7aLevel range \xA7f${range}\xA7a updated!`);
     }
-    let offset = 4;
-    entries.forEach(([range, currentVal]) => {
-      if (vals[offset + 3]) {
-        aaDatabase.delete(range);
-      } else {
-        const savedQty = currentVal?.qty ?? 1;
-        const savedSpeed = currentVal?.speed ?? 10;
-        const savedMaxStack = currentVal?.maxStack ?? 100;
-        const parseOrPreserve = (raw, saved) => {
-          const s = String(raw).trim();
-          if (s === "")
-            return saved;
-          const n = parseInt(s);
-          return isNaN(n) ? saved : n;
-        };
-        aaDatabase.write(range, {
-          qty: Math.max(1, parseOrPreserve(vals[offset], savedQty)),
-          speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrPreserve(vals[offset + 1], savedSpeed))),
-          maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrPreserve(vals[offset + 2], savedMaxStack)))
-        });
-      }
-      offset += 4;
+    rebuildAALookup();
+    clearSpawnerParseCache();
+    system5.run(() => openAAConfigForm(player));
+  }).catch((error) => {
+    console.error(`Error in openAAEditForm: ${error}`);
+    player.sendMessage("\xA7cAn error occurred while editing spawner settings.");
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function openAAAddForm(player) {
+  if (!player || !player.isValid)
+    return;
+  const form = new ModalFormData3().title("Add New Level Range").textField("Range:", "e.g., 1-10 or 15-15", "").textField("Quantity:", "e.g., 2", "1").textField("Speed (sec):", "e.g., 10", "10").textField("Max Stack:", "e.g., 100", "100");
+  form.show(player).then((r) => {
+    if (r.canceled || !r.formValues) {
+      system5.run(() => openAAConfigForm(player));
+      return;
+    }
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const vals = r.formValues;
+    let range = String(vals[0]).trim();
+    if (!range) {
+      player.sendMessage("\xA7cNo range specified. Nothing was added.");
+      system5.run(() => openAAConfigForm(player));
+      return;
+    }
+    if (!range.includes("-"))
+      range = `${range}-${range}`;
+    const parseOrDefault = (raw, fallback) => {
+      const s = String(raw).trim();
+      if (s === "")
+        return fallback;
+      const n = parseInt(s);
+      return isNaN(n) ? fallback : n;
+    };
+    aaDatabase.write(range, {
+      qty: Math.max(1, parseOrDefault(vals[1], 1)),
+      speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrDefault(vals[2], 10))),
+      maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrDefault(vals[3], 100)))
     });
     rebuildAALookup();
     clearSpawnerParseCache();
-    player.sendMessage("\xA7aSpawner settings updated!");
+    player.sendMessage(`\xA7aAdded level range \xA7f${range}\xA7a!`);
+    system5.run(() => openAAConfigForm(player));
+  }).catch((error) => {
+    console.error(`Error in openAAAddForm: ${error}`);
+    player.sendMessage("\xA7cAn error occurred while adding a new range.");
+  }).finally(() => {
+    cooldowns.set(player.name, Date.now());
+  });
+}
+function loadAAPreset32Levels(player) {
+  if (!player || !player.isValid)
+    return;
+  const confirmForm = new MessageFormData().title("Load 32-Level Preset").body(
+    "This will remove all existing level ranges and replace them with the full 32-level preset.\n\nLevels 1-32 with escalating Qty, Speed, and Max Stack values.\n\nThis cannot be undone. Continue?"
+  ).button1("Yes, Load Preset").button2("Cancel");
+  confirmForm.show(player).then((r) => {
+    if (r.canceled || r.selection !== 0) {
+      system5.run(() => openAAConfigForm(player));
+      return;
+    }
+    if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+      player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+      return;
+    }
+    const existingKeys = aaDatabase.keys();
+    for (const key of existingKeys) {
+      aaDatabase.delete(key);
+    }
+    const preset = {
+      "1-1": { qty: 2, speed: 6, maxStack: 50 },
+      "2-2": { qty: 4, speed: 7, maxStack: 70 },
+      "3-3": { qty: 6, speed: 7, maxStack: 90 },
+      "4-4": { qty: 8, speed: 8, maxStack: 110 },
+      "5-5": { qty: 10, speed: 8, maxStack: 130 },
+      "6-6": { qty: 12, speed: 9, maxStack: 150 },
+      "7-7": { qty: 14, speed: 9, maxStack: 170 },
+      "8-8": { qty: 16, speed: 10, maxStack: 190 },
+      "9-9": { qty: 18, speed: 10, maxStack: 210 },
+      "10-10": { qty: 20, speed: 11, maxStack: 230 },
+      "11-11": { qty: 22, speed: 11, maxStack: 250 },
+      "12-12": { qty: 24, speed: 12, maxStack: 270 },
+      "13-13": { qty: 26, speed: 12, maxStack: 290 },
+      "14-14": { qty: 28, speed: 13, maxStack: 310 },
+      "15-15": { qty: 30, speed: 13, maxStack: 330 },
+      "16-16": { qty: 32, speed: 14, maxStack: 350 },
+      "17-17": { qty: 34, speed: 14, maxStack: 370 },
+      "18-18": { qty: 36, speed: 15, maxStack: 390 },
+      "19-19": { qty: 38, speed: 15, maxStack: 410 },
+      "20-20": { qty: 40, speed: 16, maxStack: 430 },
+      "21-21": { qty: 42, speed: 16, maxStack: 450 },
+      "22-22": { qty: 44, speed: 17, maxStack: 470 },
+      "23-23": { qty: 46, speed: 17, maxStack: 490 },
+      "24-24": { qty: 48, speed: 18, maxStack: 510 },
+      "25-25": { qty: 50, speed: 18, maxStack: 530 },
+      "26-26": { qty: 52, speed: 19, maxStack: 550 },
+      "27-27": { qty: 54, speed: 19, maxStack: 570 },
+      "28-28": { qty: 56, speed: 20, maxStack: 590 },
+      "29-29": { qty: 58, speed: 20, maxStack: 610 },
+      "30-30": { qty: 62, speed: 21, maxStack: 650 },
+      "31-31": { qty: 66, speed: 21, maxStack: 690 },
+      "32-32": { qty: 70, speed: 22, maxStack: 730 }
+    };
+    let count = 0;
+    for (const [range, values] of Object.entries(preset)) {
+      aaDatabase.write(range, values);
+      count++;
+    }
+    rebuildAALookup();
+    clearSpawnerParseCache();
+    player.sendMessage(`\xA7a\u26A1 Loaded \xA7f${count}\xA7a level ranges from the 32-level preset!`);
+    system5.run(() => openAAConfigForm(player));
+  }).catch((error) => {
+    console.error(`Error in loadAAPreset32Levels: ${error}`);
+    player.sendMessage("\xA7cAn error occurred while loading the preset.");
   }).finally(() => {
     cooldowns.set(player.name, Date.now());
   });
@@ -5522,13 +5671,17 @@ function getCachedConfig2(key, defaultValue) {
         "stackRadius": configDatabase.read("stackRadius"),
         "playerKillOnly": configDatabase.read("playerKillOnly"),
         "itemSpillCap": configDatabase.read("itemSpillCap"),
-        "xpSpillCap": configDatabase.read("xpSpillCap")
+        "xpSpillCap": configDatabase.read("xpSpillCap"),
+        "reapAmount": configDatabase.read("reapAmount"),
+        "reapLootingBonus": configDatabase.read("reapLootingBonus")
       };
       const configs = {
         "stackRadius": validateAndClampConfig("stackRadius", rawConfigs.stackRadius, UI.DEFAULT_STACK_RADIUS),
         "playerKillOnly": rawConfigs.playerKillOnly ?? false,
         "itemSpillCap": validateAndClampConfig("itemSpillCap", rawConfigs.itemSpillCap, ENTITIES.DEFAULT_ITEM_SPILL_CAP),
-        "xpSpillCap": validateAndClampConfig("xpSpillCap", rawConfigs.xpSpillCap, ENTITIES.DEFAULT_XP_SPILL_CAP)
+        "xpSpillCap": validateAndClampConfig("xpSpillCap", rawConfigs.xpSpillCap, ENTITIES.DEFAULT_XP_SPILL_CAP),
+        "reapAmount": Math.max(1, Math.min(100, parseInt(rawConfigs.reapAmount) || 1)),
+        "reapLootingBonus": rawConfigs.reapLootingBonus ?? true
       };
       return configs[key];
     },
@@ -6054,6 +6207,7 @@ if (!globalThis.__stackDieSubscribed) {
       const locKey = `${hurtEntity.location.x.toFixed(0)},${hurtEntity.location.y.toFixed(0)},${hurtEntity.location.z.toFixed(0)}`;
       lastKilled.set(`${entityTypeId}:${locKey}`, Date.now());
       const currentAmount = extractStackNumber(hurtEntity.nameTag);
+      let totalReaped = 1;
       if (currentAmount > 1) {
         try {
           const oldRotation = hurtEntity.getRotation();
@@ -6062,19 +6216,42 @@ if (!globalThis.__stackDieSubscribed) {
             console.error(`Invalid location data for entity ${entityTypeId}`);
             return;
           }
-          const newEntity = hurtEntity.dimension.spawnEntity(entityTypeId, oldLocation);
-          if (newEntity && newEntity.isValid) {
-            newEntity.nameTag = nameTagConfig.replace("#", (currentAmount - 1).toString()).replace("@", displayName);
-            newEntity.setRotation(oldRotation);
-            if (inheritedSpawnerKey) {
-              entitySpawnerMap.set(newEntity.id, inheritedSpawnerKey);
+          const baseReap = getCachedConfig2("reapAmount", 1);
+          let lootLevel = 0;
+          if (killerPlayer) {
+            try {
+              const equipment = killerPlayer.getComponent("equippable");
+              const mainhand = equipment?.getEquipment("Mainhand");
+              if (mainhand) {
+                const enchants = mainhand.getComponent("enchantable")?.getEnchantments() || [];
+                const looting = enchants.find((e) => e.type.id === "looting");
+                if (looting)
+                  lootLevel = looting.level;
+              }
+            } catch (e) {
             }
-          } else {
-            console.error(`Failed to spawn replacement entity for ${entityTypeId}`);
+          }
+          const lootingBonus = getCachedConfig2("reapLootingBonus", true) ? lootLevel * 2 : 0;
+          totalReaped = Math.min(currentAmount, baseReap + lootingBonus);
+          const remainingAmount = currentAmount - totalReaped;
+          reapMultipliers.set(hurtEntity.id, totalReaped);
+          if (remainingAmount > 0) {
+            const newEntity = hurtEntity.dimension.spawnEntity(entityTypeId, oldLocation);
+            if (newEntity && newEntity.isValid) {
+              newEntity.nameTag = nameTagConfig.replace("#", remainingAmount.toString()).replace("@", displayName);
+              newEntity.setRotation(oldRotation);
+              if (inheritedSpawnerKey) {
+                entitySpawnerMap.set(newEntity.id, inheritedSpawnerKey);
+              }
+            } else {
+              console.error(`Failed to spawn replacement entity for ${entityTypeId}`);
+            }
           }
         } catch (e) {
           console.error(`Failed to respawn stacked entity: ${e}`);
         }
+      } else {
+        reapMultipliers.set(hurtEntity.id, 1);
       }
       try {
         const playerKillOnly = getCachedConfig2("playerKillOnly", false);
@@ -6085,7 +6262,8 @@ if (!globalThis.__stackDieSubscribed) {
           const xpConfig = cacheManager.get("xpDrop", entityTypeId, () => xpDropDatabase.read(entityTypeId));
           if (xpConfig && Math.random() * 100 < (xpConfig.chance ?? 100)) {
             try {
-              hurtEntity.dimension.spawnEntity(ENTITIES.XP_ORB_TYPE, hurtEntity.location, { amount: xpConfig.amount ?? 1 });
+              const xpAmount = (xpConfig.amount ?? 1) * totalReaped;
+              hurtEntity.dimension.spawnEntity(ENTITIES.XP_ORB_TYPE, hurtEntity.location, { amount: xpAmount });
             } catch (e) {
               console.error(`Error spawning XP orb for ${entityTypeId}: ${e}`);
             }

@@ -824,6 +824,13 @@ function openEditLootItemForm(player: Player, entityId: string, itemId: string):
         });
 }
 
+/**
+ * Spawner Settings — List View (ActionFormData)
+ * Shows all configured level ranges as buttons. Each button opens a
+ * tiny 4-control edit form, completely avoiding the Bedrock ModalFormData
+ * serialization limit (~60 controls) that silently truncated responses
+ * when all ranges were on a single page.
+ */
 function openAAConfigForm(player: Player): void {
     if (!player || !player.isValid) {
         console.error(ERROR_MESSAGES.INVALID_PLAYER);
@@ -836,88 +843,280 @@ function openAAConfigForm(player: Player): void {
         return;
     }
 
-    const form = (new ModalFormData() as any).title("Spawner Settings");
     const entries: [string, any][] = [];
     aaDatabase.forEach((val, key) => entries.push([key, val]));
-    
-    form.textField("Add New Range:", "e.g., 1-10 or 33-33", "");
-    form.textField("New Range - Quantity:", "e.g., 1", "");
-    form.textField("New Range - Speed (sec):", "e.g., 10", "");
-    form.textField("New Range - Max Stack:", "e.g., 100", "");
 
-    entries.forEach(([range, {qty, speed, maxStack}]) => {
-        form.textField(`Qty for ${range}:`, `Update`, `${qty}`);
-        form.textField(`Speed for ${range}:`, `Update`, `${speed}`);
-        form.textField(`Max Stack for ${range}:`, `Update`, `${maxStack}`);
-        form.toggle(`§cRemove Range ${range}?§r`, false);
+    // Sort ranges numerically by their starting level
+    entries.sort((a, b) => {
+        const aMin = parseInt(a[0].split("-")[0], 10) || 0;
+        const bMin = parseInt(b[0].split("-")[0], 10) || 0;
+        return aMin - bMin;
     });
 
-    form.show(player).then((r: any) => {
-        if (r.canceled || !r.formValues) return;
-        // Re-validate permission inside .then() to prevent session-tag-revocation bypass
+    const form = new ActionFormData()
+        .title("Spawner Settings")
+        .body(`${entries.length} level range(s) configured.\nTap a range to edit, or add a new one.`);
+
+    // Button 0: Add New Range
+    form.button("+ Add New Range", "textures/ui/color_plus");
+
+    // Button 1: Load 32-Level Preset
+    form.button("Load 32-Level Preset", "textures/items/nether_star");
+
+    // Buttons 2..N+1: One button per existing range
+    for (const [range, { qty, speed, maxStack }] of entries) {
+        form.button(
+            `Level ${range}\nQty: ${qty}  Speed: ${speed}s  Max: ${maxStack}`,
+            "textures/items/diamond"
+        );
+    }
+
+    // Last button: Back
+    form.button("Back", "textures/ui/cancel");
+
+    forceShowForm(player, form).then((r: any) => {
+        if (r.canceled || r.selection === undefined) return;
         if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
             player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
             return;
         }
-        const vals = r.formValues as (string | boolean)[];
 
-        if (typeof vals[0] === 'string' && vals[0].trim()) {
-            let range = vals[0].trim();
-            if (!range.includes("-")) range = `${range}-${range}`;
-            // BUG FIX: parseInt("") is NaN, so `NaN || fallback` silently resets to
-            // the hardcoded default whenever a field is left blank. Use a helper that
-            // only falls back when the field is actually blank/invalid, not when a
-            // valid 0 is intentionally entered. For the "new range" fields there is
-            // no existing saved value to preserve, so the fallback is safe here.
-            const parseOrDefault = (raw: string | boolean, fallback: number) => {
-                const s = String(raw).trim();
-                if (s === '') return fallback;
-                const n = parseInt(s);
-                return isNaN(n) ? fallback : n;
-            };
-            aaDatabase.write(range, {
-                qty: Math.max(1, parseOrDefault(vals[1], 1)),
-                speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrDefault(vals[2], 10))),
-                maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrDefault(vals[3], 100))),
-            });
+        system.run(() => {
+            if (r.selection === 0) {
+                // Add New Range
+                openAAAddForm(player);
+            } else if (r.selection === 1) {
+                // Load 32-Level Preset
+                loadAAPreset32Levels(player);
+            } else if (r.selection === entries.length + 2) {
+                // Back button (last button, offset by 2 fixed buttons)
+                openAdminMenu(player);
+            } else {
+                // Edit an existing range (selection 2..N+1 maps to entries[0..N-1])
+                const idx = r.selection - 2;
+                if (idx >= 0 && idx < entries.length) {
+                    const [range, values] = entries[idx];
+                    openAAEditForm(player, range, values);
+                }
+            }
+        });
+    }).catch((error: any) => {
+        console.error(`Error in openAAConfigForm: ${error}`);
+        player.sendMessage("§cAn error occurred while opening spawner settings.");
+    }).finally(() => {
+        cooldowns.set(player.name, Date.now());
+    });
+}
+
+/**
+ * Edit a single spawner level range — only 4 controls (Qty, Speed, MaxStack, Remove toggle).
+ * Well under Bedrock's form serialization limit.
+ */
+function openAAEditForm(player: Player, range: string, currentVal: AALookupValue): void {
+    if (!player || !player.isValid) return;
+
+    const savedQty = currentVal?.qty ?? 1;
+    const savedSpeed = currentVal?.speed ?? 10;
+    const savedMaxStack = currentVal?.maxStack ?? 100;
+
+    const form = (new ModalFormData() as any)
+        .title(`Edit Level ${range}`)
+        .textField("Quantity:", "e.g., 2", `${savedQty}`)
+        .textField("Speed (sec):", "e.g., 6", `${savedSpeed}`)
+        .textField("Max Stack:", "e.g., 50", `${savedMaxStack}`)
+        .toggle("§cRemove this range?§r", false);
+
+    form.show(player).then((r: any) => {
+        if (r.canceled || !r.formValues) {
+            system.run(() => openAAConfigForm(player));
+            return;
+        }
+        if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+            player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+            return;
         }
 
-        let offset = 4;
-        entries.forEach(([range, currentVal]) => {
-            if (vals[offset + 3] as boolean) {
-                aaDatabase.delete(range);
-            } else {
-                // BUG FIX: For existing entries, if the user leaves a field blank
-                // (didn't change it), preserve the previously-saved value instead
-                // of falling back to a hardcoded default. This was the root cause
-                // of settings "reverting" after editing — any untouched field would
-                // silently reset to qty=1, speed=10, maxStack=100.
-                const savedQty: number = currentVal?.qty ?? 1;
-                const savedSpeed: number = currentVal?.speed ?? 10;
-                const savedMaxStack: number = currentVal?.maxStack ?? 100;
+        const vals = r.formValues as (string | boolean)[];
+        const shouldRemove = vals[3] as boolean;
 
-                const parseOrPreserve = (raw: string | boolean, saved: number) => {
-                    const s = String(raw).trim();
-                    if (s === '') return saved; // blank = keep current
-                    const n = parseInt(s);
-                    return isNaN(n) ? saved : n;
-                };
+        if (shouldRemove) {
+            aaDatabase.delete(range);
+            player.sendMessage(`§eRemoved level range §f${range}§e.`);
+        } else {
+            const parseOrPreserve = (raw: string | boolean, saved: number) => {
+                const s = String(raw).trim();
+                if (s === '') return saved;
+                const n = parseInt(s);
+                return isNaN(n) ? saved : n;
+            };
 
-                aaDatabase.write(range, {
-                    qty: Math.max(1, parseOrPreserve(vals[offset], savedQty)),
-                    speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrPreserve(vals[offset + 1], savedSpeed))),
-                    maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrPreserve(vals[offset + 2], savedMaxStack))),
-                });
-            }
-            offset += 4;
+            aaDatabase.write(range, {
+                qty: Math.max(1, parseOrPreserve(vals[0], savedQty)),
+                speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrPreserve(vals[1], savedSpeed))),
+                maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrPreserve(vals[2], savedMaxStack))),
+            });
+            player.sendMessage(`§aLevel range §f${range}§a updated!`);
+        }
+
+        rebuildAALookup();
+        clearSpawnerParseCache();
+
+        // Return to the list
+        system.run(() => openAAConfigForm(player));
+    }).catch((error: any) => {
+        console.error(`Error in openAAEditForm: ${error}`);
+        player.sendMessage("§cAn error occurred while editing spawner settings.");
+    }).finally(() => {
+        cooldowns.set(player.name, Date.now());
+    });
+}
+
+/**
+ * Add a new spawner level range — only 4 controls (Range, Qty, Speed, MaxStack).
+ * Well under Bedrock's form serialization limit.
+ */
+function openAAAddForm(player: Player): void {
+    if (!player || !player.isValid) return;
+
+    const form = (new ModalFormData() as any)
+        .title("Add New Level Range")
+        .textField("Range:", "e.g., 1-10 or 15-15", "")
+        .textField("Quantity:", "e.g., 2", "1")
+        .textField("Speed (sec):", "e.g., 10", "10")
+        .textField("Max Stack:", "e.g., 100", "100");
+
+    form.show(player).then((r: any) => {
+        if (r.canceled || !r.formValues) {
+            system.run(() => openAAConfigForm(player));
+            return;
+        }
+        if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+            player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+            return;
+        }
+
+        const vals = r.formValues as string[];
+        let range = String(vals[0]).trim();
+
+        if (!range) {
+            player.sendMessage("§cNo range specified. Nothing was added.");
+            system.run(() => openAAConfigForm(player));
+            return;
+        }
+
+        if (!range.includes("-")) range = `${range}-${range}`;
+
+        const parseOrDefault = (raw: string, fallback: number) => {
+            const s = String(raw).trim();
+            if (s === '') return fallback;
+            const n = parseInt(s);
+            return isNaN(n) ? fallback : n;
+        };
+
+        aaDatabase.write(range, {
+            qty: Math.max(1, parseOrDefault(vals[1], 1)),
+            speed: Math.min(MAX_ALLOWED_SPEED, Math.max(1, parseOrDefault(vals[2], 10))),
+            maxStack: Math.min(MAX_ALLOWED_STACK, Math.max(1, parseOrDefault(vals[3], 100))),
         });
 
         rebuildAALookup();
-        // BUG FIX: Flush the per-nameTag spawner spec cache so running spawners
-        // immediately pick up the new qty/speed/maxStack values on their next tick
-        // instead of continuing to use stale cached specs until a server restart.
         clearSpawnerParseCache();
-        player.sendMessage("§aSpawner settings updated!");
+        player.sendMessage(`§aAdded level range §f${range}§a!`);
+
+        // Return to the list
+        system.run(() => openAAConfigForm(player));
+    }).catch((error: any) => {
+        console.error(`Error in openAAAddForm: ${error}`);
+        player.sendMessage("§cAn error occurred while adding a new range.");
+    }).finally(() => {
+        cooldowns.set(player.name, Date.now());
+    });
+}
+
+/**
+ * Loads mute's 32-level spawner preset in one click.
+ * Clears existing AA entries and writes all 32 individual levels.
+ */
+function loadAAPreset32Levels(player: Player): void {
+    if (!player || !player.isValid) return;
+
+    const confirmForm = new MessageFormData()
+        .title("Load 32-Level Preset")
+        .body(
+            "This will remove all existing level ranges and replace them with the full 32-level preset.\n\n" +
+            "Levels 1-32 with escalating Qty, Speed, and Max Stack values.\n\n" +
+            "This cannot be undone. Continue?"
+        )
+        .button1("Yes, Load Preset")
+        .button2("Cancel");
+
+    confirmForm.show(player).then((r: any) => {
+        if (r.canceled || r.selection !== 0) {
+            system.run(() => openAAConfigForm(player));
+            return;
+        }
+        if (!securityService.hasTagPermission(player, UI.ADMIN_PERMISSION_TAG)) {
+            player.sendMessage(ERROR_MESSAGES.NO_PERMISSION);
+            return;
+        }
+
+        // Clear all existing AA entries
+        const existingKeys = aaDatabase.keys();
+        for (const key of existingKeys) {
+            aaDatabase.delete(key);
+        }
+
+        // Mute's 32-level spawner rules
+        const preset: Record<string, { qty: number; speed: number; maxStack: number }> = {
+            "1-1":   { qty: 2,  speed: 6,  maxStack: 50 },
+            "2-2":   { qty: 4,  speed: 7,  maxStack: 70 },
+            "3-3":   { qty: 6,  speed: 7,  maxStack: 90 },
+            "4-4":   { qty: 8,  speed: 8,  maxStack: 110 },
+            "5-5":   { qty: 10, speed: 8,  maxStack: 130 },
+            "6-6":   { qty: 12, speed: 9,  maxStack: 150 },
+            "7-7":   { qty: 14, speed: 9,  maxStack: 170 },
+            "8-8":   { qty: 16, speed: 10, maxStack: 190 },
+            "9-9":   { qty: 18, speed: 10, maxStack: 210 },
+            "10-10": { qty: 20, speed: 11, maxStack: 230 },
+            "11-11": { qty: 22, speed: 11, maxStack: 250 },
+            "12-12": { qty: 24, speed: 12, maxStack: 270 },
+            "13-13": { qty: 26, speed: 12, maxStack: 290 },
+            "14-14": { qty: 28, speed: 13, maxStack: 310 },
+            "15-15": { qty: 30, speed: 13, maxStack: 330 },
+            "16-16": { qty: 32, speed: 14, maxStack: 350 },
+            "17-17": { qty: 34, speed: 14, maxStack: 370 },
+            "18-18": { qty: 36, speed: 15, maxStack: 390 },
+            "19-19": { qty: 38, speed: 15, maxStack: 410 },
+            "20-20": { qty: 40, speed: 16, maxStack: 430 },
+            "21-21": { qty: 42, speed: 16, maxStack: 450 },
+            "22-22": { qty: 44, speed: 17, maxStack: 470 },
+            "23-23": { qty: 46, speed: 17, maxStack: 490 },
+            "24-24": { qty: 48, speed: 18, maxStack: 510 },
+            "25-25": { qty: 50, speed: 18, maxStack: 530 },
+            "26-26": { qty: 52, speed: 19, maxStack: 550 },
+            "27-27": { qty: 54, speed: 19, maxStack: 570 },
+            "28-28": { qty: 56, speed: 20, maxStack: 590 },
+            "29-29": { qty: 58, speed: 20, maxStack: 610 },
+            "30-30": { qty: 62, speed: 21, maxStack: 650 },
+            "31-31": { qty: 66, speed: 21, maxStack: 690 },
+            "32-32": { qty: 70, speed: 22, maxStack: 730 },
+        };
+
+        let count = 0;
+        for (const [range, values] of Object.entries(preset)) {
+            aaDatabase.write(range, values);
+            count++;
+        }
+
+        rebuildAALookup();
+        clearSpawnerParseCache();
+        player.sendMessage(`§a⚡ Loaded §f${count}§a level ranges from the 32-level preset!`);
+
+        // Return to the list so the user can see all 32 entries
+        system.run(() => openAAConfigForm(player));
+    }).catch((error: any) => {
+        console.error(`Error in loadAAPreset32Levels: ${error}`);
+        player.sendMessage("§cAn error occurred while loading the preset.");
     }).finally(() => {
         cooldowns.set(player.name, Date.now());
     });

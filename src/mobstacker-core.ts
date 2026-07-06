@@ -5,6 +5,7 @@ import { Database } from "./database";
 import { getAAValueForLevel } from "./mobstacker-ui"; // Import the config function from the UI file
 import { TIMING, UI, ENTITIES, PERFORMANCE, VALIDATION } from "./constants";
 import { activeForms, cooldowns } from "./levelsystem";
+import { reapMultipliers } from "./loot_table";
 
 // Performance monitoring
 const performanceMetrics = {
@@ -612,14 +613,18 @@ function getCachedConfig(key: string, defaultValue: any): any {
                 "stackRadius": configDatabase.read("stackRadius"),
                 "playerKillOnly": configDatabase.read("playerKillOnly"),
                 "itemSpillCap": configDatabase.read("itemSpillCap"),
-                "xpSpillCap": configDatabase.read("xpSpillCap")
+                "xpSpillCap": configDatabase.read("xpSpillCap"),
+                "reapAmount": configDatabase.read("reapAmount"),
+                "reapLootingBonus": configDatabase.read("reapLootingBonus")
             };
 
             const configs = {
                 "stackRadius": validateAndClampConfig("stackRadius", rawConfigs.stackRadius, UI.DEFAULT_STACK_RADIUS),
                 "playerKillOnly": rawConfigs.playerKillOnly ?? false,
                 "itemSpillCap": validateAndClampConfig("itemSpillCap", rawConfigs.itemSpillCap, ENTITIES.DEFAULT_ITEM_SPILL_CAP),
-                "xpSpillCap": validateAndClampConfig("xpSpillCap", rawConfigs.xpSpillCap, ENTITIES.DEFAULT_XP_SPILL_CAP)
+                "xpSpillCap": validateAndClampConfig("xpSpillCap", rawConfigs.xpSpillCap, ENTITIES.DEFAULT_XP_SPILL_CAP),
+                "reapAmount": Math.max(1, Math.min(100, parseInt(rawConfigs.reapAmount) || 1)),
+                "reapLootingBonus": rawConfigs.reapLootingBonus ?? true
             };
 
             return (configs as Record<string, any>)[key];
@@ -1290,6 +1295,8 @@ if (!(globalThis as any).__stackDieSubscribed) {
             lastKilled.set(`${entityTypeId}:${locKey}`, Date.now());
 
             const currentAmount = extractStackNumber(hurtEntity.nameTag);
+            let totalReaped = 1;
+
             if (currentAmount > 1) {
                 try {
                     const oldRotation = hurtEntity.getRotation();
@@ -1300,31 +1307,53 @@ if (!(globalThis as any).__stackDieSubscribed) {
                         return;
                     }
 
-                    const newEntity = hurtEntity.dimension.spawnEntity(entityTypeId as any, oldLocation);
+                    // Reap amount logic
+                    const baseReap = getCachedConfig("reapAmount", 1);
+                    let lootLevel = 0;
+                    if (killerPlayer) {
+                        try {
+                            const equipment = killerPlayer.getComponent('equippable') as any;
+                            const mainhand = equipment?.getEquipment('Mainhand');
+                            if (mainhand) {
+                                const enchants = mainhand.getComponent('enchantable')?.getEnchantments() || [];
+                                const looting = enchants.find((e: any) => e.type.id === 'looting');
+                                if (looting) lootLevel = looting.level;
+                            }
+                        } catch (e) {}
+                    }
 
-                    if (newEntity && newEntity.isValid) {
-                        newEntity.nameTag = nameTagConfig.replace('#', (currentAmount - 1).toString()).replace('@', displayName);
-                        newEntity.setRotation(oldRotation);
-                        if (inheritedSpawnerKey) {
-                            entitySpawnerMap.set(newEntity.id, inheritedSpawnerKey);
+                    const lootingBonus = getCachedConfig("reapLootingBonus", true) ? lootLevel * 2 : 0;
+                    totalReaped = Math.min(currentAmount, baseReap + lootingBonus);
+                    const remainingAmount = currentAmount - totalReaped;
+
+                    // Set reap multiplier for the loot table manager
+                    reapMultipliers.set(hurtEntity.id, totalReaped);
+
+                    if (remainingAmount > 0) {
+                        const newEntity = hurtEntity.dimension.spawnEntity(entityTypeId as any, oldLocation);
+
+                        if (newEntity && newEntity.isValid) {
+                            newEntity.nameTag = nameTagConfig.replace('#', remainingAmount.toString()).replace('@', displayName);
+                            newEntity.setRotation(oldRotation);
+                            if (inheritedSpawnerKey) {
+                                entitySpawnerMap.set(newEntity.id, inheritedSpawnerKey);
+                            }
+                        } else {
+                            console.error(`Failed to spawn replacement entity for ${entityTypeId}`);
                         }
-                    } else {
-                        console.error(`Failed to spawn replacement entity for ${entityTypeId}`);
                     }
 
                 } catch (e) {
                     console.error(`Failed to respawn stacked entity: ${e}`);
                 }
+            } else {
+                reapMultipliers.set(hurtEntity.id, 1);
             }
 
             // --- Loot Logic (Optimised Config Reads) ---
             try {
                 // Forced use of Config Cache in event listeners (critical fix)
                 const playerKillOnly = getCachedConfig("playerKillOnly", false);
-                // BUG FIX: 'killer' was re-declared here, shadowing the one from line 1158.
-                // 'damageSource.damagingEntity' was also accessed without optional chaining,
-                // which could crash if damageSource is undefined.
-                // Now reuses the already-resolved 'killer' from above.
                 if (playerKillOnly && (!killer || killer.typeId !== 'minecraft:player')) return;
 
                 const xpSpillCap = getCachedConfig('xpSpillCap', ENTITIES.DEFAULT_XP_SPILL_CAP);
@@ -1333,7 +1362,8 @@ if (!(globalThis as any).__stackDieSubscribed) {
                     const xpConfig = cacheManager.get('xpDrop', entityTypeId, () => xpDropDatabase.read(entityTypeId));
                     if (xpConfig && (Math.random() * 100 < (xpConfig.chance ?? 100))) {
                         try {
-                            (hurtEntity.dimension as any).spawnEntity(ENTITIES.XP_ORB_TYPE, hurtEntity.location, { amount: xpConfig.amount ?? 1 });
+                            const xpAmount = (xpConfig.amount ?? 1) * totalReaped;
+                            (hurtEntity.dimension as any).spawnEntity(ENTITIES.XP_ORB_TYPE, hurtEntity.location, { amount: xpAmount });
                         } catch (e) {
                             console.error(`Error spawning XP orb for ${entityTypeId}: ${e}`);
                         }
