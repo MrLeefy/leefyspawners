@@ -1,37 +1,37 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.85 BEH - Jul 06",
-		"description": "LeefySpawners Behavior Pack v8.2.85 - Reverted terrain texture mappings to original flat ore blocks - Jul 2026",
-		"uuid": "2a0efba2-9569-4815-a821-19bd70a78b5a",
+		"name": "LeefySpawners v8.2.86 BEH - Sep 2026",
+		"description": "LeefySpawners Behavior Pack v8.2.86 - Stable Bedrock 26.40-26.45 compatibility",
+		"uuid": "6db13ee9-e276-472e-be33-fd55892e64f1",
 		"version": [
 			8,
 			2,
-			85
+			86
 		],
 		"min_engine_version": [
 			1,
-			21,
-			0
+			26,
+			40
 		]
 	},
 	"modules": [
 		{
 			"type": "data",
-			"uuid": "918ffab7-6600-402e-a73a-2e486b3ce712",
+			"uuid": "838f1c30-480b-448e-908c-b353b74a3970",
 			"version": [
 				8,
 				2,
-				85
+				86
 			]
 		},
 		{
 			"description": "",
-			"uuid": "19480577-1dad-4548-96ad-f7cddefb2527",
+			"uuid": "f21c3912-e02f-47ae-8743-0d7ec6ea87fc",
 			"version": [
 				8,
 				2,
-				85
+				86
 			],
 			"type": "script",
 			"language": "javascript",
@@ -41,18 +41,18 @@
 	"dependencies": [
 		{
 			"module_name": "@minecraft/server",
-			"version": "beta"
+			"version": "2.9.0"
 		},
 		{
 			"module_name": "@minecraft/server-ui",
-			"version": "beta"
+			"version": "2.1.0"
 		},
 		{
-			"uuid": "2586402e-c7af-4087-9c0a-d1e191349cba",
+			"uuid": "3a21e43b-7035-4e09-a467-61c91d9a237b",
 			"version": [
 				8,
 				2,
-				85
+				86
 			]
 		}
 	]
