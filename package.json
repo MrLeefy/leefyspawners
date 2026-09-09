@@ -9,6 +9,7 @@
     "dev": "tsc --outDir \"LeefySpawners BEH/scripts/module\" --watch",
     "typecheck": "tsc --noEmit",
     "validate": "node validate-manifests.mjs",
+    "migrate:api": "node migrate-bedrock-api.mjs",
     "sync:readme": "node sync-readme.mjs",
     "release:bump": "node bump-manifests.js"
   },
