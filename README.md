@@ -1,4 +1,4 @@
-# 🟢 LeefySpawners v8.0.0
+# 🟢 LeefySpawners v8.2.86
 
 A high-performance, features-rich Mob Spawner management and stacking addon for **Minecraft: Bedrock Edition**. Built from the ground up to support single-player worlds, dedicated servers, and **Minecraft Realms** without requiring unstable Beta APIs.
 
@@ -84,8 +84,8 @@ Once you have the `admin` tag, hold a **Blaze Rod** (or open the Spawner Menu an
 1.  Download the `.mcaddon` file (or download the behavior and resource packs separately).
 2.  **Windows/PC:** Double-click the `.mcaddon` file to automatically import it into Minecraft.
 3.  **Dedicated Server:** 
-    *   Place `JUN06LeefySpawners BEH` into the server's `behavior_packs` folder.
-    *   Place `JUN06LeefySpawners RES` into the server's `resource_packs` folder.
+    *   Place `LeefySpawners BEH` into the server's `behavior_packs` folder.
+    *   Place `LeefySpawners RES` into the server's `resource_packs` folder.
     *   Add the pack UUIDs to your server's `world_behavior_packs.json` and `world_resource_packs.json`.
 
 ### Option B: Installing on Realms (Realms Compatible!)
@@ -103,7 +103,7 @@ leefyspawners/
 ├── README.md                          # Repository documentation
 ├── .agent/
 │   └── agent.md                       # Agent preferences and guidelines
-├── JUN06LeefySpawners BEH/            # Behavior Pack
+├── LeefySpawners BEH/            # Behavior Pack
 │   ├── manifest.json                  # Manifest file (Stable API dependencies)
 │   ├── pack_icon.png                  # Pack icon
 │   ├── scripts/
@@ -116,7 +116,7 @@ leefyspawners/
 │   │           ├── database.js        # Persistence database using dynamic properties
 │   │           └── constants.js       # Global constants & configuration
 │   └── [entities/blocks/items/loot_tables]
-└── JUN06LeefySpawners RES/            # Resource Pack
+└── LeefySpawners RES/            # Resource Pack
     ├── manifest.json                  # Manifest file
     ├── pack_icon.png                  # Pack icon
     └── [textures/models/entity/texts]
