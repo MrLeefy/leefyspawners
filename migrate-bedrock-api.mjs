@@ -9,10 +9,22 @@ const newImport = 'import { world, system, Player, Block, Entity, Vector3, Dimen
 updated = updated.replace(oldImport, newImport);
 
 const commandStart = updated.indexOf("// --- CHAT COMMANDS ---");
-const commandEnd = updated.indexOf("// --- SPAWNER-TO-CHEST LINKING SYSTEM ---", commandStart);
+if (commandStart === -1) {
+  const alreadyMigrated =
+    updated.includes("// --- CUSTOM COMMANDS ---") &&
+    updated.includes('name: "leefy:reaper"');
 
-if (commandStart === -1 || commandEnd === -1) {
+  if (alreadyMigrated) {
+    console.log("LeefySpawners Script API source is already current.");
+    process.exit(0);
+  }
+
   throw new Error("Could not locate the legacy Reaper chat-command section.");
+}
+
+const commandEnd = updated.indexOf("// --- SPAWNER-TO-CHEST LINKING SYSTEM ---", commandStart);
+if (commandEnd === -1) {
+  throw new Error("Could not locate the end of the legacy Reaper chat-command section.");
 }
 
 const commandReplacement = `// --- CUSTOM COMMANDS ---
@@ -76,7 +88,7 @@ function handleReaperCommand(origin: CustomCommandOrigin, levelValue: string): C
             }
 
             mainhand.setDynamicProperty("reaper", level);
-            const newLoreLine = \`§r§7Reaper \${REAPER_ROMAN_LEVELS[level]}\`;
+            const newLoreLine = `§r§7Reaper ${REAPER_ROMAN_LEVELS[level]}`;
             const currentLore = mainhand.getLore() || [];
             const updatedLore = currentLore.filter(
                 (line: string) => !line.replace(/§./g, "").includes("Reaper"),
@@ -85,7 +97,7 @@ function handleReaperCommand(origin: CustomCommandOrigin, levelValue: string): C
             mainhand.setLore(updatedLore);
             equipment.setEquipment("Mainhand", mainhand);
             player.sendMessage(
-                \`§aSuccessfully applied Reaper \${REAPER_ROMAN_LEVELS[level]} to your weapon!\`,
+                `§aSuccessfully applied Reaper ${REAPER_ROMAN_LEVELS[level]} to your weapon!`,
             );
         } catch (error: any) {
             player.sendMessage("§cError applying Reaper: " + (error?.message || error));
@@ -95,7 +107,7 @@ function handleReaperCommand(origin: CustomCommandOrigin, levelValue: string): C
 
     return {
         status: CustomCommandStatus.Success,
-        message: \`Applying Reaper \${REAPER_ROMAN_LEVELS[level]}...\`,
+        message: `Applying Reaper ${REAPER_ROMAN_LEVELS[level]}...`,
     };
 }
 
