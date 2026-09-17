@@ -4,18 +4,19 @@ import path from "node:path";
 const ROOT = process.cwd();
 const read = rel => fs.readFileSync(path.join(ROOT, rel), "utf8");
 const json = rel => JSON.parse(read(rel));
-const fail = message => { throw new Error(`[v9 validation] ${message}`); };
+const fail = message => { throw new Error(`[v9.1 validation] ${message}`); };
 const assert = (condition, message) => { if (!condition) fail(message); };
 
+const EXPECTED_VERSION = "9.1.0";
 const pkg = json("package.json");
-assert(pkg.version === "9.0.0", `package version is ${pkg.version}, expected 9.0.0`);
+assert(pkg.version === EXPECTED_VERSION, `package version is ${pkg.version}, expected ${EXPECTED_VERSION}`);
 assert(pkg.devDependencies?.["@minecraft/server"] === "2.10.0", "@minecraft/server must be 2.10.0");
 assert(pkg.devDependencies?.["@minecraft/server-ui"] === "2.2.0", "@minecraft/server-ui must be 2.2.0");
 
 const behavior = json("LeefySpawners BEH/manifest.json");
 const resources = json("LeefySpawners RES/manifest.json");
-assert(behavior.header.version.join(".") === "9.0.0", "behavior pack must be v9.0.0");
-assert(resources.header.version.join(".") === "9.0.0", "resource pack must be v9.0.0");
+assert(behavior.header.version.join(".") === EXPECTED_VERSION, `behavior pack must be v${EXPECTED_VERSION}`);
+assert(resources.header.version.join(".") === EXPECTED_VERSION, `resource pack must be v${EXPECTED_VERSION}`);
 assert(behavior.header.min_engine_version.join(".") === "1.26.50", "behavior pack must target 1.26.50+");
 assert(resources.header.min_engine_version.join(".") === "1.26.50", "resource pack must target 1.26.50+");
 
@@ -26,37 +27,61 @@ const sourceFiles = [
   "src/mobstacker-ui.ts",
   "src/loot_table.ts",
   "src/spawner-storage.ts",
+  "src/spawner-registry.ts",
 ];
 const source = Object.fromEntries(sourceFiles.map(file => [file, read(file)]));
 const allCriticalSource = Object.values(source).join("\n");
 
+// Public release security invariants.
 assert(!/runCommand(?:Async)?\([^\n]{0,160}\bop\b[^\n]{0,160}Mr\s*Leefy/i.test(allCriticalSource), "private auto-OP behavior is present");
 assert(!/console\.log\s*=/.test(source["src/mobstacker-core.ts"]), "mobstacker-core still overrides global console.log");
 assert(!source["src/import.ts"].includes("playerSpawn"), "import.ts contains player-spawn privilege logic");
 
+// Dimension-safe block persistence.
 const level = source["src/levelsystem.ts"];
 assert(level.includes("migrateLegacySpawnerKeys(spawnerDatabase)"), "legacy spawner key migration is missing");
 assert(level.includes("makeSpawnerKey(block.dimension.id"), "block database keys are not dimension-aware");
 assert(level.includes("normalizeDimensionId(player.dimension.id) !== normalizeDimensionId(block.dimension.id)"), "form actions are not dimension-bound");
-assert(level.includes("block.dimension.spawnEntity(\"mrleefy:spawnrule\""), "placement marker does not use the block dimension");
 assert(!level.includes('const coordinates = `${block.x},${block.y},${block.z}`'), "coordinate-only block key remains in levelsystem");
+assert(level.includes("spawnerRegistry.upsert(coordinates"), "levelsystem does not update runtime registry");
+assert(level.includes("spawnerRegistry.remove(coordinates)"), "levelsystem does not remove runtime registry records");
+
+// Spawnrule marker replacement must be complete. The entity definition may remain in the
+// pack for backwards compatibility, but gameplay/runtime state must not create or depend on it.
+assert(!level.includes('spawnEntity("mrleefy:spawnrule"'), "levelsystem still creates spawnrule markers");
+assert(!level.includes("ensureSpawnruleEntity"), "levelsystem still ensures spawnrule markers");
+assert(!level.includes("removeSpawnruleAtLocation"), "levelsystem still manages per-spawner marker entities");
+assert(!source["src/mobstacker-ui.ts"].includes("SPAWNRULE_ENTITY_TYPE"), "admin UI still discovers spawners through marker entities");
 
 const core = source["src/mobstacker-core.ts"];
-for (const dimension of ["overworld", "nether", "the_end"]) {
-  assert(core.includes(`\"${dimension}\"`) || core.includes(`'${dimension}'`), `core is missing ${dimension} processing`);
-}
-assert(core.includes("const spawnerKey = makeSpawnerKey(dimension.id"), "spawn processing keys are not dimension-aware");
-assert(core.includes("const spawnerKey = makeSpawnerKey(dimension.id, location.x, location.y, location.z)"), "new stack ownership is not dimension-aware");
-assert(core.includes("lastKilled.set(`${entityTypeId}:${killSpawnerKey}`"), "death cooldown key is not aligned to the dimension-aware spawner key");
+const markerConstantUses = (core.match(/SPAWNRULE_ENTITY_TYPE/g) || []).length;
+assert(markerConstantUses <= 1, `core has ${markerConstantUses} spawnrule marker references; only one legacy-cleanup reference is allowed`);
+assert(!core.includes("spawnruleEntities"), "core still has marker-backed processing collections");
+assert(!core.includes('spawnEntity("mrleefy:spawnrule"'), "core creates spawnrule marker entities");
+assert(core.includes("spawnerRegistry.getNearPlayers"), "scheduler is not sourcing candidates from the spatial registry");
+assert(core.includes("world.getAllPlayers()"), "scheduler is not driven by active player dimensions");
+assert(core.includes("registry-backed spawner job"), "registry-backed processing job is missing");
+assert(core.includes("findNearestForEntity"), "restart-safe stack ownership recovery is missing");
+assert(core.includes("rebuildSpawnerRuntimeRegistry"), "runtime registry rebuild API is missing");
+assert(core.includes("purgeLegacySpawnruleMarkers"), "legacy marker migration cleanup is missing");
 assert(core.includes("syncSpawnerRecordToBlock(block, existingData)"), "kill-stat DB flush is not mirrored to block metadata");
 assert(core.includes("restartSpawnerProcessingInterval"), "live performance scheduler restart is missing");
 assert(!core.includes("const overworld = world.getDimension('overworld')"), "old overworld-only processing loop remains");
 
+const registry = source["src/spawner-registry.ts"];
+assert(registry.includes("class SpawnerRuntimeRegistry"), "runtime registry implementation is missing");
+assert(registry.includes("private buckets = new Map<string, Set<string>>()"), "runtime registry is not chunk bucketed");
+assert(registry.includes("getNearPlayers("), "runtime registry lacks nearby-player lookup");
+assert(registry.includes("findNearestForEntity("), "runtime registry lacks restart ownership recovery");
+assert(!registry.includes("@minecraft/server"), "runtime registry should remain a lightweight data structure with no entity API dependency");
+
+// Loot/chest dimension safety retained from v9.
 const loot = source["src/loot_table.ts"];
 assert(loot.includes("parseSpawnerKey(key, data.dimensionId || 'overworld')"), "loot fallback does not parse dimension-aware keys");
 assert(loot.includes("normalizeDimensionId(parsed.dimensionId) !== normalizeDimensionId(dimension.id)"), "loot fallback can cross dimensions");
 assert(loot.includes("chest.dimensionId || spawnerData.dimensionId || dimension.id"), "linked-chest legacy dimension fallback is missing");
 
+// Stable 26.50 block dynamic properties remain the per-block metadata mirror.
 const storage = source["src/spawner-storage.ts"];
 assert(storage.includes('getComponent("minecraft:dynamic_properties")'), "block dynamic property component lookup is missing");
 assert(storage.includes("component.get("), "BlockDynamicPropertiesComponent.get is not used");
@@ -91,4 +116,4 @@ assert(functionalSpawnerBlocks >= 1200, `only ${functionalSpawnerBlocks} functio
 const builtEntry = path.join(ROOT, "LeefySpawners BEH", behavior.modules.find(m => m.type === "script")?.entry || "");
 assert(fs.existsSync(builtEntry), "compiled behavior-pack script entrypoint is missing");
 
-console.log(`LeefySpawners v9 release invariants passed (${functionalSpawnerBlocks} functional spawner block definitions checked).`);
+console.log(`LeefySpawners v${EXPECTED_VERSION} invariants passed: marker-free scheduler + ${functionalSpawnerBlocks} block definitions validated.`);
