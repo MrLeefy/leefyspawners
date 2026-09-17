@@ -6,6 +6,9 @@ import { getAAValueForLevel } from "./mobstacker-ui.js"; // Import the config fu
 import { TIMING, UI, ENTITIES, PERFORMANCE, VALIDATION } from "./constants.js";
 import { activeForms, cooldowns } from "./levelsystem.js";
 import { reapMultipliers, deadEntitySpawnerMap } from "./loot_table.js";
+import { makeSpawnerKey, normalizeDimensionId } from "./spawner-storage.js";
+
+// LeefySpawners v9: multi-dimension core
 
 // Performance monitoring
 const performanceMetrics = {
@@ -40,33 +43,20 @@ const STATS_MEMORY_LIMITS = {
 };
 
 // Global logging system
-let LOGGING_ENABLED = false; // Global toggle for all logging (disabled by default)
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
+let LOGGING_ENABLED = false;
+const baseConsoleLog = console.log.bind(console);
 
-// Override console.log to respect global logging toggle
-// NOTE: console.error is NEVER suppressed — errors must always be visible for debugging
-console.log = function (...args) {
-    if (LOGGING_ENABLED) {
-        originalConsoleLog.apply(console, args);
-    }
-};
-
-// Debug logging function that respects the global logging toggle
 function debugLog(message: any, ...args: any[]): void {
-    if (LOGGING_ENABLED) {
-        console.log(`[DEBUG] ${message}`, ...args);
-    }
+    if (LOGGING_ENABLED) baseConsoleLog(`[DEBUG] ${message}`, ...args);
 }
 
-// Logging control functions
 function enableLogging() {
     LOGGING_ENABLED = true;
-    originalConsoleLog("[MOBSTACKER] Logging enabled");
+    baseConsoleLog("[MOBSTACKER] Logging enabled");
 }
 
 function disableLogging() {
-    originalConsoleLog("[MOBSTACKER] Logging disabled");
+    baseConsoleLog("[MOBSTACKER] Logging disabled");
     LOGGING_ENABLED = false;
 }
 
@@ -385,20 +375,7 @@ function calculateSpawnerTotals() {
     let physicalCount = 0;
     let virtualCount = 0;
 
-    const validMobs = ['mrleefy:blazestill', 'mrleefy:cowstill', 'mrleefy:sheepstill', 'mrleefy:pigstill',
-        'mrleefy:chickenstill', 'mrleefy:emeraldgolemstill', 'mrleefy:netheritegolemstill',
-        'mrleefy:irongolemstill', 'mrleefy:diamondgolemstill', 'mrleefy:goldgolemstill',
-        'mrleefy:endermanstill', 'mrleefy:creeperstill', 'mrleefy:magmacubestill',
-        'mrleefy:guardianstill', 'mrleefy:witherskeletonstill', 'mrleefy:zombiestill',
-        'mrleefy:witherstill', 'mrleefy:spiderstill', 'mrleefy:slimestill',
-        'mrleefy:vindicatorstill', 'mrleefy:skeletonstill', 'mrleefy:shulkerstill',
-        'mrleefy:breezestill', 'mrleefy:piglinbrutestill', 'mrleefy:wardenstill',
-        'mrleefy:ravagerstill', 'mrleefy:snowmanstill',
-        // Crawlers
-        'mrleefy:coalcrawlerstill', 'mrleefy:glowstonecrawlerstill', 'mrleefy:obsidiancrawlerstill',
-        'mrleefy:icecrawlerstill', 'mrleefy:spongecrawlerstill', 'mrleefy:lapiscrawlerstill',
-        'mrleefy:redstonecrawlerstill', 'mrleefy:coppercrawlerstill', 'mrleefy:quartzcrawlerstill',
-        'mrleefy:amethystcrawlerstill'];
+    const validMobTypes = validMobs.map(mob => mob.typeId);
 
     for (const dimId of dimensions) {
         try {
@@ -407,7 +384,7 @@ function calculateSpawnerTotals() {
                 const spawnruleEntities = dim.getEntities({ type: ENTITIES.SPAWNRULE_ENTITY_TYPE });
                 spawnerCount += spawnruleEntities.length;
 
-                for (const mobType of validMobs) {
+                for (const mobType of validMobTypes) {
                     const entities = dim.getEntities({ type: mobType });
                     entities.forEach((entity: Entity) => {
                         if (entity?.isValid) {
@@ -711,18 +688,12 @@ export function extractStackNumber(nameTag: string | undefined): number {
 }
 
 // Check if any players are near a location (cheap check for performance)
-function hasPlayersNearby(location: Vector3, radius: number): boolean {
+function hasPlayersNearby(dimension: Dimension, location: Vector3, radius: number): boolean {
     try {
-        const overworld = world.getDimension('overworld');
-        const nearbyPlayers = overworld.getPlayers({
-            location: location,
-            maxDistance: radius,
-            closest: 1
-        });
-        return nearbyPlayers.length > 0;
+        return dimension.getPlayers({ location, maxDistance: radius, closest: 1 }).length > 0;
     } catch (error) {
         debugLog(`Error checking players near ${location.x},${location.y},${location.z}: ${error}`);
-        return true; // Default to true on error to avoid skipping spawners
+        return true;
     }
 }
 
@@ -757,7 +728,7 @@ function updateActiveChunks(spawnruleEntities: Entity[]): void {
 
     for (const entity of spawnruleEntities) {
         if (entity?.isValid && entity.location && chunkCount < MAX_CHUNKS) {
-            const chunkKey = getChunkKey(entity.location.x, entity.location.z);
+            const chunkKey = `${normalizeDimensionId(entity.dimension.id)}:${getChunkKey(entity.location.x, entity.location.z)}`;
             if (!ACTIVE_CHUNKS.has(chunkKey)) {
                 ACTIVE_CHUNKS.set(chunkKey, []);
                 chunkCount++;
@@ -798,9 +769,9 @@ const entitySpawnerOwnership = new Map();
 
 // Clear maxed spawner cache when upgrading
 export function clearMaxedSpawnerCache(x: number, y: number, z: number): void {
-    const spawnerKey = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+    const coords = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
     for (const [key] of maxedSpawners) {
-        if (key.endsWith(`:${spawnerKey}`)) {
+        if (key.includes(`:${coords},`) || key.endsWith(`:${coords}`)) {
             maxedSpawners.delete(key);
             debugLog(`Cleared maxed cache for: ${key}`);
         }
@@ -866,20 +837,10 @@ function* spawnerProcessingJob() {
     try {
         const startTime = Date.now();
         let tickStartTime = startTime;
-        const overworld = world.getDimension('overworld');
         const radius = getCachedConfig("stackRadius", UI.DEFAULT_STACK_RADIUS);
-
-        const spawnruleEntities = overworld.getEntities({ type: ENTITIES.SPAWNRULE_ENTITY_TYPE });
-        updateActiveChunks(spawnruleEntities);
-        if (spawnruleEntities.length === 0) {
-            return; 
-        }
-
-        // Read performance config LIVE from database each cycle (admin changes apply immediately)
         const perfConfig = getPerformanceConfig();
-
-        // Fetch all active players once to prevent C++/JS boundary crossing inside the loop
-        const activePlayers = overworld.getPlayers();
+        const dimensionIds = ["overworld", "nether", "the_end"];
+        const allSpawnrules: Entity[] = [];
         const playerRadiusSq = perfConfig.PLAYER_ACTIVATION_RADIUS * perfConfig.PLAYER_ACTIVATION_RADIUS;
 
         let spawnsThisCycle = 0;
@@ -887,173 +848,138 @@ function* spawnerProcessingJob() {
         let skippedNoPlayers = 0;
         let skippedMaxed = 0;
 
-        for (const spawnruleEntity of spawnruleEntities) {
-            // OPTIMIZATION: Yield only when exceeding a 4ms tick budget (spreads work smoothly and stops desyncs)
-            if (Date.now() - tickStartTime > 4) {
-                yield;
-                tickStartTime = Date.now();
-            }
+        for (const dimensionId of dimensionIds) {
+            let dimension: Dimension;
+            try { dimension = world.getDimension(dimensionId); } catch { continue; }
 
-            // Verify spawner chunk is loaded/valid
-            if (!spawnruleEntity?.isValid) continue;
+            let spawnruleEntities: Entity[] = [];
+            try { spawnruleEntities = dimension.getEntities({ type: ENTITIES.SPAWNRULE_ENTITY_TYPE }); } catch { continue; }
+            allSpawnrules.push(...spawnruleEntities);
+            if (spawnruleEntities.length === 0) continue;
 
-            const location = spawnruleEntity.location;
-
-            // Optimized pure JS player distance evaluation (0 script boundary crossings inside loop)
-            let playerNear = false;
-            for (const player of activePlayers) {
-                if (!player.isValid) continue;
-                const pLoc = player.location;
-                const dx = pLoc.x - location.x;
-                const dy = pLoc.y - location.y;
-                const dz = pLoc.z - location.z;
-                if ((dx * dx + dy * dy + dz * dz) <= playerRadiusSq) {
-                    playerNear = true;
-                    break;
-                }
-            }
-            
-            if (!playerNear) {
-                skippedNoPlayers++;
+            const activePlayers = dimension.getPlayers();
+            if (activePlayers.length === 0) {
+                skippedNoPlayers += spawnruleEntities.length;
                 continue;
             }
 
-            const nameTag = spawnruleEntity.nameTag;
-            if (!nameTag) continue;
-
-            // Retrieve cached parsed specs (saves massive regex string GC pressure)
-            const specs = getSpawnerSpecs(nameTag);
-            if (!specs) continue;
-
-            const { entityTypeId, levelNum, qty, speed, maxStack, displayName } = specs;
-            const spawnerKey = `${Math.floor(location.x)},${Math.floor(location.y)},${Math.floor(location.z)}`;
-            const spawnKey = `${entityTypeId}:${spawnerKey}`;
-
-            // Skip maxed spawners
-            const now = Date.now();
-            if (maxedSpawners.has(spawnKey)) {
-                const lastMaxedCheck = maxedSpawners.get(spawnKey);
-                if (now - lastMaxedCheck < perfConfig.MAXED_SPAWNER_RECHECK_MS) {
-                    skippedMaxed++;
-                    continue; 
+            for (const spawnruleEntity of spawnruleEntities) {
+                if (Date.now() - tickStartTime > 4) {
+                    yield;
+                    tickStartTime = Date.now();
                 }
-            }
+                if (!spawnruleEntity?.isValid) continue;
 
-            // Cooldown timing
-            const lastSpawn = lastSpawnTime.get(spawnKey) || 0;
-            const lastKill = lastKilled.get(spawnKey) || 0;
-            const speedMillis = speed * 1000;
-
-            if (lastSpawn === 0 && perfConfig.INITIAL_DELAY_RANDOM) {
-                const randomDelay = Math.random() * speedMillis;
-                lastSpawnTime.set(spawnKey, now - randomDelay);
-                continue;
-            }
-
-            if (now - lastSpawn < speedMillis) continue;
-            if (now - lastKill < cooldownMillis) continue;
-
-            if (spawnsThisCycle >= perfConfig.MAX_SPAWNS_PER_CYCLE) {
-                continue; 
-            }
-
-            // Double check validation before calling getEntities in potentially unloaded chunks
-            if (!spawnruleEntity.isValid) continue;
-
-            let nearbyEntities;
-            try {
-                nearbyEntities = overworld.getEntities({
-                    type: entityTypeId,
-                    location: location,
-                    maxDistance: radius,
-                });
-            } catch (err) {
-                // Ignore chunk unloaded errors gracefully
-                continue;
-            }
-
-            lastSpawnTime.set(spawnKey, now);
-
-            let primaryEntity = null;
-            let maxStackInArea = 0;
-            let totalStack = 0;
-            const extras = [];
-
-            for (const entity of nearbyEntities) {
-                if (!entity || !entity.isValid) continue;
-                if (dyingEntities.has(entity.id)) continue; // skip death-animation entities
-                const stackSize = extractStackNumber(entity.nameTag || "");
-                totalStack += stackSize;
-                if (stackSize > maxStackInArea) {
-                    if (primaryEntity) extras.push(primaryEntity);
-                    maxStackInArea = stackSize;
-                    primaryEntity = entity;
-                } else {
-                    extras.push(entity);
+                const location = spawnruleEntity.location;
+                let playerNear = false;
+                for (const player of activePlayers) {
+                    if (!player.isValid) continue;
+                    const pLoc = player.location;
+                    const dx = pLoc.x - location.x;
+                    const dy = pLoc.y - location.y;
+                    const dz = pLoc.z - location.z;
+                    if ((dx * dx + dy * dy + dz * dz) <= playerRadiusSq) {
+                        playerNear = true;
+                        break;
+                    }
                 }
-            }
+                if (!playerNear) { skippedNoPlayers++; continue; }
 
-            // Remove extra entities
-            for (const entity of extras) {
+                const nameTag = spawnruleEntity.nameTag;
+                if (!nameTag) continue;
+                const specs = getSpawnerSpecs(nameTag);
+                if (!specs) continue;
+
+                const { entityTypeId, qty, speed, maxStack, displayName } = specs;
+                const spawnerKey = makeSpawnerKey(dimension.id, location.x, location.y, location.z);
+                const spawnKey = `${entityTypeId}:${spawnerKey}`;
+                const now = Date.now();
+
+                if (maxedSpawners.has(spawnKey)) {
+                    const lastMaxedCheck = maxedSpawners.get(spawnKey);
+                    if (now - lastMaxedCheck < perfConfig.MAXED_SPAWNER_RECHECK_MS) {
+                        skippedMaxed++;
+                        continue;
+                    }
+                }
+
+                const lastSpawn = lastSpawnTime.get(spawnKey) || 0;
+                const lastKill = lastKilled.get(spawnKey) || 0;
+                const speedMillis = speed * 1000;
+                if (lastSpawn === 0 && perfConfig.INITIAL_DELAY_RANDOM) {
+                    lastSpawnTime.set(spawnKey, now - Math.random() * speedMillis);
+                    continue;
+                }
+                if (now - lastSpawn < speedMillis || now - lastKill < cooldownMillis) continue;
+                if (spawnsThisCycle >= perfConfig.MAX_SPAWNS_PER_CYCLE) continue;
+                if (!spawnruleEntity.isValid) continue;
+
+                let nearbyEntities: Entity[];
                 try {
-                    if (entity.isValid) {
-                        entitySpawnerMap.delete(entity.id);
-                        entitySpawnerOwnership.delete(entity.id);
-                        entity.remove();
-                        performanceMetrics.entityRemovals++;
-                    }
-                } catch (error) {
-                    debugLog(`Failed to remove entity: ${(error as any).message}`);
+                    nearbyEntities = dimension.getEntities({ type: entityTypeId, location, maxDistance: radius });
+                } catch { continue; }
+
+                lastSpawnTime.set(spawnKey, now);
+                let primaryEntity: Entity | null = null;
+                let maxStackInArea = 0;
+                let totalStack = 0;
+                const extras: Entity[] = [];
+
+                for (const entity of nearbyEntities) {
+                    if (!entity?.isValid || dyingEntities.has(entity.id)) continue;
+                    const stackSize = extractStackNumber(entity.nameTag || "");
+                    totalStack += stackSize;
+                    if (stackSize > maxStackInArea) {
+                        if (primaryEntity) extras.push(primaryEntity);
+                        maxStackInArea = stackSize;
+                        primaryEntity = entity;
+                    } else extras.push(entity);
                 }
-            }
 
-            if (primaryEntity && primaryEntity.isValid) {
-                const newStackSize = Math.min(totalStack + qty, maxStack);
-                const currentStack = extractStackNumber(primaryEntity.nameTag || "");
-
-                if (currentStack !== newStackSize) {
+                for (const entity of extras) {
                     try {
-                        primaryEntity.nameTag = nameTagConfig
-                            .replace('#', newStackSize.toString())
-                            .replace('@', displayName);
-                    } catch (err) {
-                        debugLog(`Failed to update primary entity nameTag: ${(err as any).message}`);
-                    }
+                        if (entity.isValid) {
+                            entitySpawnerMap.delete(entity.id);
+                            entitySpawnerOwnership.delete(entity.id);
+                            entity.remove();
+                            performanceMetrics.entityRemovals++;
+                        }
+                    } catch (error) { debugLog(`Failed to remove entity: ${(error as any).message}`); }
                 }
 
-                if (newStackSize >= maxStack) {
-                    maxedSpawners.set(spawnKey, now);
-                    entitySpawnerOwnership.set(primaryEntity.id, spawnKey);
+                if (primaryEntity && primaryEntity.isValid) {
+                    const newStackSize = Math.min(totalStack + qty, maxStack);
+                    const currentStack = extractStackNumber(primaryEntity.nameTag || "");
+                    if (currentStack !== newStackSize) {
+                        try { primaryEntity.nameTag = nameTagConfig.replace('#', newStackSize.toString()).replace('@', displayName); }
+                        catch (err) { debugLog(`Failed to update primary entity nameTag: ${(err as any).message}`); }
+                    }
+                    entitySpawnerMap.set(primaryEntity.id, spawnerKey);
+                    if (newStackSize >= maxStack) {
+                        maxedSpawners.set(spawnKey, now);
+                        entitySpawnerOwnership.set(primaryEntity.id, spawnKey);
+                    } else maxedSpawners.delete(spawnKey);
                 } else {
+                    spawnNewStackedEntity(dimension, entityTypeId, location, qty, displayName);
+                    spawnsThisCycle++;
                     maxedSpawners.delete(spawnKey);
                 }
-            } else {
-                spawnNewStackedEntity(overworld, entityTypeId, location, qty, displayName);
-                spawnsThisCycle++;
-                maxedSpawners.delete(spawnKey);
+                processedCount++;
             }
-
-            processedCount++;
         }
 
+        updateActiveChunks(allSpawnrules);
         performanceMetrics.stackingOperations++;
         const processingTime = Date.now() - startTime;
-
         debugLog(`Spawner cycle: processed=${processedCount}, spawned=${spawnsThisCycle}, skippedNoPlayers=${skippedNoPlayers}, skippedMaxed=${skippedMaxed}, time=${processingTime}ms`);
-
-        if (processingTime > PERFORMANCE_THRESHOLDS.MAX_PROCESSING_TIME) {
-            debugLog(`[PERFORMANCE] Slow processing: ${processingTime}ms`);
-            performanceMetrics.warningCount++;
-        }
-
-        performanceMetrics.averageProcessingTime =
-            performanceMetrics.averageProcessingTime === 0
-                ? processingTime
-                : (performanceMetrics.averageProcessingTime * 0.95 + processingTime * 0.05);
+        if (processingTime > PERFORMANCE_THRESHOLDS.MAX_PROCESSING_TIME) performanceMetrics.warningCount++;
+        performanceMetrics.averageProcessingTime = performanceMetrics.averageProcessingTime === 0
+            ? processingTime
+            : (performanceMetrics.averageProcessingTime * 0.95 + processingTime * 0.05);
     } catch (error) {
-        console.error(`[MOBSTACKER] Error in spawner job:`, error);
+        console.error("[MOBSTACKER] Error in spawner job:", error);
     } finally {
-        isProcessingJobRunning = false; // Lock release
+        isProcessingJobRunning = false;
     }
 }
 
@@ -1081,13 +1007,17 @@ const stackingIntervalFunction = () => {
 };
 
 // Start the interval — deferred to tick 3 so database is fully loaded with admin perf settings
-let activeInterval: number;
-system.run(() => {
-    system.run(() => {
-        const perfConfig = getPerformanceConfig();
-        activeInterval = system.runInterval(stackingIntervalFunction, perfConfig.SPAWN_INTERVAL_TICKS);
-    });
-});
+let activeInterval: number | undefined;
+export function restartSpawnerProcessingInterval(): void {
+    if (activeInterval !== undefined) {
+        try { system.clearRun(activeInterval); } catch { /* already cleared */ }
+    }
+    const perfConfig = getPerformanceConfig();
+    activeInterval = system.runInterval(stackingIntervalFunction, perfConfig.SPAWN_INTERVAL_TICKS);
+    debugLog(`Spawner processing interval applied live: ${perfConfig.SPAWN_INTERVAL_TICKS} ticks`);
+}
+
+system.run(() => system.run(() => restartSpawnerProcessingInterval()));
 
 // Memory management functions (optimised to use chronological insertion-order Map eviction - zero sorting garbage!)
 function enforceMapLimits() {
@@ -1195,7 +1125,7 @@ function spawnNewStackedEntity(dimension: Dimension, entityTypeId: string, locat
         const newEntity = dimension.spawnEntity(entityTypeId as any, spawnLocation);
         if (newEntity?.isValid) {
             newEntity.nameTag = nameTagConfig.replace('#', qty.toString()).replace('@', displayName);
-            const spawnerKey = `${Math.floor(location.x)},${Math.floor(location.y)},${Math.floor(location.z)}`;
+            const spawnerKey = makeSpawnerKey(dimension.id, location.x, location.y, location.z);
             entitySpawnerMap.set(newEntity.id, spawnerKey);
             performanceMetrics.entitySpawns++;
         }
@@ -1310,7 +1240,7 @@ if (!(globalThis as any).__stackDieSubscribed) {
             const spawnerKey = entitySpawnerMap.get(hurtEntity.id);
 
             const loc = hurtEntity.location;
-            const spawnerKeyFallback = `${Math.floor(loc.x)},${Math.floor(loc.y)},${Math.floor(loc.z)}`;
+            const spawnerKeyFallback = makeSpawnerKey(hurtEntity.dimension.id, loc.x, loc.y, loc.z);
             const finalSpawnerKey = spawnerKey || spawnerKeyFallback;
             const killer = damageSource?.damagingEntity;
             const killerPlayer = killer?.typeId === "minecraft:player" ? (killer as Player) : undefined;
@@ -1336,8 +1266,8 @@ if (!(globalThis as any).__stackDieSubscribed) {
             const displayName = mobDisplayNameMap.get(entityTypeId);
             if (!displayName) return;
 
-            const locKey = `${hurtEntity.location.x.toFixed(0)},${hurtEntity.location.y.toFixed(0)},${hurtEntity.location.z.toFixed(0)}`;
-            lastKilled.set(`${entityTypeId}:${locKey}`, Date.now());
+            const killSpawnerKey = inheritedSpawnerKey || makeSpawnerKey(hurtEntity.dimension.id, hurtEntity.location.x, hurtEntity.location.y, hurtEntity.location.z);
+            lastKilled.set(`${entityTypeId}:${killSpawnerKey}`, Date.now());
 
             const currentAmount = extractStackNumber(hurtEntity.nameTag);
             let totalReaped = 1;

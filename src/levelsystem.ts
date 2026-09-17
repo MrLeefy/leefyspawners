@@ -24,6 +24,9 @@ import { configDatabase, debugLog, clearMaxedSpawnerCache } from "./mobstacker-c
 import { TIMING, UI, ERROR_MESSAGES, VALIDATION } from "./constants.js";
 import { startChestLinking, unlinkChest, triggerChestLinkParticles } from "./mobstacker-ui.js";
 import { getDoubleChestContainers } from "./loot_table.js";
+import { makeSpawnerKey, migrateLegacySpawnerKeys, normalizeDimensionId, replaceSpawnerBlockTypePreservingMetadata, syncSpawnerRecordToBlock } from "./spawner-storage.js";
+
+// LeefySpawners v9: dimension-aware storage + stable 26.50 block metadata
 
 // Helper to give items to player natively without commands, spawning on ground if inventory is full
 function giveItemNatively(player: Player, itemTypeId: string, amount: number): void {
@@ -50,6 +53,12 @@ export const cooldowns = new Map<string, number>();
 // Initialize the database for spawner locations
 const spawnerDatabase = new Database("SpawnerLocations");
 
+// Migrate v8 x,y,z records after the scoreboard DB has initialized.
+system.run(() => system.run(() => {
+    const migrated = migrateLegacySpawnerKeys(spawnerDatabase);
+    if (migrated > 0) console.warn(`[LeefySpawners v9] Migrated ${migrated} legacy spawner record(s) to dimension-aware keys.`);
+}));
+
 // Custom character mapping
 const charMap = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
@@ -73,7 +82,7 @@ const messageDelay = TIMING.MESSAGE_DELAY;
 // Hook into the playerBreakBlock event to prevent breaking certain blocks
 world.beforeEvents.playerBreakBlock.subscribe((data: PlayerBreakBlockBeforeEvent) => {
     const { player, block } = data;
-    const coordinates = `${block.x},${block.y},${block.z}`;
+    const coordinates = makeSpawnerKey(block.dimension.id, block.x, block.y, block.z);
 
     // Early return for non-spawner blocks (most common case)
     if (!spawnerDatabase.has(coordinates) && !activeForms.has(coordinates)) {
@@ -107,7 +116,7 @@ world.beforeEvents.playerBreakBlock.subscribe((data: PlayerBreakBlockBeforeEvent
         for (let dx = -nearbyRadius; dx <= nearbyRadius; dx++) {
             for (let dy = -nearbyRadius; dy <= nearbyRadius; dy++) {
                 for (let dz = -nearbyRadius; dz <= nearbyRadius; dz++) {
-                    const nearbyCoordinates = `${block.x + dx},${block.y + dy},${block.z + dz}`;
+                    const nearbyCoordinates = makeSpawnerKey(dimension.id, block.x + dx, block.y + dy, block.z + dz);
                     if (spawnerDatabase.has(nearbyCoordinates)) {
                         const nearbyBlock = dimension.getBlock(new Vector3(block.x + dx, block.y + dy, block.z + dz));
                         if (!nearbyBlock || !nearbyBlock.typeId.startsWith('mrleefy:')) {
@@ -137,7 +146,7 @@ world.afterEvents.pistonActivate.subscribe((eventData: PistonActivateAfterEvent)
                 removeSpawnruleAtLocation(blockCoord.x, blockCoord.y, blockCoord.z, dimension);
                 
                 // Securely remove database entry to prevent desync
-                const coordinates = `${blockCoord.x},${blockCoord.y},${blockCoord.z}`;
+                const coordinates = makeSpawnerKey(dimension.id, blockCoord.x, blockCoord.y, blockCoord.z);
                 if (spawnerDatabase.has(coordinates)) {
                     spawnerDatabase.delete(coordinates);
                 }
@@ -193,7 +202,7 @@ world.afterEvents.playerPlaceBlock.subscribe((data: PlayerPlaceBlockAfterEvent) 
             return;
         }
 
-        const coordinates = `${block.x},${block.y},${block.z}`;
+        const coordinates = makeSpawnerKey(block.dimension.id, block.x, block.y, block.z);
         const spawnerData = {
             typeId,
             dimensionId: player.dimension.id,
@@ -203,6 +212,7 @@ world.afterEvents.playerPlaceBlock.subscribe((data: PlayerPlaceBlockAfterEvent) 
             lastAccessed: Date.now()
         };
         spawnerDatabase.write(coordinates, spawnerData);
+        syncSpawnerRecordToBlock(block, spawnerData);
 
         try {
             const ent = player.dimension.spawnEntity("mrleefy:spawnrule" as any, { x: block.x + 0.5, y: block.y + 0.5, z: block.z + 0.5 });
@@ -215,7 +225,7 @@ world.afterEvents.playerPlaceBlock.subscribe((data: PlayerPlaceBlockAfterEvent) 
 
 // SINGLE MERGED AND SECURE BLOCK INTERACTION HANDLER
 function handleSpawnerBlockInteraction(player: Player, block: Block, cancelableEvent: { cancel: boolean }) {
-    const coordinates = `${block.x},${block.y},${block.z}`;
+    const coordinates = makeSpawnerKey(block.dimension.id, block.x, block.y, block.z);
     const typeId = block.typeId;
 
     // Early return for non-spawner blocks
@@ -245,6 +255,8 @@ function handleSpawnerBlockInteraction(player: Player, block: Block, cancelableE
 
     // Dynamic Database Fallback Check (auto-register missing blocks)
     updateSpawnerDatabaseOnInteraction(coordinates, typeId, player);
+    const currentRecord = spawnerDatabase.read(coordinates);
+    if (currentRecord) syncSpawnerRecordToBlock(block, currentRecord);
 
     // Open form
     system.run(() => {
@@ -480,7 +492,7 @@ function createSpawnerForm(player: Player, level: number, upgradee: number, down
     form1.button(`§l§8Instructions`, 'textures/items/book_enchanted.png');
     buttonActions.push(() => showInstructions(player));
 
-    if (player.hasTag(UI.OWNER_PERMISSION_TAG)) {
+    if (player.hasTag(UI.OWNER_PERMISSION_TAG) || player.hasTag(UI.ADMIN_PERMISSION_TAG)) {
         form1.button(`§8§lChoose Level`, 'textures/items/diamond');
         const chooseLevelAction = () =>
             slider(player, spawnerType, block, level, 10000 * level, typeId, upgradee, downgradee, percentrefund, refu, x, y, z);
@@ -495,7 +507,7 @@ function createSpawnerForm(player: Player, level: number, upgradee: number, down
 }
 
 function form1(player: Player, level: number, cost: number, block: Block, typeId: string, upgradee: number, downgradee: number, percentrefund: number, refu: number, spawnerType: string, x: number, y: number, z: number): void {
-    const coordinates = `${x},${y},${z}`;
+    const coordinates = makeSpawnerKey(block.dimension.id, x, y, z);
 
     if (!validateSpawnerInteraction(player, block, level, x, y, z)) {
         return;
@@ -672,8 +684,8 @@ function slider(player: Player, spawnerType: string, block: Block, level: number
         console.error("Invalid player provided to slider");
         return;
     }
-    const coordinates = `${x},${y},${z}`;
-    if (!player.hasTag(`admin`)) {
+    const coordinates = makeSpawnerKey(block.dimension.id, x, y, z);
+    if (!player.hasTag(UI.ADMIN_PERMISSION_TAG) && !player.hasTag(UI.OWNER_PERMISSION_TAG)) {
         player.sendMessage("§cYou don't have permission to use this feature.");
         activeForms.delete(coordinates);
         return;
@@ -712,7 +724,7 @@ function slider(player: Player, spawnerType: string, block: Block, level: number
         if (!player || !player.isValid) {
             return;
         }
-        if (!player.hasTag(`admin`)) {
+        if (!player.hasTag(UI.ADMIN_PERMISSION_TAG) && !player.hasTag(UI.OWNER_PERMISSION_TAG)) {
             player.sendMessage("§cYou don't have permission to use this feature.");
             return;
         }
@@ -725,7 +737,14 @@ function slider(player: Player, spawnerType: string, block: Block, level: number
             if (newLevel) {
                 player.sendMessage(`§6Level §7set to §2${newLevel}`);
                 const newBlockType = `mrleefy:${spawnerType}spawner${newLevel}`;
-                block.setType(newBlockType);
+                const existingData = spawnerDatabase.read(coordinates) || {
+                    typeId, dimensionId: normalizeDimensionId(block.dimension.id), placedBy: player.name, placedAt: Date.now(), entitiesKilled: 0
+                };
+                existingData.typeId = newBlockType;
+                existingData.dimensionId = normalizeDimensionId(block.dimension.id);
+                existingData.lastAccessed = Date.now();
+                replaceSpawnerBlockTypePreservingMetadata(block, newBlockType, existingData);
+                spawnerDatabase.write(coordinates, existingData);
 
                 clearMaxedSpawnerCache(x, y, z);
 
@@ -860,15 +879,15 @@ function maxUpgradeSpawner(player: Player, block: Block, level: number, spawnerT
     // 4. Update the spawner block and database
     const newLevel = level + Math.min(levelsNeeded, levelsConsumed - refundAmount);
     const newTypeId = `${spawnerItemPrefix}${newLevel}`;
-    block.setType(newTypeId);
-
-    const coordinates = `${x},${y},${z}`;
-    const existingData = spawnerDatabase.read(coordinates);
-    if (existingData) {
-        existingData.typeId = newTypeId;
-        existingData.lastAccessed = Date.now();
-        spawnerDatabase.write(coordinates, existingData);
-    }
+    const coordinates = makeSpawnerKey(block.dimension.id, x, y, z);
+    const existingData = spawnerDatabase.read(coordinates) || {
+        typeId, dimensionId: normalizeDimensionId(block.dimension.id), placedBy: player.name, placedAt: Date.now(), entitiesKilled: 0
+    };
+    existingData.typeId = newTypeId;
+    existingData.dimensionId = normalizeDimensionId(block.dimension.id);
+    existingData.lastAccessed = Date.now();
+    replaceSpawnerBlockTypePreservingMetadata(block, newTypeId, existingData);
+    spawnerDatabase.write(coordinates, existingData);
 
     clearMaxedSpawnerCache(x, y, z);
 
@@ -977,16 +996,17 @@ function upgradeSpawner(player: Player, block: Block, level: number, spawnerType
         giveItemNatively(player, `${spawnerItemPrefix}1`, refund.amount);
     }
 
-    block.setType(`${spawnerItemPrefix}${newLevel}`);
+    const upgradedTypeId = `${spawnerItemPrefix}${newLevel}`;
+    const coordinates = makeSpawnerKey(block.dimension.id, x, y, z);
+    const existingData = spawnerDatabase.read(coordinates) || {
+        typeId, dimensionId: normalizeDimensionId(block.dimension.id), placedBy: player.name, placedAt: Date.now(), entitiesKilled: 0
+    };
+    existingData.typeId = upgradedTypeId;
+    existingData.dimensionId = normalizeDimensionId(block.dimension.id);
+    existingData.lastAccessed = Date.now();
+    replaceSpawnerBlockTypePreservingMetadata(block, upgradedTypeId, existingData);
+    spawnerDatabase.write(coordinates, existingData);
     player.sendMessage(`§7Successfully upgraded to level §2§l${newLevel}`);
-
-    const coordinates = `${x},${y},${z}`;
-    const existingData = spawnerDatabase.read(coordinates);
-    if (existingData) {
-        existingData.typeId = `${spawnerItemPrefix}${newLevel}`;
-        existingData.lastAccessed = Date.now();
-        spawnerDatabase.write(coordinates, existingData);
-    }
 
     clearMaxedSpawnerCache(x, y, z);
 
@@ -1023,7 +1043,7 @@ function downgrade(player: Player, block: Block, level: number, spawnerType: str
         return;
     }
 
-    const coordinates = `${x},${y},${z}`;
+    const coordinates = makeSpawnerKey(block.dimension.id, x, y, z);
     const dimension = block.dimension;
     const currentBlock = dimension.getBlock(new Vector3(x, y, z));
 
@@ -1052,14 +1072,14 @@ function downgrade(player: Player, block: Block, level: number, spawnerType: str
     // Apply the block downgrade
     const newLevel = level - 1;
     const newTypeId = `mrleefy:${spawnerType}spawner${newLevel}`;
-    block.setType(newTypeId);
-
-    const existingData = spawnerDatabase.read(coordinates);
-    if (existingData) {
-        existingData.typeId = newTypeId;
-        existingData.lastAccessed = Date.now();
-        spawnerDatabase.write(coordinates, existingData);
-    }
+    const existingData = spawnerDatabase.read(coordinates) || {
+        typeId: currentBlock.typeId, dimensionId: normalizeDimensionId(block.dimension.id), placedBy: player.name, placedAt: Date.now(), entitiesKilled: 0
+    };
+    existingData.typeId = newTypeId;
+    existingData.dimensionId = normalizeDimensionId(block.dimension.id);
+    existingData.lastAccessed = Date.now();
+    replaceSpawnerBlockTypePreservingMetadata(block, newTypeId, existingData);
+    spawnerDatabase.write(coordinates, existingData);
 
     // Recreate spawnrule
     try {
