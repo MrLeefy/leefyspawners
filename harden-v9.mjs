@@ -32,7 +32,6 @@ function replaceRegex(source, regex, replacement, label) {
     "levelsystem schema import",
   );
 
-  // A placed block is authoritative for dimension, not the player's potentially-changing dimension.
   s = replaceRegex(
     s,
     /(world\.afterEvents\.playerPlaceBlock\.subscribe\([\s\S]*?const spawnerData = \{\n\s*typeId,\n\s*)dimensionId: player\.dimension\.id,/,
@@ -54,7 +53,6 @@ function replaceRegex(source, regex, replacement, label) {
     "placement spawnrule dimension",
   );
 
-  // A form cannot be completed against a block in another dimension, even at matching numeric coordinates.
   s = replaceOnce(
     s,
     '    if (!isPlayerNearBlock(player, x, y, z, 10)) {\n        player.sendMessage("§cYou are too far from the spawner.");\n        return false;\n    }',
@@ -72,7 +70,7 @@ function replaceRegex(source, regex, replacement, label) {
   const marker = 'function updateSpawnerDatabaseOnInteraction(coordinates: string, typeId: string, player: Player): void {';
   if (s.includes(marker)) {
     const start = s.indexOf(marker);
-    let before = s.slice(0, start);
+    const before = s.slice(0, start);
     let tail = s.slice(start);
     tail = tail.replace(
       marker,
@@ -110,7 +108,6 @@ function replaceRegex(source, regex, replacement, label) {
     "core metadata imports",
   );
 
-  // Remove an obsolete coordinate-only statistics helper. The direct key-based path is the only live path.
   s = replaceRegex(
     s,
     /\/\/ Update statistics when entities are killed\nfunction updateSpawnerStatistics\([\s\S]*?\n\}\n\n\/\/ Optimized Direct Statistics Writer bypassing string parsing/,
@@ -152,14 +149,14 @@ function replaceRegex(source, regex, replacement, label) {
   s = replaceOnce(
     s,
     "                        if (spawnerType === entityType) {\n                            const [sx, sy, sz] = key.split(',').map(Number);\n                            const dx = location.x - sx;\n                            const dy = location.y - sy;\n                            const dz = location.z - sz;",
-    "                        if (spawnerType === entityType) {\n                            const parsed = parseSpawnerKey(key, data.dimensionId || 'overworld');\n                            if (!parsed || normalizeDimensionId(parsed.dimensionId) !== normalizeDimensionId(deadEntity.dimension.id)) {\n                                continue;\n                            }\n                            const { x: sx, y: sy, z: sz } = parsed;\n                            const dx = location.x - sx;\n                            const dy = location.y - sy;\n                            const dz = location.z - sz;",
+    "                        if (spawnerType === entityType) {\n                            const parsed = parseSpawnerKey(key, data.dimensionId || 'overworld');\n                            if (!parsed || normalizeDimensionId(parsed.dimensionId) !== normalizeDimensionId(dimension.id)) {\n                                continue;\n                            }\n                            const { x: sx, y: sy, z: sz } = parsed;\n                            const dx = location.x - sx;\n                            const dy = location.y - sy;\n                            const dz = location.z - sz;",
     "same-dimension nearest-spawner fallback",
   );
 
   s = replaceOnce(
     s,
     '                    const chest = spawnerData.linkedChest;\n                    const chestDim = world.getDimension(chest.dimensionId);',
-    '                    const chest = spawnerData.linkedChest;\n                    const chestDimensionId = normalizeDimensionId(chest.dimensionId || spawnerData.dimensionId || deadEntity.dimension.id);\n                    const chestDim = world.getDimension(chestDimensionId);',
+    '                    const chest = spawnerData.linkedChest;\n                    const chestDimensionId = normalizeDimensionId(chest.dimensionId || spawnerData.dimensionId || dimension.id);\n                    const chestDim = world.getDimension(chestDimensionId);',
     "legacy linked chest dimension fallback",
   );
 
