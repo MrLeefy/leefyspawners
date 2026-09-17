@@ -1,12 +1,12 @@
-import { Block, system } from "@minecraft/server";
+import { Block, system, type BlockDynamicPropertiesComponent } from "@minecraft/server";
 
 /**
  * LeefySpawners v9 storage helpers.
  *
- * V9 keeps the scoreboard-backed database as the global/offline index, while
- * mirroring per-spawner metadata into Bedrock 26.50 stable block dynamic
- * properties. Keys are dimension-aware to prevent Overworld/Nether/End
- * collisions.
+ * The scoreboard-backed database remains the global/offline index while
+ * Bedrock 26.50 stable block dynamic properties mirror per-spawner metadata.
+ * Keys are dimension-aware so identical coordinates in different dimensions
+ * can never collide.
  */
 export const SPAWNER_SCHEMA_VERSION = 9;
 
@@ -91,7 +91,7 @@ const DYNAMIC_KEYS = {
     linkedChest: "leefy:linked_chest",
 } as const;
 
-function getDynamicPropertiesComponent(block: Block): any | undefined {
+function getDynamicPropertiesComponent(block: Block): BlockDynamicPropertiesComponent | undefined {
     try {
         return block.getComponent("minecraft:dynamic_properties");
     } catch {
@@ -160,9 +160,9 @@ export function writeSpawnerBlockMetadata(block: Block, data: Record<string, any
 }
 
 /**
- * Bedrock creates a new block entity when setType changes one custom block ID
- * into another. Capture and reapply metadata so v8's 32-level item/block model
- * remains compatible while v9 still benefits from stable block properties.
+ * Changing one v8/v9 level block ID into another creates a new block entity.
+ * Capture and reapply metadata so the existing 32-level item/block model stays
+ * world-compatible while v9 still benefits from stable block properties.
  */
 export function replaceSpawnerBlockTypePreservingMetadata(
     block: Block,
