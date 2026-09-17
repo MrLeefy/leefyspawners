@@ -24,7 +24,7 @@ import { configDatabase, debugLog, clearMaxedSpawnerCache } from "./mobstacker-c
 import { TIMING, UI, ERROR_MESSAGES, VALIDATION } from "./constants.js";
 import { startChestLinking, unlinkChest, triggerChestLinkParticles } from "./mobstacker-ui.js";
 import { getDoubleChestContainers } from "./loot_table.js";
-import { makeSpawnerKey, migrateLegacySpawnerKeys, normalizeDimensionId, replaceSpawnerBlockTypePreservingMetadata, syncSpawnerRecordToBlock } from "./spawner-storage.js";
+import { makeSpawnerKey, migrateLegacySpawnerKeys, normalizeDimensionId, replaceSpawnerBlockTypePreservingMetadata, SPAWNER_SCHEMA_VERSION, syncSpawnerRecordToBlock } from "./spawner-storage.js";
 
 // LeefySpawners v9: dimension-aware storage + stable 26.50 block metadata
 
@@ -205,17 +205,18 @@ world.afterEvents.playerPlaceBlock.subscribe((data: PlayerPlaceBlockAfterEvent) 
         const coordinates = makeSpawnerKey(block.dimension.id, block.x, block.y, block.z);
         const spawnerData = {
             typeId,
-            dimensionId: player.dimension.id,
+            dimensionId: normalizeDimensionId(block.dimension.id),
             placedBy: player.name || player.nameTag || 'Unknown',
             placedAt: Date.now(),
             entitiesKilled: 0,
+            schemaVersion: SPAWNER_SCHEMA_VERSION,
             lastAccessed: Date.now()
         };
         spawnerDatabase.write(coordinates, spawnerData);
         syncSpawnerRecordToBlock(block, spawnerData);
 
         try {
-            const ent = player.dimension.spawnEntity("mrleefy:spawnrule" as any, { x: block.x + 0.5, y: block.y + 0.5, z: block.z + 0.5 });
+            const ent = block.dimension.spawnEntity("mrleefy:spawnrule" as any, { x: block.x + 0.5, y: block.y + 0.5, z: block.z + 0.5 });
             ent.nameTag = typeId;
         } catch (error) {
             console.error("Error spawning entity natively:", error);
@@ -254,7 +255,7 @@ function handleSpawnerBlockInteraction(player: Player, block: Block, cancelableE
     }
 
     // Dynamic Database Fallback Check (auto-register missing blocks)
-    updateSpawnerDatabaseOnInteraction(coordinates, typeId, player);
+    updateSpawnerDatabaseOnInteraction(coordinates, typeId, player, block.dimension.id);
     const currentRecord = spawnerDatabase.read(coordinates);
     if (currentRecord) syncSpawnerRecordToBlock(block, currentRecord);
 
@@ -298,6 +299,10 @@ function isPlayerNearBlock(player: Player, x: number, y: number, z: number, maxD
 function validateSpawnerInteraction(player: Player, block: Block, level: number, x: number, y: number, z: number): boolean {
     if (!player || !player.isValid) {
         console.error(ERROR_MESSAGES.INVALID_PLAYER);
+        return false;
+    }
+    if (normalizeDimensionId(player.dimension.id) !== normalizeDimensionId(block.dimension.id)) {
+        player.sendMessage("§cYou must be in the same dimension as the spawner.");
         return false;
     }
     if (!isPlayerNearBlock(player, x, y, z, 10)) {
@@ -1229,24 +1234,26 @@ function exit(player: Player): void {
     return;
 }
 
-function updateSpawnerDatabaseOnInteraction(coordinates: string, typeId: string, player: Player): void {
+function updateSpawnerDatabaseOnInteraction(coordinates: string, typeId: string, player: Player, spawnerDimensionId: string): void {
     try {
         const existingData = spawnerDatabase.read(coordinates);
 
         if (!existingData) {
             const spawnerData = {
                 typeId,
-                dimensionId: player.dimension.id,
+                dimensionId: normalizeDimensionId(spawnerDimensionId),
                 placedBy: player.name || player.nameTag || 'Unknown',
                 placedAt: Date.now(),
                 entitiesKilled: 0,
+                schemaVersion: SPAWNER_SCHEMA_VERSION,
                 lastAccessed: Date.now(),
                 interactedAt: Date.now()
             };
             spawnerDatabase.write(coordinates, spawnerData);
         } else {
             existingData.typeId = typeId;
-            existingData.dimensionId = existingData.dimensionId || player.dimension.id; // Self-healing migration for legacy spawners
+            existingData.dimensionId = normalizeDimensionId(existingData.dimensionId || spawnerDimensionId); // Self-healing migration for legacy spawners
+            existingData.schemaVersion = SPAWNER_SCHEMA_VERSION;
             existingData.lastAccessed = Date.now();
             existingData.interactedAt = existingData.interactedAt || Date.now();
 

@@ -6,7 +6,7 @@ import { getAAValueForLevel } from "./mobstacker-ui.js"; // Import the config fu
 import { TIMING, UI, ENTITIES, PERFORMANCE, VALIDATION } from "./constants.js";
 import { activeForms, cooldowns } from "./levelsystem.js";
 import { reapMultipliers, deadEntitySpawnerMap } from "./loot_table.js";
-import { makeSpawnerKey, normalizeDimensionId } from "./spawner-storage.js";
+import { makeSpawnerKey, normalizeDimensionId, parseSpawnerKey, SPAWNER_SCHEMA_VERSION, syncSpawnerRecordToBlock } from "./spawner-storage.js";
 
 // LeefySpawners v9: multi-dimension core
 
@@ -211,6 +211,9 @@ function flushPendingSpawnerMetadata() {
                 lastAccessed: 0
             };
 
+            const parsedKey = parseSpawnerKey(locationKey, existingData.dimensionId || "overworld");
+            existingData.dimensionId = normalizeDimensionId(existingData.dimensionId || parsedKey?.dimensionId || "overworld");
+            existingData.schemaVersion = SPAWNER_SCHEMA_VERSION;
             existingData.entitiesKilled += pending.kills;
             existingData.lastKill = pending.lastKill;
             existingData.lastAccessed = Date.now();
@@ -230,6 +233,18 @@ function flushPendingSpawnerMetadata() {
             }
 
             spawnerDatabase.write(locationKey, existingData);
+
+            // Keep stable Bedrock 26.50 block dynamic properties in sync with the DB.
+            try {
+                const parsed = parseSpawnerKey(locationKey, existingData.dimensionId || "overworld");
+                if (parsed) {
+                    const dimension = world.getDimension(parsed.dimensionId);
+                    const block = dimension.getBlock({ x: parsed.x, y: parsed.y, z: parsed.z });
+                    if (block && block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner") && !block.typeId.endsWith("_display")) {
+                        syncSpawnerRecordToBlock(block, existingData);
+                    }
+                }
+            } catch { /* unloaded chunks remain safely represented by the global DB */ }
         } catch (error) {
             console.error(`Error saving spawner metadata for ${locationKey}:`, error);
         }
