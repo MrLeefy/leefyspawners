@@ -108,37 +108,6 @@ function cleanupStatistics() {
     debugLog(`Statistics cleanup: entities=${spawnerStatistics.entitiesKilled.size}, players=${spawnerStatistics.playerStats.size}, spawners=${spawnerStatistics.spawnerUptime.size}`);
 }
 
-// Update statistics when entities are killed
-function updateSpawnerStatistics(entityTypeId: string, spawnerLocation: Vector3, player?: Player) {
-    // Track entities killed by type
-    const currentKills = spawnerStatistics.entitiesKilled.get(entityTypeId) || 0;
-    spawnerStatistics.entitiesKilled.set(entityTypeId, currentKills + 1);
-
-    // Track spawner uptime and kills per location
-    const locationKey = `${spawnerLocation.x},${spawnerLocation.y},${spawnerLocation.z}`;
-    const currentUptime = spawnerStatistics.spawnerUptime.get(locationKey) || 0;
-    spawnerStatistics.spawnerUptime.set(locationKey, currentUptime + 1);
-
-    // Update metadata (now memory-buffered and flushed every 30s)
-    updateSpawnerMetadata(locationKey, entityTypeId, player);
-
-    // Track player statistics
-    if (player) {
-        const playerName = player.name || player.nameTag || 'Unknown';
-        const playerStat = spawnerStatistics.playerStats.get(playerName) || {
-            entitiesKilled: 0,
-            spawnersPlaced: 0,
-            killsByType: {},
-            lastActivity: Date.now()
-        };
-        playerStat.entitiesKilled++;
-        playerStat.lastActivity = Date.now();
-        // Track kills by entity type
-        playerStat.killsByType[entityTypeId] = (playerStat.killsByType[entityTypeId] || 0) + 1;
-        spawnerStatistics.playerStats.set(playerName, playerStat);
-    }
-}
-
 // Optimized Direct Statistics Writer bypassing string parsing
 function updateSpawnerStatisticsDirect(entityTypeId: string, locationKey: string, player?: Player) {
     // Track entities killed by type
