@@ -6,10 +6,24 @@ import { forceShowForm, Format } from "./ui-utils.js";
 import { Database } from "./database.js";
 import { LootManager, lootTableDatabase } from "./loot_table.js";
 import { cooldowns, spawnerDatabase } from "./levelsystem.js";
-import { validMobs, configDatabase, xpDropDatabase, spawnerStatistics, calculateSpawnerTotals, performanceMetrics, getMemoryUsage, loadSpawnerStatistics, resetSpawnerStatistics, getPlayerTopKills, ACTIVE_CHUNKS, enableLogging, disableLogging, isLoggingEnabled, debugLog, clearSpawnerParseCache, extractStackNumber } from "./mobstacker-core.js";
+import { validMobs, configDatabase, xpDropDatabase, spawnerStatistics, calculateSpawnerTotals, performanceMetrics, getMemoryUsage, loadSpawnerStatistics, resetSpawnerStatistics, getPlayerTopKills, ACTIVE_CHUNKS, enableLogging, disableLogging, isLoggingEnabled, debugLog, clearSpawnerParseCache, extractStackNumber, restartSpawnerProcessingInterval } from "./mobstacker-core.js";
 import { securityService } from "./security-service.js";
 import { UI, THEME, ERROR_MESSAGES, ENTITIES } from "./constants.js";
 import { performanceMonitor } from "./performance-monitor.js";
+import { makeSpawnerKey, normalizeDimensionId, parseSpawnerKey, syncSpawnerRecordToBlock } from "./spawner-storage.js";
+
+// LeefySpawners v9: dimension-aware admin UI
+function syncSpawnerBlockMirror(spawnerKey: string, record: any): void {
+    try {
+        const parsed = parseSpawnerKey(spawnerKey, record?.dimensionId || "overworld");
+        if (!parsed) return;
+        const dimension = world.getDimension(parsed.dimensionId);
+        const block = dimension.getBlock({ x: parsed.x, y: parsed.y, z: parsed.z });
+        if (block && block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner") && !block.typeId.endsWith("_display")) {
+            syncSpawnerRecordToBlock(block, record);
+        }
+    } catch { /* unloaded chunk: DB remains authoritative */ }
+}
 
 // --- CONFIGURATION MANAGEMENT ---
 const aaDatabase = new Database("AAValues");
@@ -116,12 +130,12 @@ function openAdminMenu(player: Player): void {
 
     const form = new ActionFormData()
       .title("Leefy Spawner Settings")
-      .body("§7Configure spawner behavior and performance settings\n§c⚠ Performance settings require server/world restart")
+      .body("§7Configure spawner behavior and performance settings\n§a✓ v9 performance controls apply live")
       .button("Spawner Settings", "textures/items/diamond")
       .button("Entity Loot Tables", "textures/blocks/chest_front")
       .button("Stack Radius", "textures/items/snowball")
       .button("Loot Drop Rules", "textures/items/lever.png")
-      .button("Performance Settings §c(Requires Restart)", "textures/items/clock_item")
+      .button("Performance Settings §a(Live)", "textures/items/clock_item")
       .button("Spawner Statistics", "textures/items/book_normal")
       .button("Teleport to Spawner", "textures/items/ender_pearl")
       .button("Verify & Clean Database", "textures/items/book_normal")
@@ -542,11 +556,9 @@ function openPerformanceConfigForm(player: Player): void {
 
         // Show results
         if (updated) {
-            player.sendMessage("§a✓ Performance settings saved to database!");
-            player.sendMessage("§c§l⚠ REQUIRES SERVER RESTART OR WORLD RESTART ⚠");
-            player.sendMessage("§c(Settings are cached at startup for maximum performance)");
-            player.sendMessage("§e");
-            player.sendMessage("§e» Use §f/reload §eor restart world to apply changes");
+            restartSpawnerProcessingInterval();
+            player.sendMessage("§a✓ Performance settings saved and applied live!");
+            player.sendMessage("§7No server/world restart is required in LeefySpawners v9.");
         }
 
         // Show any warnings
@@ -561,7 +573,7 @@ function openPerformanceConfigForm(player: Player): void {
             player.sendMessage(`§7Random Delays: §e${randomDelay ? 'Enabled' : 'Disabled'}`);
             player.sendMessage(`§7Check Interval: §e${spawnInterval} ticks`);
             player.sendMessage("§7━━━━━━━━━━━━━━━━━━━━━━━━");
-            player.sendMessage("§c§l» RESTART REQUIRED TO ACTIVATE «");
+            player.sendMessage("§a§l» CHANGES ACTIVE NOW «");
         }
 
     }).catch((error: any) => {
@@ -1419,7 +1431,7 @@ function openSpawnerSelectionForm(player: Player, playerName: string, spawners: 
             const mobType = typeId.replace('mrleefy:', '').replace(/spawner\d+/, '').replace(/_/g, '');
             const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || 'Unknown';
             
-            const info = getEntitiesInfoNearSpawner(x, y, z);
+            const info = getEntitiesInfoNearSpawner(x, y, z, spawner.dimensionId || "overworld");
 
             return {
                 ...spawner,
@@ -1462,7 +1474,7 @@ function openSpawnerSelectionForm(player: Player, playerName: string, spawners: 
 
             const selectedDetail = spawnerDetails[r.selection];
             if (selectedDetail) {
-                teleportToSpawner(player, selectedDetail.x, selectedDetail.y, selectedDetail.z);
+                teleportToSpawner(player, selectedDetail.x, selectedDetail.y, selectedDetail.z, selectedDetail.dimensionId);
             }
         }).catch((error: any) => {
             console.error(`Error in openSpawnerSelectionForm: ${error}`);
@@ -1475,23 +1487,20 @@ function openSpawnerSelectionForm(player: Player, playerName: string, spawners: 
     }
 }
 
-function teleportToSpawner(player: Player, x: number, y: number, z: number): void {
+function teleportToSpawner(player: Player, x: number, y: number, z: number, dimensionId = player.dimension.id): void {
     try {
         if (!player || !player.isValid) return;
-
-        player.sendMessage(`§aTeleporting to spawner at ${x}, ${y}, ${z}...`);
-
+        const targetDimension = world.getDimension(normalizeDimensionId(dimensionId));
+        player.sendMessage(`§aTeleporting to spawner at ${x}, ${y}, ${z} in ${normalizeDimensionId(dimensionId)}...`);
         system.run(() => {
             try {
-                const dimension = player.dimension;
-                player.teleport({ x: x + 0.5, y: y + 1.5, z: z + 0.5 }, { dimension: dimension });
+                player.teleport({ x: x + 0.5, y: y + 1.5, z: z + 0.5 }, { dimension: targetDimension });
             } catch (teleportError) {
                 console.error(`Teleport logic failed: ${teleportError}`);
-                player.sendMessage(`§cTeleport failed. Check if coordinate is in a loaded area or try again.`);
+                player.sendMessage("§cTeleport failed. The target chunk may be unavailable.");
             }
         });
-
-    } catch (error: any) {
+    } catch (error) {
         console.error(`Error in teleportToSpawner: ${error}`);
         player.sendMessage("§cA critical error occurred during teleportation.");
     }
@@ -1508,30 +1517,20 @@ interface SpawnerEntitiesInfo {
     virtualCount: number;  // Sum of stack multipliers
 }
 
-function getEntitiesInfoNearSpawner(x: number, y: number, z: number): SpawnerEntitiesInfo {
+function getEntitiesInfoNearSpawner(x: number, y: number, z: number, dimensionId = "overworld"): SpawnerEntitiesInfo {
     try {
-        const overworld = world.getDimension("overworld");
-        const location: Vector3 = { x, y, z };
-        
-        const nearbyEntities = overworld.getEntities({
-            location: location,
-            maxDistance: 10
-        });
-
+        const dimension = world.getDimension(normalizeDimensionId(dimensionId));
+        const nearbyEntities = dimension.getEntities({ location: { x, y, z }, maxDistance: 10 });
         let physicalCount = 0;
         let virtualCount = 0;
-
         nearbyEntities.forEach((entity: Entity) => {
-            if (entity?.isValid && entity.typeId.startsWith('mrleefy:')) {
-                if (entity.nameTag && entity.nameTag.includes('x')) {
-                    physicalCount++;
-                    virtualCount += extractStackSize(entity.nameTag);
-                }
+            if (entity?.isValid && entity.typeId.startsWith("mrleefy:") && entity.nameTag?.includes("x")) {
+                physicalCount++;
+                virtualCount += extractStackSize(entity.nameTag);
             }
         });
-
         return { physicalCount, virtualCount };
-    } catch (error) {
+    } catch {
         return { physicalCount: 0, virtualCount: 0 };
     }
 }
@@ -1585,10 +1584,12 @@ function openLocationSearchForm(player: Player, allSpawners: Record<string, any>
             Object.entries(allSpawners).forEach(([coordinates, data]) => {
                 try {
                     const [x, y, z] = coordinates.split(',').map((coord: string) => parseFloat(coord.trim()));
+                    const dimensionId = normalizeDimensionId(data.dimensionId || parseSpawnerKey(coordinates)?.dimensionId || "overworld");
+                    if (dimensionId !== normalizeDimensionId(player.dimension.id)) return;
                     const distance = Math.sqrt(Math.pow(x - searchX, 2) + Math.pow(z - searchZ, 2));
 
                     if (distance <= radius) {
-                        const info = getEntitiesInfoNearSpawner(x, y, z);
+                        const info = getEntitiesInfoNearSpawner(x, y, z, dimensionId);
                         if (info.physicalCount > 0 || includeInactive) {
                             results.push({
                                 coordinates,
@@ -1596,7 +1597,7 @@ function openLocationSearchForm(player: Player, allSpawners: Record<string, any>
                                 distance,
                                 physicalCount: info.physicalCount,
                                 virtualCount: info.virtualCount,
-                                x, y, z
+                                x, y, z, dimensionId
                             });
                         }
                     }
@@ -1657,7 +1658,7 @@ function openLocationResultsForm(player: Player, spawners: any[], searchX: numbe
 
             const selectedSpawner = validSpawners[r.selection];
             if (selectedSpawner) {
-                teleportToSpawner(player, selectedSpawner.x, selectedSpawner.y, selectedSpawner.z);
+                teleportToSpawner(player, selectedSpawner.x, selectedSpawner.y, selectedSpawner.z, selectedSpawner.dimensionId);
             }
         }).catch((error: any) => {
             console.error(`Error in openLocationResultsForm: ${error}`);
@@ -1728,41 +1729,42 @@ function getSpawnerIconPath(typeId: string, displayName: string): string {
 
 function scanAndUpdateSpawnerDatabase(): void {
     try {
-        const overworld = world.getDimension("overworld");
-        const allSpawnerKeys = spawnerDatabase.keys();
-        const entities = overworld.getEntities();
-
-        for (const entity of entities) {
-            if (!entity?.isValid) continue;
-            if (entity.typeId.startsWith('mrleefy:') && entity.nameTag && entity.nameTag.includes('x')) {
-                const location = entity.location;
-                const roundedLocation = `${Math.floor(location.x)},${Math.floor(location.y)},${Math.floor(location.z)}`;
-
-                if (!spawnerDatabase.read(roundedLocation)) {
-                    spawnerDatabase.write(roundedLocation, {
-                        typeId: entity.typeId.replace('still', ''),
-                        placedBy: 'System Scan',
-                        placedAt: Date.now()
-                    });
-                    debugLog(`[MOBSTACKER] Registered untracked spawner at ${roundedLocation} via system scan`);
+        const dimensionIds = ["overworld", "nether", "the_end"];
+        for (const dimensionId of dimensionIds) {
+            const dimension = world.getDimension(dimensionId);
+            const markers = dimension.getEntities({ type: ENTITIES.SPAWNRULE_ENTITY_TYPE });
+            for (const marker of markers) {
+                if (!marker?.isValid || !marker.nameTag?.includes("spawner")) continue;
+                const key = makeSpawnerKey(dimension.id, marker.location.x, marker.location.y, marker.location.z);
+                if (!spawnerDatabase.read(key)) {
+                    const record = {
+                        typeId: marker.nameTag,
+                        dimensionId: normalizeDimensionId(dimension.id),
+                        placedBy: "System Scan",
+                        placedAt: Date.now(),
+                        entitiesKilled: 0,
+                        lastAccessed: Date.now(),
+                    };
+                    spawnerDatabase.write(key, record);
+                    syncSpawnerBlockMirror(key, record);
+                    debugLog(`[MOBSTACKER] Registered untracked spawner at ${key}`);
                 }
             }
         }
 
-        for (const key of allSpawnerKeys) {
+        for (const key of spawnerDatabase.keys()) {
+            const record = spawnerDatabase.read(key);
+            const parsed = parseSpawnerKey(key, record?.dimensionId || "overworld");
+            if (!parsed) continue;
             try {
-                const [x, y, z] = key.split(',').map((coord: string) => parseFloat(coord.trim()));
-                const block = overworld.getBlock({ x, y, z });
-                
-                if (block && !(block.typeId.startsWith('mrleefy:') && block.typeId.includes('spawner') && !block.typeId.endsWith('_display'))) {
+                const dimension = world.getDimension(parsed.dimensionId);
+                const block = dimension.getBlock({ x: parsed.x, y: parsed.y, z: parsed.z });
+                if (block && !(block.typeId.startsWith("mrleefy:") && block.typeId.includes("spawner") && !block.typeId.endsWith("_display"))) {
                     spawnerDatabase.delete(key);
-                    debugLog(`[MOBSTACKER] Removed stale database entry for missing spawner block at ${key}`);
-                }
-            } catch (blockError) {
-                // If block is unloaded, keep the entry
-            }
+                    debugLog(`[MOBSTACKER] Removed stale database entry at ${key}`);
+                } else if (block) syncSpawnerRecordToBlock(block, record || {});
+            } catch { /* unloaded chunk: retain safely */ }
         }
-
     } catch (error) {
         console.error(`[MOBSTACKER] Error in system scan: ${error}`);
     }
@@ -2016,7 +2018,8 @@ function openPlayerStatsSelectionForm(player: Player): void {
                     location: key,
                     typeId: spawnerData.typeId,
                     placedAt: spawnerData.placedAt,
-                    entitiesKilled: spawnerData.entitiesKilled || 0
+                    entitiesKilled: spawnerData.entitiesKilled || 0,
+                    dimensionId: normalizeDimensionId(spawnerData.dimensionId || parseSpawnerKey(key)?.dimensionId || "overworld")
                 });
             }
         }
@@ -2038,7 +2041,7 @@ function openPlayerStatsSelectionForm(player: Player): void {
             let totalVirtual = 0;
             spawners.forEach((spawner: any) => {
                 const [x, y, z] = spawner.location.split(',').map(Number);
-                const info = getEntitiesInfoNearSpawner(x, y, z);
+                const info = getEntitiesInfoNearSpawner(x, y, z, spawner.dimensionId || "overworld");
                 totalPhysical += info.physicalCount;
                 totalVirtual += info.virtualCount;
             });
@@ -2082,7 +2085,7 @@ function openPlayerStatsSelectionForm(player: Player): void {
                     const mobType = typeId.replace('mrleefy:', '').replace(/spawner\d+/, '').replace(/_/g, '');
                     const displayName = getMobDisplayName(`mrleefy:${mobType}still`) || 'Unknown';
                     
-                    const info = getEntitiesInfoNearSpawner(x, y, z);
+                    const info = getEntitiesInfoNearSpawner(x, y, z, spawner.dimensionId || "overworld");
 
                     return {
                          ...spawner,
@@ -2434,6 +2437,7 @@ export function unlinkChest(player: Player, spawnerKey: string): void {
     }
     delete spawnerData.linkedChest;
     spawnerDatabase.write(spawnerKey, spawnerData);
+    syncSpawnerBlockMirror(spawnerKey, spawnerData);
     player.sendMessage("§e[Spawner Link] Spawner chest unlinked successfully.");
 }
 
@@ -2503,6 +2507,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
                 dimensionId: block.dimension.id
             };
             spawnerDatabase.write(linkInfo.spawnerKey, spawnerData);
+            syncSpawnerBlockMirror(linkInfo.spawnerKey, spawnerData);
 
             player.sendMessage(`§a[Spawner Link] Successfully linked spawner to chest at ${block.x}, ${block.y}, ${block.z}!`);
 

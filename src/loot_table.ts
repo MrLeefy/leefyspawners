@@ -2,6 +2,7 @@ import { world, system, ItemStack, EntityDieAfterEvent, Player, Dimension, Vecto
 import { Database } from "./database.js";
 import { ENTITIES } from "./constants.js";
 import { spawnerDatabase } from "./levelsystem.js";
+import { normalizeDimensionId, parseSpawnerKey } from "./spawner-storage.js";
 
 // --- DATABASE SETUP ---
 export const lootTableDatabase = new Database('LootTables');
@@ -862,7 +863,11 @@ class LootManager {
                     if (data && typeof data.typeId === 'string') {
                         const spawnerType = data.typeId.replace('mrleefy:', '').replace(/spawner\d*/, '').trim().toLowerCase();
                         if (spawnerType === entityType) {
-                            const [sx, sy, sz] = key.split(',').map(Number);
+                            const parsed = parseSpawnerKey(key, data.dimensionId || 'overworld');
+                            if (!parsed || normalizeDimensionId(parsed.dimensionId) !== normalizeDimensionId(dimension.id)) {
+                                continue;
+                            }
+                            const { x: sx, y: sy, z: sz } = parsed;
                             const dx = location.x - sx;
                             const dy = location.y - sy;
                             const dz = location.z - sz;
@@ -891,7 +896,8 @@ class LootManager {
                 const spawnerData = spawnerDatabase.read(spawnerKey);
                 if (spawnerData && spawnerData.linkedChest) {
                     const chest = spawnerData.linkedChest;
-                    const chestDim = world.getDimension(chest.dimensionId);
+                    const chestDimensionId = normalizeDimensionId(chest.dimensionId || spawnerData.dimensionId || dimension.id);
+                    const chestDim = world.getDimension(chestDimensionId);
                     if (chestDim) {
                         const block = chestDim.getBlock({ x: chest.x, y: chest.y, z: chest.z });
                         if (block) {

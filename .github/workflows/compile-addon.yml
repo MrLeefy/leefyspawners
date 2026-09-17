@@ -38,10 +38,19 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Apply LeefySpawners v9 modernization
+        run: node migrate-v9.mjs
+
+      - name: Apply LeefySpawners v9 hardening
+        run: node harden-v9.mjs
+
+      - name: Apply LeefySpawners v9.1 marker-free runtime
+        run: node migrate-no-spawnrule.mjs
+
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Apply stable Script API migration
+      - name: Validate stable Script API migration
         run: npm run migrate:api
 
       - name: Validate manifests
@@ -54,6 +63,9 @@ jobs:
         run: |
           npm run build
           node obfuscate_release.js
+
+      - name: Validate v9.1 release invariants
+        run: node validate-v9.mjs
 
       - name: Create .mcaddon files
         run: |
@@ -74,6 +86,17 @@ jobs:
             "LeefySpawnersRES_$VERSION.mcpack"
           cp "LeefySpawners_$VERSION.mcaddon" LeefySpawners.mcaddon
           rm -f "LeefySpawnersBEH_$VERSION.mcpack" "LeefySpawnersRES_$VERSION.mcpack"
+
+          # Structural package integrity check: outer addon and both inner packs must be valid ZIPs.
+          unzip -t "LeefySpawners_$VERSION.mcaddon"
+          TMP_DIR=$(mktemp -d)
+          unzip -q "LeefySpawners_$VERSION.mcaddon" -d "$TMP_DIR"
+          PACK_COUNT=$(find "$TMP_DIR" -maxdepth 1 -name '*.mcpack' | wc -l)
+          test "$PACK_COUNT" -eq 2
+          for PACK in "$TMP_DIR"/*.mcpack; do
+            unzip -t "$PACK"
+          done
+          rm -rf "$TMP_DIR"
 
           node sync-readme.mjs
 
@@ -105,18 +128,20 @@ jobs:
             LeefySpawners.mcaddon
           if-no-files-found: error
 
-      - name: Commit migrated sources to PR branch
+      - name: Commit v9.1 migrated sources to PR branch
         if: github.event_name == 'pull_request'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json src
+          git add package.json package-lock.json src
+          git add "LeefySpawners BEH/manifest.json" "LeefySpawners RES/manifest.json"
+          git add "LeefySpawners BEH/blocks"
 
           if ! git diff --cached --quiet; then
-            git commit -m "fix: migrate LeefySpawners source to Script API 2.x"
+            git commit -m "feat: apply LeefySpawners v9.1 marker-free runtime"
             git push origin "HEAD:${{ github.head_ref }}"
           else
-            echo "Source and lockfile are already current."
+            echo "V9.1 sources and manifests are already current."
           fi
 
       - name: Commit production build
@@ -125,7 +150,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add package-lock.json src
+          git add package.json package-lock.json src
+          git add "LeefySpawners BEH/manifest.json" "LeefySpawners RES/manifest.json"
+          git add "LeefySpawners BEH/blocks"
           git add "LeefySpawners BEH/scripts/module"
           git add README.md docs/index.html
           git add -f "LeefySpawners_${ADDON_VERSION}.mcaddon" LeefySpawners.mcaddon

@@ -1,18 +1,18 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.86 BEH - Sep 2026",
-		"description": "LeefySpawners Behavior Pack v8.2.86 - Stable Bedrock 26.40-26.45 compatibility",
+		"name": "LeefySpawners v9.0.0 BEH - Sep 2026",
+		"description": "LeefySpawners v9 - Stable Bedrock 26.50, multi-dimension persistence and block-entity metadata",
 		"uuid": "6db13ee9-e276-472e-be33-fd55892e64f1",
 		"version": [
-			8,
-			2,
-			86
+			9,
+			0,
+			0
 		],
 		"min_engine_version": [
 			1,
 			26,
-			40
+			50
 		]
 	},
 	"modules": [
@@ -20,18 +20,18 @@
 			"type": "data",
 			"uuid": "838f1c30-480b-448e-908c-b353b74a3970",
 			"version": [
-				8,
-				2,
-				86
+				9,
+				0,
+				0
 			]
 		},
 		{
 			"description": "",
 			"uuid": "f21c3912-e02f-47ae-8743-0d7ec6ea87fc",
 			"version": [
-				8,
-				2,
-				86
+				9,
+				0,
+				0
 			],
 			"type": "script",
 			"language": "javascript",
@@ -41,18 +41,18 @@
 	"dependencies": [
 		{
 			"module_name": "@minecraft/server",
-			"version": "2.9.0"
+			"version": "2.10.0"
 		},
 		{
 			"module_name": "@minecraft/server-ui",
-			"version": "2.1.0"
+			"version": "2.2.0"
 		},
 		{
 			"uuid": "3a21e43b-7035-4e09-a467-61c91d9a237b",
 			"version": [
-				8,
-				2,
-				86
+				9,
+				0,
+				0
 			]
 		}
 	]
