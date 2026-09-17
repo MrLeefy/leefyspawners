@@ -3,10 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 const BEH_PATH = "LeefySpawners BEH/manifest.json";
 const RES_PATH = "LeefySpawners RES/manifest.json";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const EXPECTED_ENGINE = [1, 26, 40];
+const EXPECTED_ENGINE = [1, 26, 50];
 const EXPECTED_APIS = new Map([
-  ["@minecraft/server", "2.9.0"],
-  ["@minecraft/server-ui", "2.1.0"],
+  ["@minecraft/server", "2.10.0"],
+  ["@minecraft/server-ui", "2.2.0"],
 ]);
 
 function fail(message) {
@@ -94,5 +94,5 @@ if (!scriptModule?.entry || !existsSync(`LeefySpawners BEH/${scriptModule.entry}
 }
 
 console.log(
-  `LeefySpawners ${version.join(".")} manifests are valid for stable Bedrock 26.40-26.45.`,
+  `LeefySpawners ${version.join(".")} manifests are valid for stable Bedrock 26.50+ with @minecraft/server 2.10.0 and @minecraft/server-ui 2.2.0.`,
 );

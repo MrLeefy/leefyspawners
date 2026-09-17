@@ -1,18 +1,18 @@
 {
 	"format_version": 2,
 	"header": {
-		"name": "LeefySpawners v8.2.86 RES - Sep 2026",
-		"description": "LeefySpawners Resource Pack v8.2.86 - Stable Bedrock 26.40-26.45 compatibility",
+		"name": "LeefySpawners v9.0.0 RES - Sep 2026",
+		"description": "LeefySpawners v9 Resource Pack - Stable Bedrock 26.50+",
 		"uuid": "3a21e43b-7035-4e09-a467-61c91d9a237b",
 		"version": [
-			8,
-			2,
-			86
+			9,
+			0,
+			0
 		],
 		"min_engine_version": [
 			1,
 			26,
-			40
+			50
 		]
 	},
 	"modules": [
@@ -20,9 +20,9 @@
 			"type": "resources",
 			"uuid": "e17b600d-4e3d-4e99-98d4-d01c89067fb7",
 			"version": [
-				8,
-				2,
-				86
+				9,
+				0,
+				0
 			]
 		}
 	],
@@ -30,9 +30,9 @@
 		{
 			"uuid": "6db13ee9-e276-472e-be33-fd55892e64f1",
 			"version": [
-				8,
-				2,
-				86
+				9,
+				0,
+				0
 			]
 		}
 	]
