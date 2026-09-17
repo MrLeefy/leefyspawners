@@ -93,7 +93,7 @@ const DYNAMIC_KEYS = {
 
 function getDynamicPropertiesComponent(block: Block): any | undefined {
     try {
-        return (block as any).getComponent("minecraft:dynamic_properties");
+        return block.getComponent("minecraft:dynamic_properties");
     } catch {
         return undefined;
     }
@@ -105,15 +105,15 @@ export function readSpawnerBlockMetadata(block: Block): Record<string, any> {
 
     const data: Record<string, any> = {};
     try {
-        data.schemaVersion = component.getDynamicProperty(DYNAMIC_KEYS.schemaVersion);
-        data.typeId = component.getDynamicProperty(DYNAMIC_KEYS.typeId);
-        data.dimensionId = component.getDynamicProperty(DYNAMIC_KEYS.dimensionId);
-        data.placedBy = component.getDynamicProperty(DYNAMIC_KEYS.placedBy);
-        data.placedAt = component.getDynamicProperty(DYNAMIC_KEYS.placedAt);
-        data.entitiesKilled = component.getDynamicProperty(DYNAMIC_KEYS.entitiesKilled);
-        data.lastAccessed = component.getDynamicProperty(DYNAMIC_KEYS.lastAccessed);
+        data.schemaVersion = component.get(DYNAMIC_KEYS.schemaVersion);
+        data.typeId = component.get(DYNAMIC_KEYS.typeId);
+        data.dimensionId = component.get(DYNAMIC_KEYS.dimensionId);
+        data.placedBy = component.get(DYNAMIC_KEYS.placedBy);
+        data.placedAt = component.get(DYNAMIC_KEYS.placedAt);
+        data.entitiesKilled = component.get(DYNAMIC_KEYS.entitiesKilled);
+        data.lastAccessed = component.get(DYNAMIC_KEYS.lastAccessed);
 
-        const linkedChestRaw = component.getDynamicProperty(DYNAMIC_KEYS.linkedChest);
+        const linkedChestRaw = component.get(DYNAMIC_KEYS.linkedChest);
         if (typeof linkedChestRaw === "string" && linkedChestRaw.length > 0) {
             try { data.linkedChest = JSON.parse(linkedChestRaw); } catch { /* ignore corrupt mirror */ }
         }
@@ -132,14 +132,14 @@ export function writeSpawnerBlockMetadata(block: Block, data: Record<string, any
     if (!component) return false;
 
     try {
-        component.setDynamicProperty(DYNAMIC_KEYS.schemaVersion, SPAWNER_SCHEMA_VERSION);
-        component.setDynamicProperty(DYNAMIC_KEYS.typeId, String(data.typeId || block.typeId));
-        component.setDynamicProperty(DYNAMIC_KEYS.dimensionId, normalizeDimensionId(data.dimensionId || block.dimension.id));
+        component.set(DYNAMIC_KEYS.schemaVersion, SPAWNER_SCHEMA_VERSION);
+        component.set(DYNAMIC_KEYS.typeId, String(data.typeId || block.typeId));
+        component.set(DYNAMIC_KEYS.dimensionId, normalizeDimensionId(data.dimensionId || block.dimension.id));
 
-        if (data.placedBy !== undefined) component.setDynamicProperty(DYNAMIC_KEYS.placedBy, String(data.placedBy).slice(0, 80));
-        if (Number.isFinite(data.placedAt)) component.setDynamicProperty(DYNAMIC_KEYS.placedAt, Number(data.placedAt));
-        if (Number.isFinite(data.entitiesKilled)) component.setDynamicProperty(DYNAMIC_KEYS.entitiesKilled, Number(data.entitiesKilled));
-        if (Number.isFinite(data.lastAccessed)) component.setDynamicProperty(DYNAMIC_KEYS.lastAccessed, Number(data.lastAccessed));
+        if (data.placedBy !== undefined) component.set(DYNAMIC_KEYS.placedBy, String(data.placedBy).slice(0, 80));
+        if (Number.isFinite(data.placedAt)) component.set(DYNAMIC_KEYS.placedAt, Number(data.placedAt));
+        if (Number.isFinite(data.entitiesKilled)) component.set(DYNAMIC_KEYS.entitiesKilled, Number(data.entitiesKilled));
+        if (Number.isFinite(data.lastAccessed)) component.set(DYNAMIC_KEYS.lastAccessed, Number(data.lastAccessed));
 
         if (data.linkedChest) {
             const linkedChest = {
@@ -148,9 +148,9 @@ export function writeSpawnerBlockMetadata(block: Block, data: Record<string, any
                 z: Number(data.linkedChest.z),
                 dimensionId: normalizeDimensionId(data.linkedChest.dimensionId),
             };
-            component.setDynamicProperty(DYNAMIC_KEYS.linkedChest, JSON.stringify(linkedChest));
+            component.set(DYNAMIC_KEYS.linkedChest, JSON.stringify(linkedChest));
         } else {
-            component.setDynamicProperty(DYNAMIC_KEYS.linkedChest, undefined);
+            component.set(DYNAMIC_KEYS.linkedChest, undefined);
         }
         return true;
     } catch (error) {
