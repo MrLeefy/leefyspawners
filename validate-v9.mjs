@@ -30,12 +30,10 @@ const sourceFiles = [
 const source = Object.fromEntries(sourceFiles.map(file => [file, read(file)]));
 const allCriticalSource = Object.values(source).join("\n");
 
-// Public release security invariants.
 assert(!/runCommand(?:Async)?\([^\n]{0,160}\bop\b[^\n]{0,160}Mr\s*Leefy/i.test(allCriticalSource), "private auto-OP behavior is present");
 assert(!/console\.log\s*=/.test(source["src/mobstacker-core.ts"]), "mobstacker-core still overrides global console.log");
 assert(!source["src/import.ts"].includes("playerSpawn"), "import.ts contains player-spawn privilege logic");
 
-// Dimension-safe persistence and processing invariants.
 const level = source["src/levelsystem.ts"];
 assert(level.includes("migrateLegacySpawnerKeys(spawnerDatabase)"), "legacy spawner key migration is missing");
 assert(level.includes("makeSpawnerKey(block.dimension.id"), "block database keys are not dimension-aware");
@@ -56,8 +54,8 @@ assert(!core.includes("const overworld = world.getDimension('overworld')"), "old
 
 const loot = source["src/loot_table.ts"];
 assert(loot.includes("parseSpawnerKey(key, data.dimensionId || 'overworld')"), "loot fallback does not parse dimension-aware keys");
-assert(loot.includes("normalizeDimensionId(parsed.dimensionId) !== normalizeDimensionId(deadEntity.dimension.id)"), "loot fallback can cross dimensions");
-assert(loot.includes("chest.dimensionId || spawnerData.dimensionId || deadEntity.dimension.id"), "linked-chest legacy dimension fallback is missing");
+assert(loot.includes("normalizeDimensionId(parsed.dimensionId) !== normalizeDimensionId(dimension.id)"), "loot fallback can cross dimensions");
+assert(loot.includes("chest.dimensionId || spawnerData.dimensionId || dimension.id"), "linked-chest legacy dimension fallback is missing");
 
 const storage = source["src/spawner-storage.ts"];
 assert(storage.includes('getComponent("minecraft:dynamic_properties")'), "block dynamic property component lookup is missing");
@@ -66,7 +64,6 @@ assert(storage.includes("component.set("), "BlockDynamicPropertiesComponent.set 
 assert(!storage.includes("component.getDynamicProperty("), "obsolete block dynamic property getter remains");
 assert(!storage.includes("component.setDynamicProperty("), "obsolete block dynamic property setter remains");
 
-// Verify every functional spawner block is a stable block entity with dynamic properties.
 let functionalSpawnerBlocks = 0;
 function walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -91,7 +88,6 @@ function walk(dir) {
 walk(path.join(ROOT, "LeefySpawners BEH", "blocks"));
 assert(functionalSpawnerBlocks >= 1200, `only ${functionalSpawnerBlocks} functional spawner blocks were validated; expected the full 32-level catalog`);
 
-// Built entrypoint must exist after npm run build/obfuscation.
 const builtEntry = path.join(ROOT, "LeefySpawners BEH", behavior.modules.find(m => m.type === "script")?.entry || "");
 assert(fs.existsSync(builtEntry), "compiled behavior-pack script entrypoint is missing");
 
