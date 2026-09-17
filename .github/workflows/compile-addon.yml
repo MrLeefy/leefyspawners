@@ -41,6 +41,9 @@ jobs:
       - name: Apply LeefySpawners v9 modernization
         run: node migrate-v9.mjs
 
+      - name: Apply LeefySpawners v9 hardening
+        run: node harden-v9.mjs
+
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
@@ -57,6 +60,9 @@ jobs:
         run: |
           npm run build
           node obfuscate_release.js
+
+      - name: Validate v9 release invariants
+        run: node validate-v9.mjs
 
       - name: Create .mcaddon files
         run: |
@@ -77,6 +83,17 @@ jobs:
             "LeefySpawnersRES_$VERSION.mcpack"
           cp "LeefySpawners_$VERSION.mcaddon" LeefySpawners.mcaddon
           rm -f "LeefySpawnersBEH_$VERSION.mcpack" "LeefySpawnersRES_$VERSION.mcpack"
+
+          # Structural package integrity check: outer addon and both inner packs must be valid ZIPs.
+          unzip -t "LeefySpawners_$VERSION.mcaddon"
+          TMP_DIR=$(mktemp -d)
+          unzip -q "LeefySpawners_$VERSION.mcaddon" -d "$TMP_DIR"
+          PACK_COUNT=$(find "$TMP_DIR" -maxdepth 1 -name '*.mcpack' | wc -l)
+          test "$PACK_COUNT" -eq 2
+          for PACK in "$TMP_DIR"/*.mcpack; do
+            unzip -t "$PACK"
+          done
+          rm -rf "$TMP_DIR"
 
           node sync-readme.mjs
 
